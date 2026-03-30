@@ -48,6 +48,15 @@ rr p [project_code]
 rr dash
 ```
 
+### `crm`
+
+**Description:** CRM Database Viewer. Displays a formatted table of all contacts. Add a search term to filter results.
+
+**Usage:**
+```
+rr crm [optional_search_term]
+```
+
 ### `help`
 
 **Description:** Help Menu. Displays this list of commands or detailed information about a specific command.

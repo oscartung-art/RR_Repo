@@ -29,6 +29,9 @@ case "$COMMAND" in
     help)
         python "$REPO_DIR/tools/help_commands.py" "$@"
         ;;
+    crm)
+        python "$REPO_DIR/tools/view_crm.py" "$@"
+        ;;
     *)
         echo -e "\033[91mUnknown command: '$COMMAND'\033[0m"
         echo -e "Run 'rr help' to see available commands."
