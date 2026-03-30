@@ -33,12 +33,6 @@ ASSET_ROOT = Path("G:/Assets")
 
 LANDSCAPE_SPREADSHEET_ID = "1kvXmUldDFyiXMJLQb2yPclFnHZOTsFHom7uGS7GGLPk"
 
-# RR Studio Dashboard (Google Sheet — Live project status mirror)
-DASHBOARD_SHEET_ID = "1Ve4LjD4YGC7tmOnEipJ58Jn230IYnKe9ojJk4SFNcag"
-
-# Cloud Brain Doc (Google Doc — stitched .md files for mobile reading)
-CLOUD_BRAIN_DOC_ID = "1EmnIcp81vS5ao6isWBVTGol7jVGUQVcArC-VxHPG1w8"
-
 # ---------------------------------------------------------------------------
 # Encoding
 # ---------------------------------------------------------------------------
