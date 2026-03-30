@@ -32,11 +32,34 @@ Each command entry follows this structure:
 
 ### `p`
 
-**Description:** Project Inspector. Displays detailed metadata and drive paths for a specific project.
+**Description:** Project Inspector. Displays detailed metadata and drive paths. Supports sub-views for deep inspection.
 
 **Usage:**
 ```
-rr p [project_code]
+rr p [project_code] [docs|contacts|links|full]
+```
+
+### `open`
+
+**Description:** Folder Opener. Instantly opens the project's F: drive directory in Windows File Explorer.
+
+**Usage:**
+```
+rr open [project_code]
+```
+
+### `c`
+
+**Description:** Clipboard Tool. Instantly copies a specific field from a project file directly to your Windows clipboard.
+
+**Usage:**
+```
+rr c [project_code] [category] [field]
+```
+
+**Example:**
+```
+rr c PLS links client_drive
 ```
 
 ### `dash`

@@ -52,6 +52,18 @@ Technical spatial data for engine/3D alignment.
 *   `transformation`: String containing AxisX, AxisY, AxisZ, and Rotation.
 *   `longitude`, `latitude`, `ib1000`, `ib5000`.
 
+### 2.6 `renderings` & `animations`
+Tracks the volume and status of final deliverables. This data is used by `rr dash` to show production progress.
+*   **Format:** `[ID]: "[Status]"`
+*   **Statuses:** `Draft` (Internal/Review), `Active` (Client Selected), `Final` (Delivered), `Discarded`.
+*   **Example:**
+    ```yaml
+    renderings:
+      R01: "Final"
+      R02: "Active"
+      R03: "Draft"
+    ```
+
 ---
 
 ## 3. The Symmetrical Rule

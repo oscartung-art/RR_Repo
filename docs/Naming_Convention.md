@@ -166,32 +166,30 @@ Assets promoted to the global library follow a brand-first or family-first conve
 
 ---
 
-## 10. Rendered Outputs & Deliverables
+## 10. Rendered Outputs & Deliverables (Ultra-Flat Overwrite Workflow)
 
-All images, animations, and client-facing exports must follow a strict versioned naming convention to ensure that feedback loops (via GitHub Issues) can be tracked accurately.
+This workflow prioritizes a flat folder structure and minimal file clutter by overwriting previous renders. 
 
-### 9.1 Image & Animation Naming
-**Formula:** `[ProjectCode]_[ViewName]_[Description]_v###.[ext]`
+### 9.1 The "ID-Anchor" Naming Formula
+Use **Underscores (`_`)** to separate the Project and ID tokens, and **PascalCase** for the combined description.
+**Formula:** `[ProjectCode]_[ID]_[Description].[ext]`
 
-*   **Example:** `KIL112_GF_Landscape_MainView_v001.jpg`
-*   **Version:** Always use a 3-digit padded version (`v001`).
-*   **ViewName:** Matches the Level Sequence name in Unreal (e.g., `LS_LivingRoom_01`).
+*   **Example:** `PLS_R07_GFLobbyGreen.png`
+*   **ProjectCode:** Unique project identifier (e.g., `PLS`).
+*   **ID:** The **Stable Anchor**. Increasing IDs (`R01`, `R02`...) that never change.
+*   **Description:** A combined **PascalCase** string of the Subject and any Options (e.g., `GFLobbyGreen`).
 
-### 9.2 Movie Render Queue (MRQ) Tokens
-To automate this in Unreal Engine, use the following string in the **Output > File Name Format** field:
+### 9.2 The "Backstage vs. Showroom" Strategy
+1.  **The Backstage (`02_Work/`):** Render all iterations here. Overwrite the file each time you render to keep the folder flat and current.
+2.  **The Showroom (`03_Shared/`):** **Copy** only the specific "Committed" renders to this folder for the client.
 
-`{date}_[ProjectCode]_{camera_name}_v{version}`
+### 9.3 Movie Render Queue (MRQ) Tokens (Unreal Engine)
+To automate this, use the following string in the **Output > File Name Format** field:
 
-*   **`{date}`**: Unreal outputs this as `YYYY.MM.DD` (e.g., `2026.03.26`). We accept this dot-notation specifically for MRQ outputs to avoid manual renaming.
-*   **`[ProjectCode]`**: Hardcode your project code here (e.g., `KIL112`).
-*   **`{camera_name}`**: Automatically pulls the camera/view name.
-*   **`v{version}`**: Unreal will automatically increment this based on files already in the folder (e.g., if `v001` exists, it will render `v002`).
+`[ProjectCode]_{camera_name}`
 
-### 9.3 Directory Structure (Syncing with NAS)
-All renders must be saved to the **`03_Shared/`** directory of your Project Mass (`F:\`) to ensure they are easily accessible for client delivery and AI analysis.
+*   **Camera Naming:** In the Unreal Outliner, name your cameras using the `[ID]_[Description]` format (e.g., `R07_GFLobbyGreen`).
 
-*   **Path:** `F:\[CODE]_[ProjectName]\03_Shared\Renders\[YYYY.MM.DD]_[Version]\` (Note the dot-notation for the date to match the MRQ output).
-*   **Thumbnail Mirror:** A copy of the latest `v###.jpg` should be placed in your local **`D:\`** mirror to allow for fast cloud browsing and AI enrichment via the `enrich_gdrive.py` pipeline.
 `
 ---
 
