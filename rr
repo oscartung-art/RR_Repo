@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# RealRendering Studio CLI Entrypoint (rr)
+# This script routes commands to the appropriate Python tools.
+
+# Dynamically determine the repository root based on this script's location
+# This allows the script to work on D:/ (Desktop) or C:/ (Notebook) automatically.
+REPO_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# If no arguments are provided, default to showing the help menu
+if [ $# -eq 0 ]; then
+    python "$REPO_DIR/tools/help_commands.py"
+    exit 0
+fi
+
+# Capture the first argument as the command
+COMMAND=$1
+# Shift arguments so "$@" contains only the remaining arguments (e.g., the project code)
+shift 
+
+# Route the command
+case "$COMMAND" in
+    p)
+        python "$REPO_DIR/tools/lookup.py" "$@"
+        ;;
+    dash)
+        python "$REPO_DIR/scripts/generate_dashboard.py" --print-only "$@"
+        ;;
+    help)
+        python "$REPO_DIR/tools/help_commands.py" "$@"
+        ;;
+    *)
+        echo -e "\033[91mUnknown command: '$COMMAND'\033[0m"
+        echo -e "Run 'rr help' to see available commands."
+        exit 1
+        ;;
+esac

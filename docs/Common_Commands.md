@@ -2,7 +2,17 @@
 
 This guide stores the most frequent commands used to navigate and manage the Studio Brain.
 
-## 1. Project Management (GitHub)
+## 1. Project Lookup (Quick Dashboard)
+View a clean summary of any project directly in the terminal:
+```bash
+# General Usage
+p PROJECT_CODE
+
+# Example
+p PLS
+```
+
+## 2. Project Management (Internal)
 View the active "To-Do List" and project status:
 ```bash
 gh issue list

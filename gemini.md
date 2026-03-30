@@ -106,6 +106,15 @@ Chronological record of significant actions. Most recent first.
 
 ---
 
+## Gemini CLI Directives
+> **"You are my Studio Manager. My UI is raw Markdown. When a new project starts:**
+> 1. Create `projects/[PROJECT_NAME].md`.
+> 2. Open `dashboard.md`, find the `## 🔴 LEADS` header, and insert a new line with the link `[NAME](path)`.
+> 3. Use standard Markdown links `[Title](path)`, **NOT** Wikilinks `[[Title]]`, as I am not using extensions.
+> 4. Keep the text aligned and tidy using whitespace."
+
+---
+
 ## Technical Stack
 
 - **Automation:** Python 3.9+, Unreal Engine Python API

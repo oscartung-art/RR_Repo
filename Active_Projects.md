@@ -4,11 +4,33 @@ This document tracks all active projects, their outstanding issues, quotations, 
 
 | Project Code | Client | Project Name | Status | Outstanding Issues | Quotation Link | Invoice/Payment Link | F: Drive Path |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **KIL112** | *Client Name* | *Project Name* | In Progress | [ ] Task 1<br>[ ] Task 2 | [Quote.md](quotes/) | [Waveapps](url) / PDF | `F:/KIL112` |
-| **KL1** | One KL | Upper Prince | Review | [ ] Fix Lighting<br>[ ] G/F Adjustments | - | - | `F:/KL1` |
-| **MWR** | New Merit | Mawo Road Redevelopment | Briefing | [ ] Check reference | - | - | `F:/MWR mawo road` |
+| **FFS** | Unknown | - | - | - | [Share Link](https://realrendering.synology.me/drive/d/s/12wdTTdSY0A87VfGJuHwver1AKTKcTNd/e2N8qTJgZMTZmOmNo7eaTve7dxSNOHR-N7FArEp-Mww) | - | `F:/FFS` |
+| **KIL11285** | Fortune Hope Limited | Wing Kwong Street / Sung On Street | - | - | [Share Link](https://realrendering.synology.me/drive/d/s/14wx90mCtrMbNp8yXol9kQP6Zw357cbI/P5ijfVbOr--iVOReoflmV2X90TD6zTxR-krlAGRD7kww) | - | `F:/KIL11285` |
+| **KL1** | One KL Development Limited One KL II Development Limited One KL III Development Limite | Upper Prince | - | - | [https://realrendering.synology.me/drive/d/s/zr5I9N3OZmtMzBZbrcT6Tnj2vcPGKfT1/2aUx2zvoKKl4BTr7gIOOlJMZxb1-05yb-A71gObaRnws](https://realrendering.synology.me/drive/d/s/zr5I9N3OZmtMzBZbrcT6Tnj2vcPGKfT1/2aUx2zvoKKl4BTr7gIOOlJMZxb1-05yb-A71gObaRnws) | - | `F:/KL1` |
+| **MLS** | Unknown | Unknown | - | - | - | - | `F:/MLS` |
+| **MTC** | Unknown | - | - | - | [Share Link](https://realrendering.synology.me/drive/d/s/12wdTTdSY0A87VfGJuHwver1AKTKcTNd/e2N8qTJgZMTZmOmNo7eaTve7dxSNOHR-N7FArEp-Mww) | - | `F:/MTC` |
+| **MWR** | New Merit Limited(WOP) | PROPOSED COMPOSITE REDEVELOPMENT AT | - | - | [Share Link](https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWefdGVfX-T7mAKhjR-Ao) | - | `F:/MWR mawo road` |
+| **PLS** | NewMeritLimited | PLS | - | - | [Share Link](https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWe_fdGVfX-T7mAKhjR-Ao) | - | `F:/PLS` |
+| **YKS** | Unknown | Unknown | - | - | - | - | `F:/YKS` |
 
 ---
 
 ## Instructions Processing (From inbox.md)
 *When `inbox.md` is processed, items will be distributed into the "Outstanding Issues" columns above.*
+
+---
+
+## AI Editable Project Data (TOON Format)
+
+This block contains the structured project data in TOON format, serving as the primary source for AI-driven edits and automation. Changes here will be reflected in the dashboard table above.
+
+```toon
+projects[8]{Code,Project Name,Client,F: Drive Path,Share Link,Status,Outstanding Issues,Quotation Link,Invoice/Payment Link}:
+FFS,-,Unknown,F:/FFS,https://realrendering.synology.me/drive/d/s/12wdTTdSY0A87VfGJuHwver1AKTKcTNd/e2N8qTJgZMTZmOmNo7eaTve7dxSNOHR-N7FArEp-Mww,-,"[]",[Share Link](https://realrendering.synology.me/drive/d/s/12wdTTdSY0A87VfGJuHwver1AKTKcTNd/e2N8qTJgZMTZmOmNo7eaTve7dxSNOHR-N7FArEp-Mww),-
+KIL11285,Wing Kwong Street / Sung On Street,Fortune Hope Limited,F:/KIL11285,https://realrendering.synology.me/drive/d/s/14wx90mCtrMbNp8yXol9kQP6Zw357cbI/P5ijfVbOr--iVOReoflmV2X90TD6zTxR-krlAGRD7kww,-,"[]",[Share Link](https://realrendering.synology.me/drive/d/s/14wx90mCtrMbNp8yXol9kQP6Zw357cbI/P5ijfVbOr--iVOReoflmV2X90TD6zTxR-krlAGRD7kww),-
+KL1,Upper Prince,One KL Development Limited One KL II Development Limited One KL III Development Limite,F:/KL1,https://realrendering.synology.me/drive/d/s/zr5I9N3OZmtMzBZbrcT6Tnj2vcPGKfT1/2aUx2zvoKKl4BTr7gIOOlJMZxb1-05yb-A71gObaRnws,-,"[]",[Share Link](https://realrendering.synology.me/drive/d/s/zr5I9N3OZmtMzBZbrcT6Tnj2vcPGKfT1/2aUx2zvoKKl4BTr7gIOOlJMZxb1-05yb-A71gObaRnws),-
+MLS,Unknown,Unknown,F:/MLS,-,-,"[]",-,-
+MTC,-,Unknown,F:/MTC,https://realrendering.synology.me/drive/d/s/12wdTTdSY0A87VfGJuHwver1AKTKcTNd/e2N8qTJgZMTZmOmNo7eaTve7dxSNOHR-N7FArEp-Mww,-,"[]",[Share Link](https://realrendering.synology.me/drive/d/s/12wdTTdSY0A87VfGJuHwver1AKTKcTNd/e2N8qTJgZMTZmOmNo7eaTve7dxSNOHR-N7FArEp-Mww),-
+MWR,PROPOSED COMPOSITE REDEVELOPMENT AT,New Merit Limited(WOP),F:/MWR mawo road,https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWefdGVfX-T7mAKhjR-Ao,-,"[]",[Share Link](https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWefdGVfX-T7mAKhjR-Ao),-
+PLS,PLS,NewMeritLimited,F:/PLS,https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWe_fdGVfX-T7mAKhjR-Ao,-,"[]",[Share Link](https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWe_fdGVfX-T7mAKhjR-Ao),-
+YKS,Unknown,Unknown,F:/YKS,,-,"[]",-,```

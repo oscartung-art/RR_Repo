@@ -1,77 +1,70 @@
-import json
 import os
 import sys
+import re
 
-# Paths
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECTS_JSON_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, "../projects.json"))
-MIGRATION_OUTPUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../scratch/migration_output"))
+PROJECTS_DIR = r"D:\GoogleDrive\RR_Repo\projects"
 
-def load_projects():
-    if not os.path.exists(PROJECTS_JSON_PATH):
-        print(f"Error: {PROJECTS_JSON_PATH} not found. Please run tools/migrate_db.py first.")
-        return []
-    with open(PROJECTS_JSON_PATH, "r") as f:
-        return json.load(f)
-
-def get_project_meta(project):
-    # Try looking in the project's own folder first (on F:)
-    if project.get("path"):
-        meta_path = os.path.join(project["path"], "_project_meta.json")
-        if os.path.exists(meta_path):
-            with open(meta_path, "r") as f:
-                return json.load(f)
-
-    # Fallback to migration output for non-deployed metadata
-    meta_path = os.path.join(MIGRATION_OUTPUT_DIR, project["code"], "_project_meta.json")
-    if os.path.exists(meta_path):
-        with open(meta_path, "r") as f:
-            return json.load(f)
-    return None
-
-def find_project(query):
-    projects = load_projects()
-    results = [p for p in projects if query.lower() in p["code"].lower() or query.lower() in p["name"].lower() or query.lower() in p["client"].lower()]
-    return results
+def parse_yaml(filepath):
+    """Simple parser to get top-level keys from YAML front matter."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    match = re.search(r'^---\s*\n(.*?)\n---\s*', content, re.DOTALL | re.MULTILINE)
+    if not match:
+        return None
+    
+    yaml_text = match.group(1)
+    data = {}
+    for line in yaml_text.splitlines():
+        line = line.split('#')[0] # Remove comments
+        if not line.strip(): continue
+        if ':' in line and not line[0].isspace():
+            key, val = line.split(':', 1)
+            val = val.strip().strip("'\"")
+            data[key.strip()] = val
+    return data
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python tools/lookup.py <query>")
+        print("Usage: python tools/lookup.py <PROJECT_CODE>")
         print("Example: python tools/lookup.py PLS")
         sys.exit(1)
 
-    query = sys.argv[1]
-    results = find_project(query)
+    code = sys.argv[1].upper()
+    filename = f"{code}.md"
+    filepath = os.path.join(PROJECTS_DIR, filename)
 
-    if not results:
-        print(f"No projects found matching '{query}'.")
+    if not os.path.exists(filepath):
+        # Try a partial search if exact code doesn't exist
+        print(f"Project '{code}' not found exactly. Searching...")
+        matches = [f for f in os.listdir(PROJECTS_DIR) if code.lower() in f.lower()]
+        if not matches:
+            print("No matching projects found.")
+            return
+        filename = matches[0]
+        filepath = os.path.join(PROJECTS_DIR, filename)
+        print(f"Found closest match: {filename}\n")
+
+    data = parse_yaml(filepath)
+    if not data:
+        print(f"Error: Could not parse metadata for {filename}")
         return
 
-    for p in results:
-        print(f"\n--- Project: {p['code']} ---")
-        print(f"Name:   {p['name']}")
-        print(f"Client: {p['client']}")
-        print(f"Path:   {p['path']}")
-        
-        meta = get_project_meta(p)
-        if meta:
-            print("\n  [Site Info]")
-            for k, v in meta.get("project_info", {}).items():
-                if v and v != "-":
-                    print(f"    {k}: {v}")
-            
-            print("\n  [Share Links]")
-            for k, v in meta.get("links", {}).items():
-                if v and v != "-":
-                    print(f"    {k}: {v}")
-            
-            if meta.get("gis") and any(v != "-" for v in meta["gis"].values()):
-                print("\n  [GIS Data]")
-                for k, v in meta["gis"].items():
-                    if v and v != "-":
-                        print(f"    {k}: {v}")
-        else:
-            print("\n  (Detailed metadata not found)")
+    # Beautiful Terminal Output
+    print("=" * 50)
+    print(f"???  PROJECT INSPECTOR: {data.get('code', code)}")
+    print("=" * 50)
+    print(f"{'NAME:':<15} {data.get('name', '-')}")
+    print(f"{'CLIENT:':<15} {data.get('client', '-')}")
+    print(f"{'STATUS:':<15} {data.get('status', 'Unknown')}")
+    print(f"{'LAST UPDATED:':<15} {data.get('last_updated', '-')}")
+    print("-" * 50)
+    print(f"{'F: DRIVE:':<15} {data.get('f_drive_path', '-')}")
+    
+    # Check for site info (simplified for the script)
+    print("-" * 50)
+    print(f"?? VS CODE CMD:  Ctrl+P -> {filename}")
+    print("=" * 50)
 
 if __name__ == "__main__":
     main()
