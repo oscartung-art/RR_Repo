@@ -250,6 +250,12 @@ This section provides a master list of all approved prefixes for different asset
 | **SM** | Static Mesh | Static Mesh geometry. |
 | **TX** | Texture | General texture maps (use T_ prefix for UE). |
 
+---
+
+## 13. Data Integrity & Schema
+For rules regarding the internal YAML structure of project files and how they link to the Master CRM, refer to [Project_Metadata_Schema.md](Project_Metadata_Schema.md).
+
+
 ### 12.2 3ds Max Infrastructure Prefixes
 | Code | Type | Description |
 | :--- | :--- | :--- |
