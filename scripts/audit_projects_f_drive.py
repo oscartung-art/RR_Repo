@@ -1,4 +1,4 @@
-'''import os
+import os
 import re
 
 F_DRIVE_PATH = r"F:"
@@ -68,4 +68,4 @@ def run_audit():
     print(f"✅ Project audit complete. Report saved to: {report_file_path}")
 
 if __name__ == "__main__":
-    run_audit()''
+    run_audit()
