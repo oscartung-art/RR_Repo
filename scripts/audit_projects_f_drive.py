@@ -41,29 +41,26 @@ def run_audit():
     report_lines.append("") # Empty string for newline after run date
 
     if missing_from_index:
-        report_lines.append("## ❌ Projects on F:\ Drive but NOT in index.md (Missing from Dashboard Linkage)")
+        report_lines.append("## ❌ Projects on F:/Drive but NOT in index.md (Missing from Dashboard Linkage)")
         for project in sorted(list(missing_from_index)):
             report_lines.append(f"- {project}")
     else:
-        report_lines.append("## ✅ All F:\ Drive projects are linked in index.md")
+        report_lines.append("## ✅ All F:/Drive projects are linked in index.md")
 
-    report_lines.append("
----
-") # Separator
+    report_lines.append("\n---\n")  # Separator
 
     if not_found_on_f_drive:
-        report_lines.append("## ⚠️ Projects in index.md but NOT on F:\ Drive (Or Name Mismatch)")
+        report_lines.append("## ⚠️ Projects in index.md but NOT on F:/Drive (Or Name Mismatch)")
         for project in sorted(list(not_found_on_f_drive)):
-            report_lines.append(f"- {project} (Consider renaming on F:\ or removing from index.md)")
+            report_lines.append(f"- {project} (Consider renaming on F:/ or removing from index.md)")
     else:
-        report_lines.append("## ✅ All indexed projects are present on F:\ Drive (by name)")
+        report_lines.append("## ✅ All indexed projects are present on F:/Drive (by name)")
 
     # Output the report to a markdown file in the scratch directory
     report_file_path = os.path.join(REPO_PATH, "scratch", "project_audit_report.md")
     os.makedirs(os.path.dirname(report_file_path), exist_ok=True)
     with open(report_file_path, "w", encoding="utf-8") as f:
-        f.write("
-".join(report_lines))
+        f.write("\n".join(report_lines))
 
     print(f"✅ Project audit complete. Report saved to: {report_file_path}")
 

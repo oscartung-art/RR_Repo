@@ -22,7 +22,7 @@ def check_for_duplicates(file_hash, master_index_path):
     """Checks if a file hash already exists in the master asset index."""
     if not os.path.exists(master_index_path):
         return False
-\    with open(master_index_path, 'r', newline='', encoding='utf-8') as f:
+    with open(master_index_path, 'r', newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row.get("ID") == file_hash: # Assuming ID column stores the hash

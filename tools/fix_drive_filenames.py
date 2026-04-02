@@ -2,6 +2,7 @@
 fix_drive_filenames.py — Fix filename typos in Google Drive:
 1. Remove '#' from designconnected filenames
 2. Remove trailing space from Wparallax filename
+"""
 import json
 import subprocess
 import time
@@ -32,8 +33,6 @@ DRIVE_INDEX_PATH = os.path.join("db", "drive_all_files_index.json")
 
 def get_file_id(path, drive_index):
     """Get file ID from the drive index."""
-    # ... (remains same)
-
     info = drive_index.get(path)
     if info:
         return info["id"]
