@@ -56,11 +56,9 @@ def main():
     parser.add_argument("project_code", help="The unique project code (e.g., KIL115).")
     args = parser.parse_args()
 
-    print(f"
-Initializing project: {args.project_code}...")
+    print(f"Initializing project: {args.project_code}...")
     initialize_project(args.project_code)
-    print("
-Project initialization complete.")
+    print("Project initialization complete.")
 
 
 if __name__ == "__main__":
