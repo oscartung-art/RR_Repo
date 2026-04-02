@@ -52,6 +52,9 @@ case "$COMMAND" in
     c|copy)
         python "$REPO_DIR/tools/copy_data.py" "$@"
         ;;
+    find)
+        python "$REPO_DIR/scripts/find_asset.py" "$@"
+        ;;
     *)
         echo -e "\033[91mUnknown command: '$COMMAND'\033[0m"
         echo -e "Run 'rr help' to see available commands."

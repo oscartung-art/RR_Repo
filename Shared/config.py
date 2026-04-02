@@ -25,7 +25,7 @@ SYNC_ROOT = Path("D:/GoogleDrive")
 PROJECT_ROOT = Path("F:/Projects")
 
 # G:\ — 3D asset archives on NAS
-ASSET_ROOT = Path("G:/Assets")
+ASSET_ROOT = Path("G:/")
 
 # ---------------------------------------------------------------------------
 # Google Sheets IDs

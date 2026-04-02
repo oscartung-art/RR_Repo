@@ -1,0 +1,28 @@
+# Usage: /clean [path]
+# Default (no args): scans entire D:/GoogleDrive/RR_Repo
+# Examples:
+#   /clean tools/
+#   /clean scripts/
+#   /clean D:/GoogleDrive/RR_Repo
+
+description = "Deep cleanup of redundant files, dead code, and stale documentation."
+prompt = """
+Perform a deep scan of: {{args}}
+If no path is provided, scan the entire repo at D:/GoogleDrive/RR_Repo.
+
+1. **Files**: Identify and flag:
+   - Temp files (names starting with ~$ or ending in .tmp)
+   - Redundant thumbnails or preview files
+   - Old versioned files not following Linear Versioning (e.g. file_v1_OLD.py, file_BACKUP.md)
+
+2. **Code**: Read all Python scripts in the path. Flag:
+   - Dead functions (defined but never called within the repo)
+   - Unused imports
+   - Logic that duplicates existing commands in `tools/rr/` (cmd_p, cmd_dash, cmd_log, cmd_crm, cmd_open, cmd_c)
+   - Hardcoded paths that should use `Shared/config.py`
+
+3. **Docs**: Flag any standalone `.md` files whose full content has already been consolidated into `gemini.md`.
+
+4. **Action**: Output a 'Purge & Refactor' table with columns: File | Type | Reason | Action (Delete / Archive / Refactor).
+   Do NOT execute any delete or move operations until the user explicitly confirms.
+"""

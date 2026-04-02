@@ -191,3 +191,5 @@ links:
 - **2026-03-16**: Variation Order (VO) for additional animation and rendering sent to Candy Mak.
 
 This section contains the free-form narrative, meeting notes, project briefs, and any other non-structured information for the PLS project.
+<!-- LOG 2026-03-31 09:48 -->
+<!-- Test log entry from rr CLI -->

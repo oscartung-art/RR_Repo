@@ -1,0 +1,28 @@
+# Usage: /audit [path]
+# Examples:
+#   /audit tools/
+#   /audit scripts/
+#   /audit projects/PLS.md
+#   /audit D:/GoogleDrive/RR_Repo
+
+description = "Audits a path for naming errors, hardcoded paths, script logic flaws, and document neatness."
+prompt = """
+Before starting, re-read the Naming Conventions section of `gemini.md` to load all casing and singular-noun rules.
+
+Audit the following path: {{args}}
+
+1. **Naming**: Run !{python scripts/audit_assets.py "{{args}}"} to check file and folder naming conventions.
+   If the script is unavailable, manually check all names against the Naming Conventions section of `gemini.md`.
+
+2. **Logic**: Read each Python script in the path. Flag any:
+   - Hardcoded drive paths (e.g. `D:/`, `F:/`) that should use `Shared/config.py` constants instead
+   - Missing `from Shared.config import ...` imports
+   - Duplicate logic that already exists in `tools/rr/`
+
+3. **Neatness**: Review all `.md` files in the path. Flag any:
+   - Plural folder/section names (should be singular per naming conventions)
+   - Conversational or chat-style text (docs must be structured data only)
+   - Sections already consolidated into `gemini.md` that can be removed
+
+4. **Plan**: Output a prioritized refactor table with columns: File | Issue | Severity | Recommended Fix
+"""

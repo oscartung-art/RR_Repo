@@ -1,0 +1,12 @@
+# RR_Repo Python Dependencies
+# Install with: pip install -r requirements.txt
+# All packages are from the Python standard library except where noted.
+#
+# Standard library modules used (no install needed):
+#   os, sys, re, csv, argparse, pathlib, datetime, subprocess
+#
+# Optional: install if using Google Sheets integration
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client

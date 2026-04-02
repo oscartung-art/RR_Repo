@@ -1,0 +1,26 @@
+# Usage: /ingest [raw text | file path | paste content]
+# Examples:
+#   /ingest "Client Oscar called, wants R04 by Friday. Project PLS."
+#   /ingest db/inbox.md
+#   /ingest "New contact: John Lam, john@example.com, ABC Ltd"
+
+description = "Analyzes raw input and routes it to gemini.md, a project file, or the CRM database."
+prompt = """
+Before doing anything, re-read `gemini.md` Sections 8 and 9 (Project YAML Schema and CRM Protocol).
+
+Analyze the following input: {{args}}
+
+1. **Categorize**: Determine which category this input belongs to:
+   - Studio Knowledge (rules, SOPs, decisions) -> update `gemini.md`
+   - Project Metadata (status, contacts, links, deliverables) -> update `projects/[CODE].md` YAML front matter
+   - CRM / Contact Data (name, email, organization) -> append to `db/Master_CRM.csv`
+   - Asset (file to ingest) -> run !{python tools/ingest_asset.py "{{args}}"}
+
+2. **Propose**: Show a Markdown table of all proposed changes with columns: File | Field | Old Value | New Value.
+
+3. **Confirm**: Wait for explicit user confirmation (yes/no) before writing anything.
+
+4. **Execute**: Apply confirmed changes only.
+
+5. **Report**: Show a final summary of what was updated.
+"""
