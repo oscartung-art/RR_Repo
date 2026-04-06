@@ -16,7 +16,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 # D:\ — Google Drive mirror (Brain & Project Spine)
-BRAIN_ROOT = Path("D:/GoogleDrive/RR_Repo")
+BRAIN_ROOT = Path("D:/RR_Repo")
 
 # Alias for scripts that reference the sync layer directly
 SYNC_ROOT = Path("D:/GoogleDrive")

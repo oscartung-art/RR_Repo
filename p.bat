@@ -1,1 +1,1 @@
-@python %~dp0tools\lookup.py %*
+@python %~dp0tools\rr.py p %*

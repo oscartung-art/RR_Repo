@@ -42,7 +42,7 @@ def get_gemini_client():
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("ERROR: GEMINI_API_KEY environment variable is not set.")
-        print("Example: export GEMINI_API_KEY=AIzaSyCzv4KeuAPgPoBKUvzhK3gxrP78ldcpdIQ")
+        print("Example: export GEMINI_API_KEY=<your-gemini-api-key>")
         exit(1)
     return genai.Client(api_key=api_key)
 

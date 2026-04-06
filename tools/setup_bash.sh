@@ -5,7 +5,7 @@
 # Usage (from repo root in Git Bash):
 #   bash tools/setup_bash.sh
 
-REPO_ROOT="D:/GoogleDrive/RR_Repo"
+REPO_ROOT="D:/RR_Repo"
 BASHRC="$HOME/.bashrc"
 VENV_ACTIVATE="$REPO_ROOT/.venv/Scripts/activate"
 

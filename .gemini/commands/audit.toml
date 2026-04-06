@@ -3,7 +3,7 @@
 #   /audit tools/
 #   /audit scripts/
 #   /audit projects/PLS.md
-#   /audit D:/GoogleDrive/RR_Repo
+#   /audit D:/RR_Repo
 
 description = "Audits a path for naming errors, hardcoded paths, script logic flaws, and document neatness."
 prompt = """

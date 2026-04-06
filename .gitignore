@@ -67,6 +67,14 @@ venv.bak/
 .vscode/tasks.json
 .vscode/launch.json
 
+# .NET / Visual Studio generated artifacts
+**/bin/
+**/obj/
+*.suo
+*.user
+*.pdb
+*.exe
+
 # Secrets
 /Shared/credentials.json
 /Shared/service-account.json

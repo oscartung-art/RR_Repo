@@ -7,11 +7,7 @@
 
 ## 0. Inbox
 
-This portion is for copy and paste, gemini will clean and fit content automatically
-
-Metadata Hydration Protocol:
-Do not attempt to encode "Facts" (Brand, Designer, Price) into the visual vector. Use the 4090 to generate the Visual Vector (The "What"), and use Python/Pandas logic to populate Metadata Columns (The "Who/Where") based on folder paths or source URLs.
-Search Logic: Always prioritize Metadata Filters (SQL) before applying Vector Similarity (AI) to ensure 100% accuracy for known brands.
+This portion is for copy and paste, clean and fit content automatically.
 
 ## 1. Core Architecture (The Mirror System)
 
@@ -21,12 +17,12 @@ The project is split across three distinct storage zones to balance speed, stora
 | :--- | :--- | :--- | :--- |
 | **The Brain** | `D:\GoogleDrive\RR_Repo\` | Scripts, SOPs, Tasks, CRM, DB | Mirrored to Cloud. AI context anchor. |
 | **Project Mass** | `F:\` | 3ds Max, Unreal, Renders | High-speed local NAS. No cloud sync. |
-| **Asset Mass** | `G:\` | 3D Library, Textures, HDRI | Indexed via `_index.csv`. Read-only repo. |
+| **Asset Mass** | `G:\` | 3D Library, Textures, HDRI | Indexed via `_index.parquet` and sidecar metadata. |
 
 - **Local Path:** `D:\GoogleDrive\RR_Repo` — same on Desktop and Notebook via Google Drive for Desktop.
 - **Shared Python Module:** `Shared/config.py` — Pathlib-based constants for all drive roots.
 - **Shared YAML Parser:** `Shared/frontmatter.py` — single authoritative parser for all project `.md` files.
-- GitHub is **not used**. No `git push` required. Google Drive mirrors automatically.
+- Primary sync is Google Drive for Desktop. Git can still be used for version control when needed.
 
 ---
 
@@ -35,18 +31,23 @@ The project is split across three distinct storage zones to balance speed, stora
 ```text
 D:\GoogleDrive\RR_Repo
 ├── gemini.md              <- Single brain (this file)
-├── docs/                  <- SOPs, guides, naming conventions (reference only — brain is here)
-├── logs/                  <- Log files (action_log.md, brain_dump.md, inbox.md)
-├── projects/              <- Per-project .md files with YAML front matter
+├── Active_Projects.md     <- Canonical project dashboard
+├── inbox.md               <- Raw inbox capture (to be processed)
+├── rr / p.bat             <- CLI entry points (Bash / Windows)
+├── .env.example           <- API key template (safe to commit)
 ├── Shared/                <- Shared Python package
 │   ├── __init__.py
 │   ├── config.py          <- Centralized path constants
 │   └── frontmatter.py     <- Shared YAML front matter parser
-├── pipeline/              <- Asset enrichment scripts
 ├── tools/                 <- rr CLI commands and user-facing scripts
+│   └── rr/                <- rr subcommand package (cmd_p, cmd_dash, etc.)
 ├── scripts/               <- Background/maintenance automation (audits, syncs)
-├── quotes/                <- Client quotations (Markdown source, PDF output)
-├── db/                    <- Project_Master_Index.csv, Master_CRM.csv
+├── pipeline/              <- Asset enrichment scripts
+├── projects/              <- Per-project .md files with YAML front matter
+├── db/                    <- Local data stores (Master_CRM.csv, projects.json)
+├── log/                   <- Logs, notes, orphan reports
+├── ipc/                   <- Everything Search SDK (DLL, header, examples)
+├── example/quotes/        <- Sample client quotations (automation prototyping)
 ├── archive/               <- Cancelled or superseded scripts and docs
 └── scratch/               <- Exploratory / legacy scripts
 ```
@@ -55,11 +56,11 @@ D:\GoogleDrive\RR_Repo
 
 ## 3. Executive Functions
 
-- **Memory Capture:** Use `logs/brain_dump.md` or `logs/inbox.md` for rapid thought capture. Say *"Log to inbox: [text]"* to append a row with today's date and status `Unfiled`.
-- **Consistency Audits:** Run `python scripts/audit_assets.py [path]` periodically on `G:\Assets` and active projects to ensure naming compliance.
-- **Project Setup:** Use `rr new --code [CODE] --name [Name] --client [Client]` (or `python tools/init_project.py`) for all new commissions.
+- **Memory Capture:** Use `log/brain_dump.md` or `inbox.md` for rapid thought capture. Say *"Log to inbox: [text]"* to append a row with today's date and status `Unfiled`.
+- **Consistency Audits:** Run `python tools/audit_assets.py [path]` periodically on `G:\Assets` and active projects to ensure naming compliance.
+- **Project Setup:** Use `python tools/init_project.py` (or `python tools/new_project.py`) for new commissions.
 - **Proactive Maintenance:** Gemini CLI updates `gemini.md` automatically when new preferences or tools are discovered. Fixes hardcoded paths.
-- **Task Tracking:** Active tasks are manually pasted into `logs/action_log.md`. Use the Minimalist table format.
+- **Task Tracking:** Active tasks are manually pasted into `log/action_log.md`. Use the Minimalist table format.
 - **Cancellation Rule:** When any system, tool, or workflow is cancelled, the agent MUST remove it from code, delete related files, and wipe all references from documentation.
 - **File Write Safety:** Always perform a `read_file` on `gemini.md` before writing (Read-Modify-Write protocol).
 
@@ -115,7 +116,7 @@ source ~/.bashrc
 
 ### 5.2 Core Principles
 - **Context determines case.** Use the table above — do not guess.
-- **Always singular.** Folder names are singular (e.g., `tool/`, not `tools/`).
+- **Prefer consistency over blanket rules.** Keep existing repository folder names stable (`tools/`, `scripts/`, `projects/`).
 - **No spaces in any filename or folder name.**
 
 ### 5.3 The "No-Break" Rules (ZIP Extraction & Safe Renaming)
@@ -173,17 +174,28 @@ Similarity is calculated via Cosine Similarity between query vector and stored v
 
 ### Operational Workflow
 
-**Step A — Audit (`scripts/audit_library.py`):** Run before any indexing. Identifies Orphans (models without thumbnails) and Ghosts (thumbnails without models). No asset enters the index until it is a valid Pair.
+**Step A — Audit (`tools/audit_assets.py`):** Run before any indexing. Identifies Orphans (models without thumbnails) and Ghosts (thumbnails without models). No asset enters the index until it is a valid Pair.
 
-**Step B — Index (`scripts/index_assets.py`):** Batch-processes all thumbnails into `_index.parquet` using the RTX 4090. Incremental mode: only processes new or modified files.
+**Step B — Index (`scripts/index_master.py`):** Batch-processes thumbnails into `_index.parquet` using the RTX 4090. Incremental mode: only processes new or modified files.
 
-**Step C — Find (`scripts/find_asset.py`):** Primary retrieval interface.
+**Step C — Find (`scripts/search_clip_text.py`):** Primary retrieval interface.
 - Terminal: `rr find "Modern Eames Chair"` or `rr find "G:/ref/client_photo.jpg"`
 - Generates a temporary EFU file and opens Everything Search visually.
 
 ### Coffee Shop Mode (Mobile)
 
 Copy `_index.parquet` + the 4.5 GB CLIP model to the notebook. Text-to-vector runs on notebook CPU. Search across 40,000+ records remains instantaneous. Identify the asset path locally; fetch the actual `.zip` on return to studio.
+
+### Policy
+
+#### Metadata Hydration Protocol
+- Do not encode Facts (Brand, Designer, Price) into the visual vector.
+- Use the 4090 to generate the Visual Vector (the What).
+- Use Python/Pandas logic to populate Metadata Columns (the Who/Where) from folder paths or source URLs.
+
+#### Search Logic
+- Always apply Metadata Filters (SQL/structured columns) before Vector Similarity (AI).
+- For known brands, metadata-first retrieval is mandatory to preserve 100% factual accuracy.
 
 ### Deprecated (Stop Doing These)
 
@@ -284,7 +296,7 @@ Camera naming in Outliner: `[ID]_[Description]` (e.g., `R07_GFLobbyGreen`)
 
 ## 11. Action Log Status Tags
 
-Used in `logs/action_log.md`. No other tags permitted.
+Used in `log/action_log.md`. No other tags permitted.
 
 | Tag | Meaning |
 | :--- | :--- |
@@ -356,23 +368,23 @@ Content/
 
 ## 15. Strategic Workflows
 
-1. **Asset Ingest:** New downloads → `ingest_asset.py` → rename, hash for duplicates, move to `G:\`.
-2. **Asset Sync:** `sync_assets.py` → scan `G:\`, maintain `_index.csv`, mirror thumbnails to `D:\`.
-3. **EFU Export:** `export_efu.py` → export `_index.csv` to `.efu` for Everything Search. *(On hold — needs `_index.csv` first)*
-4. **Project Init:** `rr new` / `tools/init_project.py` → scaffold F: folder + create `projects/[CODE].md`.
-5. **Quotations:** Markdown source in `quotes/` → exported to PDF via script. Status tracked in project `.md`.
+1. **Asset Ingest:** New downloads → `tools/ingest_asset.py` → rename, hash for duplicates, move to `G:\`.
+2. **Asset Sync:** `tools/sync_assets.py` → scan `G:\`, maintain `_index.parquet`, mirror/update metadata artifacts.
+3. **Tag Export:** `scripts/tag_assets.py` → write `.metadata.efu` sidecars for Everything Search ratings/vendor/category.
+4. **Project Init:** `tools/init_project.py` or `tools/new_project.py` → scaffold F: folder + create `projects/[CODE].md`.
+5. **Quotations:** Sample markdown source in `example/quotes/` for ingestion/automation prototyping.
 6. **Secrets:** API/local secrets in `.env` (excluded from sync). Passwords in Google Password Manager.
-7. **Inbox Processing:** Paste raw client text (WhatsApp, email) into `logs/inbox.md`. Ask AI to process and extract tasks.
+7. **Inbox Processing:** Paste raw client text (WhatsApp, email) into `inbox.md`. Ask AI to process and extract tasks.
 
 ---
 
 ## 16. Key Automation Goals (Phase 1)
 
-- [ ] **`sync_assets.py`** — Scan G:\, maintain `_index.csv`, mirror thumbnails to D:\. *(Prerequisite for EFU export)*
-- [ ] **`ingest_asset.py`** — Normalization Station: rename, hash, move to G:\.
-- [ ] **`init_project.py`** — Generate standard project folder on F:\ with `CHANGELOG.md`.
-- [ ] **`export_efu.py`** — Export `_index.csv` to `.efu` for Everything Search. *(On hold)*
-- [ ] **`unreal_cleanup.py`** — Automate Unreal Engine Flat & Singular asset structure.
+- [ ] **`tools/sync_assets.py`** — Scan G:\ and keep index/metadata current.
+- [ ] **`tools/ingest_asset.py`** — Normalization Station: rename, hash, move to G:\.
+- [ ] **`tools/init_project.py`** — Generate standard project folder on F:\ with `CHANGELOG.md`.
+- [ ] **`scripts/tag_assets.py`** — Continue hardening EFU sidecar generation for Everything workflow.
+- [ ] **`tools/unreal_cleanup.py`** — Automate Unreal Engine Flat & Singular asset structure.
 
 ---
 
@@ -380,9 +392,10 @@ Content/
 
 > **"You are my Studio Manager. My UI is raw Markdown. When a new project starts:**
 > 1. Create `projects/[CODE].md` with the standard YAML front matter (Section 8).
-> 2. Run `rr new --code [CODE] --name [Name] --client [Client]` to scaffold the F: drive folder.
+> 2. Run `python tools/init_project.py` (or `python tools/new_project.py`) to scaffold the F: drive folder.
 > 3. Use standard Markdown links `[Title](path)`, **NOT** Wikilinks `[[Title]]`.
-> 4. Keep text aligned and tidy using whitespace."
+> 4. Keep text aligned and tidy using whitespace.
+> 5. Always include a README file with generated code. The README must explain the purpose of the code and provide clear instructions on how to run it."
 
 **AI Knowledge Management Rules:**
 1. **Overwrite, do not append** — read the existing file, synthesize new decisions, rewrite cleanly.
@@ -395,7 +408,7 @@ Content/
 ## 18. Technical Stack
 
 - **Automation:** Python 3.9+, Unreal Engine Python API
-- **Search:** Everything Search (VoidTools) indexing `_index.csv`
+- **Search:** Everything Search (VoidTools) + `_index.parquet` + `.metadata.efu` sidecars
 - **Documentation:** Markdown (VS Code / Gemini) — raw, no extensions
 - **Visualization:** Text-based ASCII flowcharts and structured Markdown tables (no Mermaid.js)
 - **AI Agents:** Gemini Web (discussion) → Gemini CLI (local execution) → Manus (heavy lifting)

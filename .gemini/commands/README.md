@@ -53,7 +53,7 @@ For full usage, refer to this file or read the individual `.toml` files directly
 /audit tools/
 /audit scripts/
 /audit projects/PLS.md
-/audit D:/GoogleDrive/RR_Repo
+/audit D:/RR_Repo
 ```
 
 **Checks Performed:**
@@ -76,13 +76,13 @@ For full usage, refer to this file or read the individual `.toml` files directly
 ```
 /clean [path]
 ```
-If no path is given, scans the entire `D:/GoogleDrive/RR_Repo`.
+If no path is given, scans the entire `D:/RR_Repo`.
 
 **Examples:**
 ```
 /clean tools/
 /clean scripts/
-/clean D:/GoogleDrive/RR_Repo
+/clean D:/RR_Repo
 ```
 
 **Scan Targets:**

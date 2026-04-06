@@ -6,7 +6,7 @@ This file is the Bash alias target. It is intentionally thin:
 all command logic lives in tools/rr/cmd_*.py
 
 Bash alias (added by setup_bash.sh):
-    rr() { python "D:/GoogleDrive/RR_Repo/tools/rr.py" "$@"; }
+    rr() { python "D:/RR_Repo/tools/rr.py" "$@"; }
 
 Usage:
     rr help [command]

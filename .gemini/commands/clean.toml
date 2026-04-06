@@ -1,14 +1,14 @@
 # Usage: /clean [path]
-# Default (no args): scans entire D:/GoogleDrive/RR_Repo
+# Default (no args): scans entire D:/RR_Repo
 # Examples:
 #   /clean tools/
 #   /clean scripts/
-#   /clean D:/GoogleDrive/RR_Repo
+#   /clean D:/RR_Repo
 
 description = "Deep cleanup of redundant files, dead code, and stale documentation."
 prompt = """
 Perform a deep scan of: {{args}}
-If no path is provided, scan the entire repo at D:/GoogleDrive/RR_Repo.
+If no path is provided, scan the entire repo at D:/RR_Repo.
 
 1. **Files**: Identify and flag:
    - Temp files (names starting with ~$ or ending in .tmp)

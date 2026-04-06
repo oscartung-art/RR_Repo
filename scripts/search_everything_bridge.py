@@ -8,7 +8,7 @@ import numpy as np
 import open_clip
 import pandas as pd
 import torch
-import win32clipboard
+import pyperclip
 import winsound
 
 # --- CONFIG ---
@@ -18,13 +18,12 @@ PRETRAINED = 'openai'
 MATCH_THRESHOLD = 0.22  # Raised for higher confidence, fewer false positives
 TOP_K = 30
 QUERY_PREFIX = os.environ.get("RR_BRIDGE_PREFIX", "").strip()
-QUERY_STABLE_SECONDS = float(os.environ.get("RR_QUERY_STABLE_SECONDS", "0.35"))
+if not QUERY_PREFIX:
+    QUERY_PREFIX = "vibe:"
 
 user32 = ctypes.windll.user32
 
-WM_GETTEXT = 0x000D
-WM_GETTEXTLENGTH = 0x000E
-VK_RETURN = 0x0D
+WM_SETTEXT = 0x000C
 
 
 def candidate_index_paths():
@@ -96,18 +95,6 @@ def _get_window_text(hwnd):
     return title.value
 
 
-def _read_control_text(hwnd):
-    if not hwnd:
-        return None
-    length = user32.SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0)
-    if length <= 0:
-        return None
-    buf = ctypes.create_unicode_buffer(length + 1)
-    user32.SendMessageW(hwnd, WM_GETTEXT, length + 1, buf)
-    text = buf.value.strip()
-    return text or None
-
-
 def _find_everything_windows():
     hwnds = []
 
@@ -139,25 +126,8 @@ def _find_search_edit_handle(everything_hwnd):
     return None
 
 
-def get_everything_text():
-    """Read current query text from Everything, preferring foreground window then fallback scan."""
-    hwnd = user32.GetForegroundWindow()
-    if hwnd:
-        cls = _get_window_class(hwnd).upper()
-        if "EVERYTHING" in cls:
-            text = _read_control_text(_find_search_edit_handle(hwnd))
-            if text:
-                return text
-
-    for everything_hwnd in _find_everything_windows():
-        text = _read_control_text(_find_search_edit_handle(everything_hwnd))
-        if text:
-            return text
-    return None
-
-
 def extract_query(text):
-    """Extract query from Everything text using optional prefix routing."""
+    """Extract query from clipboard text using prefix routing."""
     if not text:
         return None
 
@@ -165,7 +135,6 @@ def extract_query(text):
     if not stripped:
         return None
 
-    # Prefix mode: set RR_BRIDGE_PREFIX=vibe: to only process prefixed commands.
     if QUERY_PREFIX:
         prefix_pattern = re.escape(QUERY_PREFIX)
         match = re.match(rf"^\s*{prefix_pattern}\s*(.+?)\s*$", stripped, flags=re.IGNORECASE)
@@ -174,28 +143,35 @@ def extract_query(text):
         query = match.group(1).strip()
         return query or None
 
-    # Default mode: any non-empty query in Everything is accepted.
     return stripped
 
 
-def set_clipboard(text):
-    """Safely sets the clipboard for Everything Search."""
-    for _ in range(10):
-        try:
-            win32clipboard.OpenClipboard()
-            try:
-                win32clipboard.EmptyClipboard()
-                win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
-                return
-            finally:
-                win32clipboard.CloseClipboard()
-        except Exception:
-            time.sleep(0.05)
-    raise RuntimeError("Clipboard is busy. Could not write search query.")
+def push_query_to_everything(search_string):
+    """Inject generated query into Everything search box and refresh."""
+    hwnds = _find_everything_windows()
+    if not hwnds:
+        return False
+
+    hwnd = hwnds[0]
+    user32.SetForegroundWindow(hwnd)
+    time.sleep(0.05)
+
+    edit_hwnd = _find_search_edit_handle(hwnd)
+    if not edit_hwnd:
+        return False
+
+    user32.SendMessageW(edit_hwnd, WM_SETTEXT, 0, ctypes.c_wchar_p(search_string))
+    time.sleep(0.05)
+
+    VK_F5 = 0x74
+    KEYEVENTF_KEYUP = 0x0002
+    user32.keybd_event(VK_F5, 0, 0, 0)
+    user32.keybd_event(VK_F5, 0, KEYEVENTF_KEYUP, 0)
+    return True
 
 
 def run_bridge():
-    print("VIBE BRIDGE STARTING...")
+    print("VIBE BRIDGE STARTING (clipboard mode)...")
 
     index_path = resolve_index_path()
     if not index_path:
@@ -214,68 +190,56 @@ def run_bridge():
     df, asset_vectors = load_and_prepare_index(index_path)
     print(f"Loaded {len(df)} assets.")
 
-    if QUERY_PREFIX:
-        print(f"Listening in prefix mode: '{QUERY_PREFIX} <query>'")
-    else:
-        print("Listening in direct mode: type query in Everything and press Enter.")
+    print(f"Watching clipboard for: '{QUERY_PREFIX} <query>'")
+    print("Example: vibe: leather sofa white studio")
 
-    last_query = ""
-    last_seen_text = ""
-    last_change_time = time.time()
-    last_enter_down = False
-    last_probe = 0.0
+    last_clipboard = ""
+    processed_queries = set()
 
     try:
         while True:
-            current_text = get_everything_text()
-            now = time.time()
+            try:
+                current_clipboard = pyperclip.paste().strip()
+            except Exception:
+                time.sleep(0.1)
+                continue
 
-            if current_text != last_seen_text:
-                last_seen_text = current_text or ""
-                last_change_time = now
+            if current_clipboard and current_clipboard != last_clipboard:
+                query = extract_query(current_clipboard)
+                if query and query not in processed_queries:
+                    print(f"Searching for: {query}")
 
-            enter_down = bool(user32.GetAsyncKeyState(VK_RETURN) & 0x8000)
-            enter_pressed = enter_down and not last_enter_down
-            last_enter_down = enter_down
+                    with torch.no_grad():
+                        text_tokens = tokenizer([query]).to(device)
+                        text_features = model.encode_text(text_tokens)
+                        text_features /= text_features.norm(dim=-1, keepdim=True)
+                        query_vector = text_features.cpu().numpy().astype("float32").flatten()
 
-            query = extract_query(current_text)
-            should_process = query and query != last_query and enter_pressed
+                    scores = np.dot(asset_vectors, query_vector)
+                    working_df = df.copy()
+                    working_df["score"] = scores
 
-            if should_process:
-                print(f"Searching for: {query}")
+                    results = (
+                        working_df[working_df["score"] > MATCH_THRESHOLD]
+                        .sort_values("score", ascending=False)
+                        .head(TOP_K)
+                    )
 
-                with torch.no_grad():
-                    text_tokens = tokenizer([query]).to(device)
-                    text_features = model.encode_text(text_tokens)
-                    text_features /= text_features.norm(dim=-1, keepdim=True)
-                    query_vector = text_features.cpu().numpy().astype("float32").flatten()
-
-                scores = np.dot(asset_vectors, query_vector)
-                working_df = df.copy()
-                working_df["score"] = scores
-
-                results = (
-                    working_df[working_df["score"] > MATCH_THRESHOLD]
-                    .sort_values("score", ascending=False)
-                    .head(TOP_K)
-                )
-
-                if results.empty:
-                    print("No matches above threshold.")
-                else:
-                    search_string = build_everything_query(results["path"].tolist())
-                    set_clipboard(search_string)
-                    winsound.MessageBeep(winsound.MB_ICONASTERISK)
-                    print(f"Copied {len(results)} matches to clipboard.")
-
-                last_query = query
-            elif not current_text:
-                if now - last_probe > 5:
-                    if QUERY_PREFIX:
-                        print(f"Waiting for Everything search box... (type '{QUERY_PREFIX} your query')")
+                    if results.empty:
+                        print("No matches above threshold.")
+                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
                     else:
-                        print("Waiting for Everything search box... (type query and press Enter)")
-                    last_probe = now
+                        search_string = build_everything_query(results["path"].tolist())
+                        if push_query_to_everything(search_string):
+                            winsound.MessageBeep(winsound.MB_ICONASTERISK)
+                            print(f"Pushed {len(results)} matches to Everything search.")
+                        else:
+                            winsound.MessageBeep(winsound.MB_ICONHAND)
+                            print("Everything window/search box not found.")
+
+                    processed_queries.add(query)
+
+                last_clipboard = current_clipboard
 
             time.sleep(0.1)
     except KeyboardInterrupt:

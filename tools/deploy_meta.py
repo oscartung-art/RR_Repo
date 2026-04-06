@@ -4,7 +4,7 @@ import shutil
 
 # Paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECTS_JSON_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, "../projects.json"))
+PROJECTS_JSON_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, "../db/projects.json"))
 MIGRATION_OUTPUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "../scratch/migration_output"))
 
 def deploy():

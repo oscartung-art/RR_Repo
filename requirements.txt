@@ -10,3 +10,10 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
+
+# LanceDB Search Stack (search_lancedb_indexer.py, search_clipboard_daemon.py)
+lancedb[embeddings]
+sentence-transformers
+pyperclip
+pywin32
+Pillow

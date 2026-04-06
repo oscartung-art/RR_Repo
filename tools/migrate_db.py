@@ -9,7 +9,7 @@ from collections import defaultdict
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, "../../../Database/ProjectDB.csv"))
 REPO_ROOT = os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
-PROJECTS_JSON_PATH = os.path.join(REPO_ROOT, "projects.json")
+PROJECTS_JSON_PATH = os.path.join(REPO_ROOT, "db", "projects.json")
 PROJECT_MASS_DIR = "F:/" 
 
 KNOWN_CODES = ["PLS", "KL1", "YKS", "MLS", "MWR", "3HG", "CSW", "HWC", "FS3", "GLC", "KIL112", "KR1", "URA"]

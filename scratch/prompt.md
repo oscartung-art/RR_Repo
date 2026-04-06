@@ -63,3 +63,16 @@ take a look at F:\UE 5.6\Content\ and see if you have any suggestions on how to 
 4. Client sent instructions via different channels, email, whatsapp mainly, how can I keep track of all the instructions and make sure I don't miss anything?
 5. quotation management, how can I keep track of all the quotations I have sent, their status (accepted, rejected, pending), and the details of each quotation (client name, project name, amount, etc.)? where should these quotation live? Gh or F: drive? 
 6. I currently use waveapps for manging invoices and payments, but I want to find a better way to integrate it with my storage architecture and workflow. For example, I want to be able to easily access the invoice files and payment records from my NAS or cloud storage, and also link them to the corresponding projects and quotations. Any suggestions on how to do this?
+
+
+I’ll save the current todo state exactly as shown so you can switch tasks without losing it.
+
+Updated todo list
+
+Saved. Your todo list is now persisted with the same state:
+- completed: Read full daemon file (tail)
+- in-progress: Write new search_clipboard_daemon.py
+- not-started: Create search_lancedb_indexer.py
+- not-started: Update requirements.txt
+
+Ready for the next task whenever you are.
