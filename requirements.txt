@@ -14,6 +14,8 @@ google-api-python-client
 # LanceDB Search Stack (search_lancedb_indexer.py, search_clipboard_daemon.py)
 lancedb[embeddings]
 sentence-transformers
+open-clip-torch
+torch
 pyperclip
 pywin32
 Pillow

@@ -1,0 +1,313 @@
+Furniture	!FurnitureName	Category	Color	Brand	Material	Size	-	Form		Location				
+Furniture		SeatingLounger	Lounger					Round						
+Furniture		SeatingArmchair	Armchair											
+Furniture		SeatingBench	Bench											
+Furniture		Seating	Ottoman											
+Furniture		Seating	Recliner											
+Furniture		Seating	RecliningChair											
+Furniture		Seating	Pouf											
+Furniture		Seating	LoungeChair											
+Furniture		Seating	SideChair											
+Furniture		Seating	BarStool											
+Furniture		Seating	Stool											
+Furniture		Seating	MassageChair											
+Furniture		Seating	Divans											
+Furniture		Carpet												
+Furniture		Parasole												
+Furniture		Utility												
+Furniture		Lighting												
+Furniture			FloorLamp											
+Furniture			TableLamp											
+Furniture			ReadingLamp											
+Furniture		Table												
+Furniture			BarTable											
+Furniture			DiningTable											
+Furniture			Nightstand											
+Furniture			OfficeTable											
+Furniture			BedsideTable											
+Furniture			CoffeeTable											
+Furniture			Desk											
+Furniture			SideTable											
+Furniture			Billiard											
+Furniture		RoomDividers												
+Furniture		Bed	Daybed				Bedroom							
+Furniture			BunkLoftBed				Bedroom							
+Furniture			Futon				Bedroom							
+Furniture		Sofa	SectionalSofa											
+Furniture			Loveseat											
+Furniture		Storage	DisplayCabinet											
+Furniture			DrawerChest											
+Furniture			Sideboard											
+Furniture			Bookcase											
+Furniture			Credenzas											
+Furniture			Closet				Bedroom							
+Furniture			TvCabinet											
+Furniture		Sculpture												
+Furniture			CurtainBlind											
+Furniture			EntertainmentCenter											
+Procedural		Railing							Railclone				99	
+Procedural		CurtainWall							Forest					
+		Roof												
+		Planter												
+	Vegetation	Category	BotanicalName	ChineseName	CommonName	Spread	Location	Form	Height				99	
+Building	C0	Category	SubCategory	Width	Length	Height							99	
+Fixture	C0	Category	Primary Description	Brand	Material	Form	Location						99	
+Fixture		SwitchSocket												
+Fixture		HVMC	AirConditioner											
+Fixture			DishWasher											
+Fixture			Fan											
+Fixture			Radiator											
+Fixture			FirePit											
+Fixture		Lighting	ArchitecturalLight											
+Fixture			Chandelier											
+Fixture			Pendant											
+Fixture			PendantLinear											
+Fixture			PendantSet											
+			WallLight											
+Fixture		Bar												
+Fixture		Bathroom	Dispenser											
+Fixture			Showertray											
+Fixture			Washbasin											
+Fixture			Bathtub											
+Fixture			Bathtubmixer											
+Fixture			WashbasinFaucet				Bathroom							
+Fixture			Sink				Bathroom							
+Fixture			Flushplate											
+Fixture			StallPartition				Bathroom							
+Fixture			Vanity				Bathroom							
+Fixture			Bathtub				Bathroom							
+Fixture			Toilet				Bathroom							
+Fixture			HandDryer				Bathroom							
+Fixture			Hook											
+Fixture			TowelBar											
+Fixture			TowelRing											
+Fixture			PaperHolder											
+Fixture			ShowerHead				Bathroom							
+Fixture			HotWaterHeater				Bathroom							
+Fixture		Outdoor	BbqGrill											
+Fixture		Street	BicycleRack											
+Fixture		Café												
+Fixture		Bedroom	Closet											
+Fixture			ClosetStorage				Bedroom							
+		Gym	DualLegCurl											
+			MultiGym											
+			AdjustableBench											
+			Dumbell											
+Fixture			Treadmill											
+Fixture		Kitchen	Fridge											
+Fixture			Freezer				Kitchen							
+Fixture			Oven				Kitchen							
+Fixture			Hob				Kitchen							
+Fixture			Cabinet				Kitchen							
+Fixture			KitchenFaucet				Kitchen							
+Fixture			Range				Kitchen							
+Fixture			KitchenSink				Kitchen							
+Fixture			Microwave				Kitchen							
+Fixture			CombiOven											
+Fixture		Office	Storage											
+Fixture														
+Fixture			ScreenDivider											
+Fixture		Laundry	Washingmachine											
+Fixture			Purifier											
+Fixture			Dryer											
+Fixture			Coatrack											
+Fixture		Sculpture												
+People	C0	Number of people	Age	Ethnicity	Season	Gender	Accessories	Activity	Clothing				99	
+Location	C0	Category	SubCategory	Width	Length	Height	Location	Custom7	Custom8				99	
+Vegetation	C0	Category	SubCategory	BotanicalName	ChineseName	Height/Size	Location	Form	Color/Feature	Code			10	CommonName
+Vegetation	C0	Tree					GreenWall	Spherical	Flowering				10	CommonName
+Vegetation	C0	Plant	Fern				PlanterBox	Fan	Evergreen				10	
+Vegetation	C0	Plant					PlantPot	Fan	Evergreen				10	
+Vegetation	C0	Cacti					Home	Globe	Deciduous				10	
+Vegetation	C0	Climber					Aquatic	Columnar	Dry				10	
+Vegetation	C0	Grass					Crop	Spreading					10	
+Vegetation	C0	Bamboo					Ornamental	Oval					10	
+Vegetation	C0	Flower					Floor	Conical					10	
+Vegetation	C0	Palm					Table	MutiStem					10	
+Vegetation	C0	Bog					Wetland	GrassLike					10	
+Vegetation	C0	GroundCover					Lawn	Feather					10	
+Vegetation	C0	PottedPlant	Table				Outdoor	TreeForm					10	
+Vegetation	C0	PottedPlant	Floor				Wild	Upright					10	
+Vegetation	C0	Hedge						Rosette					10	
+Vegetation	C0	Stem						Pear					10	
+Vegetation	C0	Succulent											10	
+Vegetation	C0	Creeper											10	
+Vegetation	C0												10	
+Vegetation	C0												10	
+Vegetation	C0												10	
+Vegetation	C0												10	
+Material	!MaterialName	!Category		Color	Finish	Size		Diamond	Location				10	
+Material	C0	Abstract						Diamond					10	
+Material	C0	Logo						Jumbo					10	
+Material	C0	Screen						Mosaic					10	
+Material	C0	Coal						Mosaic					10	
+Material	C0	Derbis						Mosaic					10	
+Material	C0	Photo						Ocon					10	
+Material	C0	Background						Square					10	
+Material	C0	Asphalt											10	
+Material	C0	Concrete											10	
+Material	C0	BookCover											10	
+Material	C0	Fabric											10	
+Material	C0	FabricLeather											10	
+Material	C0	FabricPlain											10	
+Material	C0	FabricCarpet											10	
+Material	C0	FinishPattern											10	
+Material	C0	FinishLaquer											10	
+Material	C0	FinishPaint											10	
+Material	C0	FinishWax											10	
+Material	C0	FlooringCarpet											10	
+Material	C0	FlooringPaving											10	
+Material	C0	FlooringStone											10	
+Material	C0	FlooringTile											10	
+Material	C0	FlooringVinyl											10	
+Material	C0	FlooringParquet											10	
+Material	C0	GlassGlazing											10	
+Material	C0	GlassOpaque											10	
+Material	C0	Liquid											10	
+Material	C0	MasonryBrick											10	
+Material	C0	MasonryCMU											10	
+Material	C0	MasonryStone											10	
+Material	C0	MetalAluminium											10	
+Material	C0	MetalBronze											10	
+Material	C0	MetalCopper											10	
+Material	C0	MetalFabricated											10	
+Material	C0	MetalMetallicPaint											10	
+Material	C0	MetalSteel											10	
+Material	C0	MetalMirror/Chrome											10	
+Material	C0	OrganicFlower											10	
+Material	C0	OrganicGrass											10	
+Material	C0	OrganicBranch											10	
+Material	C0	OrganicBark											10	
+Material	C0	OrganicLeaf											10	
+Material	C0	OrganicGravel											10	
+Material	C0	OrganicGround											10	
+Material	C0	Historical											10	
+Material	C0	OrganicRock											10	
+Material	C0	Paint											10	
+Material	C0	Parallax											10	
+Material	C0	Roofing											10	
+Material	C0	Siding											10	
+Material	C0	StoneMarble											10	
+Material	C0	StoneTravertine											10	
+Material	C0	StoneGranite											10	
+Material	C0	StoneSlate											10	
+Material	C0	StoneTerrazzo											10	
+Material	C0	TileCeramic											10	
+Material	C0	TileJumbo											10	
+Material	C0	TileStone											10	
+Material	C0	TilePool											10	
+Material	C0	Tile											10	
+Material	C0	Utility											10	
+Material	C0	WallCovering											10	
+Material	C0	Wallpaper											10	
+Material	C0	WoodAsh											10	
+Material	C0	WoodBirch											10	
+Material	C0	WoodCedar											10	
+Material	C0	WoodCherry											10	
+Material	C0	WoodMahogany											10	
+Material	C0	WoodMaple											10	
+Material	C0	Woodmisc											10	
+Material	C0	WoodPanel											10	
+Material	C0	WoodPlywood											10	
+Material	C0	WoodPoplar											10	
+Material	C0	WoodRattan											10	
+Material	C0	WoodRedOak											10	
+Material	C0	WoodRosewood											10	
+Material	C0	WoodTeak											10	
+Material	C0	WoodVeneer											10	
+Material	C0	WoodWalnut											10	
+Material	C0	WoodWhiteOak											10	
+Material	C0	WoodYellowPine											10	
+Layouts	C0	Category	SubCategory	C4	C5	C6	Location	Form	Custom8	C9			99	
+Layouts	C0	DiningTable						Circle					10	
+Layouts	C0	BarTable						Oval					10	
+Layouts	C0	BedSet						Ushape					10	
+Layouts	C0	Closet						Lshape					10	
+Layouts	C0	Seating	SeatingLounge					Galley					10	
+Layouts	C0		SeatingPoolSide										10	
+Layouts	C0												10	
+Layouts	C0												10	ove
+Object	C0		SubCategory	Brand	Material	Form	Location						99	
+Object			Mat											
+Object			LandscapeDecoration											
+Object	C0		Artwork											
+Object			PaperHolder											
+Object			Remotecontrol											
+Object	C0		Camera											
+Object	C0		TV											
+Object	C0		Computer											
+Object	C0		Toy											
+Object	C0		Stationery											
+Object	C0		Shoe											
+Object	C0		Headphone											
+Object	C0		Speaker											
+Object	C0		Watch											
+Object	C0		Bookend											
+Object	C0		Sunglasses											
+Object	C0		Doorstopper											
+Object	C0		Clock											
+Object	C0	BakingPan												
+Object	C0	BakingTool												
+Object	C0	BathMat												
+Object	C0	BathroomSinkAccessories												
+Object	C0		OfficeDecoration											
+Object	C0		Trashcan											
+Object	C0		Handwash											
+Object	C0	BeverageContainer												
+Object	C0	BeverageServeware												
+Object	C0	Book												
+Object	C0	Bowls												
+Object	C0	Candle												
+Object	C0	Food												
+Object	C0	ClothesHanger												
+Object	C0	CocktailGlass												
+Object	C0		Decoration											
+Object			Toothbrush											
+Object			Wiper											
+Object	C0	ToiletBrush												
+Object	C0	CoffeeMachine												
+			WaterKettle											
+Object	C0	CookingUtensil	CookingPot											
+Object	C0	Cushion	CookingPan											
+Object	C0		BakingDish											
+Object	C0	DecorMd	CuttingBoards											
+Object	C0		KitchenKnife											
+Object	C0	DishRack	KitchenTrashCan											
+Object	C0	DisplaySet	DisplaySetCoffeeTable											
+Object	C0	DoorMat												
+Object	C0	Drinkware												
+Object	C0	FlatwareSet												
+Object	C0		FoodContainer											
+Object	C0	JarTins												
+Object	C0		KidsKitchenware											
+Object	C0		KitchenDrawerOrganizer											
+			Cart											
+			Projector											
+														
+														
+Object	C0	MusicInstrument												
+Object	C0	NoticeBoard												
+Object	C0	PaperSize												
+Object	C0	PaperTowelHolder												
+Object	C0	PetAccessorie												
+Object	C0	PictureFrame												
+Object	C0	PlacematCoaster												
+Object	C0	PlantPot												
+Object	C0	ServingBowl												
+Object	C0	ServingTray												
+Object	C0	SoapDispenser												
+Object	C0	SpiceCondimentContainer												
+Object	C0	TableMirror												
+Object	C0	TableSetting	Plate											
+Object	C0		TeapotKettle											
+Object	C0	Towel	ServingDish											
+Object	C0	TraySet	WineGlass											
+Object	C0	Vase	NapkinHolder											
+Object	C0	WallClock	DinnerwareSet											
+Object	C0	WallMirror	CoffeeCup											
+Object	C0		Luggage											
+Object	C0		BeerGlasses											
+Object	C0		DrinkingGlass											
+Fixture			WaterDispensor											
+Vehicle		Vehicle												
+VFX		Water												
