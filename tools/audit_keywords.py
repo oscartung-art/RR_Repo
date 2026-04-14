@@ -6,11 +6,10 @@ Run:
 Checks:
   1. Duplicate entries within any section
   2. Prefix Codes whose subcategory is not in the Allowlist
-  3. Keyword Map entries whose target subcategory is not in the Allowlist
-  4. Allowlist subcategories not referenced by any Prefix Code or Keyword Map entry
-  5. Duplicate CLIP Labels
-  6. Usage Locations that are duplicated
-  7. Summary counts per section
+  3. Allowlist subcategories not referenced by any Prefix Code
+  4. Duplicate CLIP Labels
+  5. Usage Locations that are duplicated
+  6. Summary counts per section
 """
 
 from __future__ import annotations
@@ -68,43 +67,35 @@ def audit(sections: dict[str, list[list[str]]]) -> int:
 
     # ------------------------------------------------------------------ load
     prefix_rows = sections.get("Prefix Codes", [])
-    keyword_rows = sections.get("Keyword Map", [])
     subcats = set(_col(sections.get("Subcategories", [])))
     location_rows = sections.get("Usage Locations", [])
-    clip_rows: list = []
+    clip_rows = sections.get("CLIP Labels", [])
     ignore_rows = sections.get("Ignore Folders", [])
 
     prefix_codes = _col(prefix_rows, 0)
     prefix_targets = _col(prefix_rows, 1)
-    kw_keywords = _col(keyword_rows, 0)
-    kw_targets = _col(keyword_rows, 1)
     locations = _col(location_rows)
     clip_labels = _col(clip_rows)
     ignore_dirs = _col(ignore_rows)
 
     # ------------------------------------------------------------------ 1. dupes per section
     check_dupes("Prefix Codes", prefix_codes)
-    check_dupes("Keyword Map / keywords", kw_keywords)
     check_dupes("Subcategories", list(subcats))
     check_dupes("Usage Locations", locations)
+    check_dupes("CLIP Labels", clip_labels)
     check_dupes("Ignore Folders", ignore_dirs)
 
     # ------------------------------------------------------------------ 2. prefix targets not in allowlist
     for code, target in zip(prefix_codes, prefix_targets):
         if target and target not in subcats:
-            warn(f"[Prefix Codes] '{code}' → '{target}' is NOT in Subcategories")
+            warn(f"[Prefix Codes] '{code}' -> '{target}' is NOT in Subcategories")
 
-    # ------------------------------------------------------------------ 3. keyword targets not in allowlist
-    for keyword, target in zip(kw_keywords, kw_targets):
-        if target and target not in subcats:
-            warn(f"[Keyword Map] '{keyword}' → '{target}' is NOT in Subcategories")
-
-    # ------------------------------------------------------------------ 4. orphaned subcategories
-    referenced = set(prefix_targets) | set(kw_targets)
+    # ------------------------------------------------------------------ 3. orphaned subcategories
+    referenced = set(prefix_targets)
     orphans = sorted(subcats - referenced)
     if orphans:
         for o in orphans:
-            warn(f"[Subcategories] '{o}' has no Prefix Code or Keyword pointing to it (orphan)")
+            warn(f"[Subcategories] '{o}' has no Prefix Code pointing to it (orphan)")
 
     # ------------------------------------------------------------------ report
     sep = "-" * 60
@@ -122,9 +113,9 @@ def audit(sections: dict[str, list[list[str]]]) -> int:
     print()
     print("Summary:")
     print(f"  Prefix Codes           : {len(prefix_codes)}")
-    print(f"  Keyword Map entries    : {len(kw_keywords)}")
     print(f"  Subcategories          : {len(subcats)}")
     print(f"  Usage Locations        : {len(locations)}")
+    print(f"  CLIP Labels            : {len(clip_labels)}")
     print(f"  Ignore Folders         : {len(ignore_dirs)}")
     print(f"  Orphaned subcategories : {len(orphans)}")
     print(sep)

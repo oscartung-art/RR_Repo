@@ -30,7 +30,7 @@ The project is split across three distinct storage zones to balance speed, stora
 
 ```text
 D:\GoogleDrive\RR_Repo
-├── gemini.md              <- Single brain (this file)
+├── qwen.md                <- Single brain (this file)
 ├── Active_Projects.md     <- Canonical project dashboard
 ├── inbox.md               <- Raw inbox capture (to be processed)
 ├── rr / p.bat             <- CLI entry points (Bash / Windows)
@@ -59,10 +59,10 @@ D:\GoogleDrive\RR_Repo
 - **Memory Capture:** Use `log/brain_dump.md` or `inbox.md` for rapid thought capture. Say *"Log to inbox: [text]"* to append a row with today's date and status `Unfiled`.
 - **Consistency Audits:** Run `python tools/audit_assets.py [path]` periodically on `G:\Assets` and active projects to ensure naming compliance.
 - **Project Setup:** Use `python tools/init_project.py` (or `python tools/new_project.py`) for new commissions.
-- **Proactive Maintenance:** Gemini CLI updates `gemini.md` automatically when new preferences or tools are discovered. Fixes hardcoded paths.
+- **Proactive Maintenance:** Qwen CLI updates `qwen.md` automatically when new preferences or tools are discovered. Fixes hardcoded paths.
 - **Task Tracking:** Active tasks are manually pasted into `log/action_log.md`. Use the Minimalist table format.
 - **Cancellation Rule:** When any system, tool, or workflow is cancelled, the agent MUST remove it from code, delete related files, and wipe all references from documentation.
-- **File Write Safety:** Always perform a `read_file` on `gemini.md` before writing (Read-Modify-Write protocol).
+- **File Write Safety:** Always perform a `read_file` on `qwen.md` before writing (Read-Modify-Write protocol).
 
 ---
 
@@ -401,7 +401,7 @@ Content/
 1. **Overwrite, do not append** — read the existing file, synthesize new decisions, rewrite cleanly.
 2. **No chat history** — never include conversational text in docs. Only structured data and rules.
 3. **Clarity over length** — keep files short while retaining 100% of technical constraints.
-4. **Re-read `gemini.md`** at the start of every session to restore full context.
+4. **Re-read `qwen.md`** at the start of every session to restore full context.
 
 ---
 
@@ -430,8 +430,8 @@ gemini  # enter API key when prompted
 
 **Daily resumption:**
 1. Confirm Google Drive tray icon shows sync complete.
-2. Launch `gemini` — it auto-loads `gemini.md`.
-3. If context is stale mid-session: *"Re-read `gemini.md`."*
+2. Launch `qwen` — it auto-loads `qwen.md`.
+3. If context is stale mid-session: *"Re-read `qwen.md`."*
 
 ---
 
@@ -444,10 +444,10 @@ Chronological record of significant actions. Most recent first.
 | 2026-03-31 | Manus | Added `rr find` command (`tools/rr/cmd_find.py`) — CLIP semantic search + EFU export to Everything Search. Supports text query, image query, `--top N`, `--stats`. Graceful fallback when index/packages not ready. |
 | 2026-03-31 | Manus | Replaced Section 7 (G: Drive Asset Library) with Semantic Architecture 2026 — CLIP vector search, Parquet index, Pair Rule, Coffee Shop Mode. Deprecated CSV tagging and numerical prefixes. |
 | 2026-03-31 | Manus | Improved all three TOML commands (safety gates, schema refs, path fixes, default args). Created `.gemini/commands/README.md` help reference. |
-| 2026-03-31 | Manus | Created `.gemini/commands/` with `ingest.toml`, `audit.toml`, `clean.toml` Gemini CLI custom commands. Fixed stale `docs/` reference in `/clean` to point to `gemini.md`. |
+| 2026-03-31 | Manus | Created `.gemini/commands/` with `ingest.toml`, `audit.toml`, `clean.toml` Gemini CLI custom commands. Fixed stale `docs/` reference in `/clean` to point to `qwen.md`. |
 | 2026-03-31 | Manus | Consolidated all rr CLI files into `tools/rr/` package (`cmd_p`, `cmd_dash`, `cmd_log`, `cmd_crm`, `cmd_open`, `cmd_c`, `cmd_help`, `utils`). Fixed `rr dash` and `rr log`. Archived old orphaned files: `lookup.py`, `rr_log.py`, `view_crm.py`, `help_commands.py`. `rr.py` is now a thin dispatcher. |
-| 2026-03-31 | Manus | Cancelled `sync_brain.py`, `scripts/token.json`, `Shared/credentials.json` (Google Docs sync no longer needed). Deleted `docs/` folder — all content lives in `gemini.md`. |
-| 2026-03-31 | Manus | Consolidated all `docs/*.md` into `gemini.md` as single brain. |
+| 2026-03-31 | Manus | Cancelled `sync_brain.py`, `scripts/token.json`, `Shared/credentials.json` (Google Docs sync no longer needed). Deleted `docs/` folder — all content lives in `qwen.md`. |
+| 2026-03-31 | Manus | Consolidated all `docs/*.md` into `qwen.md` as single brain. |
 | 2026-03-31 | Manus | Full repo audit. Created `tools/rr.py` dispatcher + `tools/setup_bash.sh`. Fixed `rr_log.py`. Updated `lookup.py` to use `Shared/config.py`. Added `Shared/frontmatter.py`. Updated `System_Commands_Reference.md`, `Common_Commands.md`, `VS_Code_Setup_Guide.md`. Created `requirements.txt`. Archived stale scripts and docs. |
 | 2026-03-30 | Gemini CLI | Cancelled `tasks` folder. Removed all multi-agent sync elements and task handoff protocols. |
 | 2026-03-30 | Gemini CLI | Cancelled 3-way sync, Dashboard, and Cloud Brain. Shifted to text-only VSCode-centric workflow. |

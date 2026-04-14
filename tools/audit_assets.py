@@ -118,22 +118,6 @@ def audit_project_dir(directory):
                 })
     return violations
 
-def audit_docs_dir(directory):
-    """Audit docs/ — expects Title_Case_With_Underscores.md"""
-    violations = []
-    for fname in os.listdir(directory):
-        if not fname.endswith('.md'):
-            continue
-        if fname.lower() in SKIP_NAMES:
-            continue
-        if not DOCS_PATTERN.match(fname):
-            violations.append({
-                'file': fname,
-                'rule': 'Docs file: `Title_Case_With_Underscores.md`',
-                'suggestion': suggest_doc_name(fname)
-            })
-    return violations
-
 def audit_tools_dir(directory):
     """Audit tools/ — expects snake_case.py"""
     violations = []
@@ -180,9 +164,9 @@ def main():
     parser.add_argument('--dir', required=True, help='Directory to audit')
     parser.add_argument(
         '--type',
-        choices=['asset', 'project', 'docs', 'tools'],
+        choices=['asset', 'project', 'tools'],
         default='asset',
-        help='Audit type: asset (G:\\), project (F:\\), docs (docs/), tools (tools/)'
+        help='Audit type: asset (G:\\), project (F:\\), tools (tools/)'
     )
     parser.add_argument('--save', action='store_true', help='Save report to log/ folder')
     args = parser.parse_args()
@@ -195,7 +179,6 @@ def main():
     audit_fn = {
         'asset':   audit_asset_dir,
         'project': audit_project_dir,
-        'docs':    audit_docs_dir,
         'tools':   audit_tools_dir,
     }[args.type]
 

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr *)",
+      "Bash(dir *)",
+      "Bash(pwsh *)",
+      "Bash(del *)",
+      "Bash(rm *)"
+    ]
+  },
+  "$version": 3
+}

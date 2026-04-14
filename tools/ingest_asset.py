@@ -25,6 +25,82 @@ import itertools
 import time
 import textwrap
 
+# ---------------------------------------------------------------------------
+# ingest_asset.py branch map (detailed)
+# ---------------------------------------------------------------------------
+#
+#   [main()]
+#      |
+#      +--> parse CLI flags
+#      |      (--backend, --enrich-mode, --asset-type, --dry-run, --yes)
+#      |
+#      +--> backend resolution
+#      |      +--> local  -> Ollama calls
+#      |      `--> online -> OpenRouter calls (429 retries on model calls)
+#      |
+#      +--> enrich_mode resolution
+#      |      +--> text
+#      |      +--> vision
+#      |      `--> both
+#      |
+#      +--> asset_type resolution
+#      |      +--> explicit --asset-type? -> use it
+#      |      `--> auto-detect path
+#      |             +--> source = CLI args (clean_args)
+#      |             |      +--> mode=text:
+#      |             |      |      detect_asset_category(stem)
+#      |             |      |      + interactive: accept / V / manual override
+#      |             |      |
+#      |             |      +--> mode=vision:
+#      |             |      |      detect_asset_category_vision(first_image)
+#      |             |      |      (stem ignored for type routing)
+#      |             |      |
+#      |             |      `--> mode=both:
+#      |             |             detect_asset_category(stem)
+#      |             |             + if conf != high and image exists:
+#      |             |                  detect_asset_category_vision(first_image)
+#      |             |
+#      |             `--> source = interactive paste paths
+#      |                    (same mode policy as above, using first pasted image)
+#      |
+#      +--> input grouping
+#      |      +--> args mode: group by exact stem from CLI file list
+#      |      `--> paste mode: read lines, validate files, group by stem
+#      |
+#      +--> for each stem group
+#             +--> not exactly 2 files? -> skip with reason
+#             +--> cannot infer image/asset roles? -> skip with reason
+#             `--> process_pair(image, asset)
+#                    |
+#                    +--> validate_inputs(image, asset)
+#                    +--> label source
+#                    |      +--> vision_detect: classify_image(image)
+#                    |      `--> else: CamelCase stem label
+#                    +--> compute_crc32(asset)
+#                    +--> build_metadata_row(...)
+#                    +--> enrich_row_with_models(...)
+#                    |      |
+#                    |      +--> pass A: web_search_enrich (disabled in vision-only)
+#                    |      +--> pass B: enrich_vision_pass (vision/both + image exists)
+#                    |      +--> shared field resolver pick()/pick_with_db()
+#                    |      +--> deterministic subcategory priorities
+#                    |      |      prefix code > db mood code > ai candidate/fuzzy/keywords
+#                    |      `--> asset-type branch write
+#                    |             + object: dedicated object subcategory matcher + Mood path
+#                    |             ` other: generic/category-specific field mapping
+#                    |
+#                    +--> build_short_base_name(...) + ensure_unique_targets(...)
+#                    +--> preview_mapped_metadata(...)
+#                    |
+#                    +--> dry-run?
+#                    |      `--> yes: stop pair here (no move/write)
+#                    |
+#                    `--> apply stage
+#                           +--> require confirm unless --yes
+#                           +--> move_pair(image, asset)
+#                           `--> append_metadata_row(.metadata.efu)
+#
+
 THUMBNAIL_BASE = Path(r"D:\DB")
 ARCHIVE_BASE = Path(r"G:\DB")
 # Use a hidden index file to avoid collisions with user files.
@@ -137,25 +213,75 @@ def _kw_prefix_codes() -> dict[str, str]:
 
 
 @lru_cache(maxsize=1)
-def _kw_keyword_map() -> list[tuple[str, str]]:
-    """Return [(keyword_lower, subcategory), …] from the Keyword Map section.
-
-    Order is preserved from the file (multi-word entries should appear first).
-    """
-    rows = _load_ingest_keywords().get("Keyword Map", [])
-    return [(r[0].lower(), r[1]) for r in rows if len(r) >= 2 and r[0] and r[1]]
-
-
-@lru_cache(maxsize=1)
 def _kw_subcategories() -> set[str]:
-    """Return the full set of allowed subcategory names."""
+    """Return the full set of allowed subcategory names.
+
+    Prefer a human-editable slash-path allowlist under the `## Subcategories`
+    heading when present (e.g. `Furniture/Seating/LoungeChair`). If no
+    slash-path lines are found, fall back to the existing pipe-table first
+    column to remain backwards-compatible.
+    """
+    # Try to parse slash-path lines from the raw markdown section first.
+    slash_paths: list[str] = []
+    if KEYWORDS_MD.exists():
+        in_section = False
+        for raw in KEYWORDS_MD.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if line.startswith("## "):
+                in_section = (line[3:].strip() == "Subcategories")
+                continue
+            if not in_section:
+                continue
+            if not line:
+                continue
+            # Skip table rows and markdown separators/code fences
+            if line.startswith("|") or line.startswith("---") or line.startswith("```"):
+                continue
+            # Treat a non-pipe line containing a slash as a path entry
+            if "/" in line and re.match(r'^[A-Za-z0-9 _\-\./]+$', line):
+                slash_paths.append(line.strip().strip("/"))
+    if slash_paths:
+        return {p.split("/")[-1] for p in slash_paths if p}
+
     rows = _load_ingest_keywords().get("Subcategories", [])
     return {r[0] for r in rows if r and r[0]}
 
 
 @lru_cache(maxsize=1)
 def _kw_subcategory_groups() -> dict[str, str]:
-    """Return {subcategory: group_path} from the Subcategories section."""
+    """Return {subcategory: group_path} from the Subcategories section.
+
+    Prefer building the mapping from any slash-path allowlist lines (parent
+    path = everything before the final segment). Fall back to the pipe-table
+    mapping when no slash-paths are present.
+    """
+    # Parse slash-path lines first (if present) to build leaf->group mapping.
+    slash_paths: list[str] = []
+    if KEYWORDS_MD.exists():
+        in_section = False
+        for raw in KEYWORDS_MD.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if line.startswith("## "):
+                in_section = (line[3:].strip() == "Subcategories")
+                continue
+            if not in_section:
+                continue
+            if not line:
+                continue
+            if line.startswith("|") or line.startswith("---") or line.startswith("```"):
+                continue
+            if "/" in line and re.match(r'^[A-Za-z0-9 _\-\./]+$', line):
+                slash_paths.append(line.strip().strip("/"))
+    if slash_paths:
+        mapping: dict[str, str] = {}
+        for path in slash_paths:
+            parts = [seg.strip().strip("/") for seg in path.split("/") if seg.strip()]
+            if len(parts) >= 2:
+                leaf = parts[-1]
+                group = "/".join(parts[:-1])
+                mapping[leaf] = group
+        return mapping
+
     rows = _load_ingest_keywords().get("Subcategories", [])
     return {r[0]: r[1] for r in rows if len(r) >= 2 and r[0] and r[1]}
 
@@ -666,11 +792,6 @@ def normalize_furniture_subcategory(candidate: str, source_stem: str, hints: dic
 
     if candidate_clean and candidate_clean in allowed:
         return candidate_clean
-
-    keyword_map = _kw_keyword_map()
-    for needle, mapped in keyword_map:
-        if needle in stem_lower and mapped in allowed:
-            return mapped
 
     hint_model = sanitize_name_token(hints.get("model", ""))
     if hint_model in allowed:
@@ -1580,7 +1701,7 @@ def enrich_row_with_models(
                Visual fields (Genre/Company/Period) also filled if found on page.
     """
     # All asset types flow through this enrichment pipeline in both text and vision modes.
-    # Prefix codes and keyword map resolve subcategory for every category; the web pass
+    # Prefix codes resolve subcategory for every category; the web pass
     # additionally fills brand/model/collection fields when a useful query can be built.
 
     vision_data: dict[str, str] = {}   # kept for pick() compatibility; always empty here
@@ -1717,22 +1838,15 @@ def enrich_row_with_models(
     if _ai_candidate_clean in allowed_subcats:
         _ai_subcategory = _ai_candidate_clean
     else:
-        # Keyword-map scan of stem (works for all types, not just furniture).
-        _stem_lower_shared = re.sub(r"[-_]+", " ", source_stem.lower())
         _ai_subcategory = ""
-        for _kw_n, _kw_m in _kw_keyword_map():
-            if _kw_n in _stem_lower_shared and _kw_m in allowed_subcats:
-                _ai_subcategory = _kw_m
+        # Fuzzy / substring match of the AI candidate against the type-scoped list.
+        _cand_norm = re.sub(r"[^a-z0-9]+", "", _ai_candidate_clean.lower())
+        _cand_dedup = re.sub(r"(.)\1+", r"\1", _cand_norm)
+        for _sc in allowed_subcats:
+            _sc_norm = re.sub(r"[^a-z0-9]+", "", _sc.lower())
+            if _sc_norm and (_sc_norm in _cand_norm or _sc_norm in _cand_dedup):
+                _ai_subcategory = _sc
                 break
-        if not _ai_subcategory:
-            # Fuzzy / substring match of the AI candidate against the type-scoped list.
-            _cand_norm = re.sub(r"[^a-z0-9]+", "", _ai_candidate_clean.lower())
-            _cand_dedup = re.sub(r"(.)\1+", r"\1", _cand_norm)
-            for _sc in allowed_subcats:
-                _sc_norm = re.sub(r"[^a-z0-9]+", "", _sc.lower())
-                if _sc_norm and (_sc_norm in _cand_norm or _sc_norm in _cand_dedup):
-                    _ai_subcategory = _sc
-                    break
         if not _ai_subcategory:
             # Last resort: fall back to furniture-aware normalizer for furniture/fixture.
             if asset_type in ("furniture", "fixture"):
@@ -1924,8 +2038,7 @@ def enrich_row_with_models(
         # Subcategory resolution order for object type:
         #   1. Filename prefix code (e.g. 12-11 -> Sculpture) — fully deterministic.
         #   2. Vision model output (when enrich_mode is "vision" or "both").
-        #   3. Keyword map match against the filename stem (text mode fallback).
-        #   4. hints["vision_label"] from classify_image (last resort).
+        #   3. hints["vision_label"] from classify_image (last resort).
         #
         # Priority 1: prefix code from filename (e.g. "12-11 object_0" -> Sculpture)
         _obj_uid_subcat = PREFIX_TO_SUBCATEGORY.get(hints.get("uid", ""), "") if hints.get("uid") else ""
@@ -1970,15 +2083,6 @@ def enrich_row_with_models(
         # Priority 1 wins over vision: apply prefix code if present.
         if _obj_uid_subcat and _obj_uid_subcat in allowed_subcats:
             _obj_subcat = _obj_uid_subcat
-        # Priority 3: keyword map scan against the source stem (text mode fallback).
-        # This resolves cases like filename "object_0" with session context "sculpture"
-        # or stems that contain recognisable object keywords.
-        if not _obj_subcat or _obj_subcat == "-":
-            _stem_lower_obj = re.sub(r"[-_]+", " ", source_stem.lower())
-            for _kw_needle, _kw_mapped in _kw_keyword_map():
-                if _kw_needle in _stem_lower_obj and _kw_mapped in allowed_subcats:
-                    _obj_subcat = _kw_mapped
-                    break
         # Final fallback: try hints["vision_label"] (from classify_image).
         if not _obj_subcat or _obj_subcat == "-":
             _obj_subcat = _match_allowlist(hints.get("vision_label", "")) or "-"

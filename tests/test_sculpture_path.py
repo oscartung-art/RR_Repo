@@ -117,31 +117,4 @@ assert mood2 == "Object/Decor/Sculpture", (
 )
 print("PASS: Prefix code 12-11 resolves to Object/Decor/Sculpture in text mode")
 
-# ── Test 3: stem contains keyword "sculpture" ─────────────────────────────────
-source_stem3 = "modern_sculpture_01"
-hints3 = ia.parse_filename_hints(source_stem3)
-row3 = ia.build_metadata_row(
-    thumbnail_filename="",
-    archive_path=dummy_archive,
-    asset_type=asset_type,
-    source_stem=source_stem3,
-    crc32_value=crc,
-)
-row3 = ia.enrich_row_with_models(
-    image_path=Path("dummy.jpeg"),
-    source_stem=source_stem3,
-    asset_type=asset_type,
-    hints=hints3,
-    row=row3,
-    session_context="",
-    session_hints=None,
-    enrich_mode="text",   # text mode — keyword map should fire
-)
-mood3 = row3.get("Mood", "")
-print(f"\nMood (stem 'modern_sculpture_01', text mode): {mood3}")
-assert mood3 == "Object/Decor/Sculpture", (
-    f"FAIL: expected 'Object/Decor/Sculpture', got '{mood3}'"
-)
-print("PASS: Keyword 'sculpture' in stem resolves to Object/Decor/Sculpture in text mode")
-
 print("\nAll tests passed.")

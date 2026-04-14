@@ -142,17 +142,17 @@ Schedule
 
   ## Object
   - URL: (e.g. product page URL)
-  - Mood: Subcategory Path (e.g. Object/Decor/Vase, Object/Tableware/Book, Object/Plant/FloorPlanter)
+  - Mood: Subcategory (e.g. Vase, Cushion, Book, Clock, Tray, Candle)
   - Author: Model Name (e.g. Sahal, Bonbori, Tolomeo)
   - Writer: Brand (e.g. Kartell, Alessi, Vitra)
-  - Album: Collection (e.g. Alessi Collection, Kartell Classics)
-  - Genre: Primary Color/Material (e.g. ceramic, glass, fabric, wood, metal)
-  - People: Usage Location (e.g. Kitchen, Bathroom, Office, Dining Room, Living Room)
-  - Company: Shape Form (e.g. round, rectangular, abstract, geometric, organic)
-  - Period: Style/Period (e.g. modern, contemporary, mid-century, classic)
-  - Artist: Designer (e.g. Philippe Starck, Patricia Urquiola, Achille Castiglioni)
-  - Title: Product Name (e.g. Juicy Salif, Bourgie Lamp, Tolomeo Lamp)
-  - From: Source/Origin (e.g. Italy, Denmark, Japan)
+  - Album: 
+  - Genre: Primary Color/Material (e.g. ceramic, glass, fabric)
+  - People: Usage Location (e.g. Kitchen, Bathroom, Office, Dining Room)
+  - Company: Shape Form (e.g. round, rectangular, abstract)
+  - Period: 
+  - Artist: 
+  - Title: Vendor Name
+  - From: 
   - Manager: Object
 
   ## Procedural

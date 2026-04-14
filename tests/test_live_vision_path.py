@@ -59,7 +59,7 @@ def run(vision_response: dict, vision_label: str = "", enrich_mode: str = "visio
         crc32_value=CRC,
     )
     row = ia.enrich_row_with_models(
-        image_path=Path("G:/3D/Misc/object_0.jpeg"),
+        image_path=Path("dummy.jpeg"),
         source_stem=source_stem,
         asset_type=asset_type,
         hints=hints,

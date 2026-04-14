@@ -9,22 +9,30 @@ Hierarchical category values should use `/` between levels (for example `Floorin
 For EFU export, the `Mood` column stores the full hierarchy path derived from the allowlist group, for example `Furniture/Seating/LoungeChair`, `Furniture/Table/SideTable`, or `Furniture/Carpet`.
 
 ## Table of Contents
-1. Furniture
-2. Fixture
-3. Vegetation
-4. Material
-5. Object
-6. Vehicle
-7. VFX
-8. Procedural
-9. Layouts
-10. Building
-11. People
-12. Location
+
+- Overview
+- Furniture
+- Fixture
+- Vegetation
+- Material
+- Object
+- Vehicle
+- VFX
+- Procedural
+- Layouts
+- Building
+- People
+- Location
+
+- Runtime & Support Tables
+	- Prefix Codes
+	- Subcategories
+	- Usage Locations
+	- Ignore Folders
 
 ---
 
-## 1. Furniture
+## Furniture
 Columns in `Datavalidation.tsv`: `FurnitureName | Category | Color | Brand | Material | Size | Form | Location`.
 `Color`, `Brand`, `Material`, `Size` are free-text. `Location` = `Bedroom` (when specified).
 Prefix codes `10-xx` map individual Furniture pieces; `15-xx` maps Lighting variants.
@@ -32,13 +40,13 @@ In exported EFU rows, `Mood` stores the full hierarchy path, for example `Furnit
 
 ---
 
-## 2. Fixture
+## Fixture
 Columns in `Datavalidation.tsv`: `Category | Primary Description | Brand | Material | Form | Location`.
 `Brand`, `Material`, `Form` are free-text. `Location` = Bathroom / Bedroom / Kitchen (where applicable).
 
 ---
 
-## 3. Vegetation
+## Vegetation
 Columns in `Datavalidation.tsv`: `Category | SubCategory | BotanicalName | ChineseName | Height/Size | Location | Form | Color/Feature | Code | CommonName`.
 `BotanicalName`, `ChineseName`, `CommonName`, `Height/Size` are free-text.
 
@@ -48,7 +56,7 @@ Feature: Deciduous, Dry, Evergreen, Flowering
 
 ---
 
-## 4. Material
+## Material
 Columns in `Datavalidation.tsv`: `MaterialName | Category | Color | Finish | Size | Pattern | Location`.
 `MaterialName`, `Color`, `Finish`, `Size` are free-text.
 
@@ -56,13 +64,13 @@ Pattern (tile/flooring layout size): Diamond, Jumbo, Mosaic, Ocon, Square
 
 ---
 
-## 5. Object
+## Object
 Columns in `Datavalidation.tsv`: `SubCategory | Brand | Material | Form | Location`.
 `Brand`, `Material`, `Form` are free-text.
 
 ---
 
-## 6. Vehicle
+## Vehicle
 Columns in `Datavalidation.tsv`: `Vehicle`.
 
 Vehicle/Aircraft
@@ -73,7 +81,7 @@ Vehicle/Space
 
 ---
 
-## 7. VFX
+## VFX
 Columns in `Datavalidation.tsv`: `VFX`.
 
 VFX/Caustics
@@ -86,7 +94,7 @@ VFX/Water
 
 ---
 
-## 8. Procedural
+## Procedural
 Columns in `Datavalidation.tsv`: `Procedural`.
 
 Procedural/CurtainWall
@@ -96,7 +104,7 @@ Procedural/Roof
 
 ---
 
-## 9. Layouts
+## Layouts
 Columns in `Datavalidation.tsv`: `Category | SubCategory | Location | Form`.
 
 Layouts/BarTable
@@ -110,19 +118,19 @@ Form: Circle, Galley, Lshape, Oval, Ushape
 
 ---
 
-## 10. Building
+## Building
 Columns in `Datavalidation.tsv`: `Category | SubCategory | Width | Length | Height`.
 `Width`, `Length`, `Height` are free-text dimensions.
 
 ---
 
-## 11. People
+## People
 Columns in `Datavalidation.tsv`: `Number of people | Age | Ethnicity | Season | Gender | Accessories | Activity | Clothing`.
 All values are free-text — no fixed allowlist.
 
 ---
 
-## 12. Location
+## Location
 Columns in `Datavalidation.tsv`: `Category | SubCategory | Width | Length | Height | Location | Custom7 | Custom8`.
 All values are free-text — no fixed allowlist.
 
@@ -318,316 +326,220 @@ Both `10-01` and compact `1001` forms are accepted at ingest time.
 | 15-36   | PendantRectangular  |                                    |
 
 ---
-
-## Keyword Map
-Text keywords found in filename stems → canonical subcategory.
-Multi-word entries checked before single-word ones (order matters — keep specific before general).
-
-| Keyword              | Subcategory         | Notes |
-|----------------------|---------------------|-------|
-| coffee table         | CoffeeTable         |       |
-| side table           | SideTable           |       |
-| dining table         | DiningTable         |       |
-| console table        | ConsoleTable        |       |
-| low table            | SideTable           |       |
-| end table            | SideTable           |       |
-| nesting table        | SideTable           |       |
-| bar table            | BarTable            |       |
-| office table         | OfficeTable         |       |
-| bedside table        | BedsideTable        |       |
-| display cabinet      | DisplayCabinet      |       |
-| tv cabinet           | TvCabinet           |       |
-| entertainment center | EntertainmentCenter |       |
-| rain shower          | RainShower          |       |
-| shower mixer         | ShowerMixer         |       |
-| shower head          | ShowerHead          |       |
-| floor lamp           | FloorLamp           |       |
-| table lamp           | TableLamp           |       |
-| wall lamp            | WallLamp            |       |
-| ceiling light        | CeilingLight        |       |
-| pendant lamp         | PendantLight        |       |
-| reading lamp         | ReadingLamp         |       |
-| bunk bed             | BunkBed             |       |
-| room divider         | RoomDivider         |       |
-| lounge chair         | LoungeChair         |       |
-| dining chair         | DiningChair         |       |
-| office chair         | OfficeChair         |       |
-| bar stool            | Barstool            |       |
-| bar chair            | Barstool            |       |
-| arm chair            | Armchair            |       |
-| reclining chair      | RecliningChair      |       |
-| massage chair        | MassageChair        |       |
-| sectional            | SectionalSofa       |       |
-| loveseat             | Loveseat            |       |
-| sofa                 | Sofa                |       |
-| couch                | Sofa                |       |
-| lounger              | Lounger             |       |
-| armchair             | Armchair            |       |
-| chair                | SideChair           |       |
-| bench                | Bench               |       |
-| ottoman              | Ottoman             |       |
-| nightstand           | Nightstand          |       |
-| bedside              | Nightstand          |       |
-| desk                 | Desk                |       |
-| table                | SideTable           |       |
-| lamp                 | TableLamp           |       |
-| chandelier           | Chandelier          |       |
-| pendant              | PendantLight        |       |
-| platter              | ServingPlatter      |       |
-| bowl                 | Bowl                |       |
-| vase                 | Vase                |       |
-| tray                 | Tray                |       |
-| mirror               | Mirror              |       |
-| carpet               | Carpet              |       |
-| rug                  | Carpet              |       |
-| curtain              | Curtain             |       |
-| roller blind         | CurtainBlind        |       |
-| blind                | Curtain             |       |
-| billiard             | Billiard            |       |
-| wardrobe             | Wardrobe            |       |
-| closet               | Wardrobe            |       |
-| shelf                | ShelvingUnit        |       |
-| shelving             | ShelvingUnit        |       |
-| bookcase             | Bookcase            |       |
-| sideboard            | Sideboard           |       |
-| dresser              | Dresser             |       |
-| credenza             | Credenza            |       |
-| drawer chest         | DrawerChest         |       |
-| divan                | Divan               |       |
-| cabinet              | Cabinet             |       |
-| daybed               | Daybed              |       |
-| futon                | Futon               |       |
-| bed                  | Bed                 |       |
-| bathtub              | Bathtub             |       |
-| toilet               | Toilet              |       |
-| sink                 | Sink                |       |
-| faucet               | KitchenFaucet       |       |
-| sculpture            | Sculpture           |       |
-| clock                | Clock               |       |
-| cushion              | Cushion             |       |
-| pouf                 | Pouf                |       |
-| stool                | Stool               |       |
-| recliner             | Recliner            |       |
-| basket               | Basket              |       |
-
----
-
+ 
 ## Subcategories
-The single source for all valid subcategory names. Add here **and** add a matching `Prefix Code` or `Keyword Map` entry.
+The single source for all valid subcategory names. Add here **and** add a matching `Prefix Code` entry.
 `ingest_asset.py` validates output against this and derives the EFU `Mood` path from it.
 
-| Subcategory             | Group                |
-|-------------------------|----------------------|
-| Bed                     | Furniture/Bed        |
-| BunkBed                 | Furniture/Bed        |
-| Daybed                  | Furniture/Bed        |
-| Futon                   | Furniture/Bed        |
-| Carpet                  | Furniture/Carpet     |
-| Curtain                 | Furniture/Curtain    |
-| CurtainBlind            | Furniture/Curtain    |
-| RoomDivider             | Furniture/Curtain    |
-
-| Parasol                 | Furniture/Parasol    |
-| Armchair                | Furniture/Seating    |
-| ArmchairOutdoor         | Furniture/Seating    |
-| Barstool                | Furniture/Seating    |
-| BarstoolOutdoor         | Furniture/Seating    |
-| Bench                   | Furniture/Seating    |
-| BenchOutdoor            | Furniture/Seating    |
-| Chair                   | Furniture/Seating    |
-| ChairOutdoor            | Furniture/Seating    |
-| DiningChair             | Furniture/Seating    |
-| Divan                   | Furniture/Seating    |
-| HangingChair            | Furniture/Seating    |
-| KidsChair               | Furniture/Seating    |
-| LoungeChair             | Furniture/Seating    |
-| Lounger                 | Furniture/Seating    |
-| MassageChair            | Furniture/Seating    |
-| OfficeChair             | Furniture/Seating    |
-| Ottoman                 | Furniture/Seating    |
-| Pouf                    | Furniture/Seating    |
-| RattanChair             | Furniture/Seating    |
-| Recliner                | Furniture/Seating    |
-| RecliningChair          | Furniture/Seating    |
-| SideChair               | Furniture/Seating    |
-| Stool                   | Furniture/Seating    |
-| SunLounger              | Furniture/Seating    |
-| Loveseat                | Furniture/Sofa       |
-| OfficeSofa              | Furniture/Sofa       |
-| SectionalSofa           | Furniture/Sofa       |
-| Sofa                    | Furniture/Sofa       |
-| SofaOutdoor             | Furniture/Sofa       |
-| BathroomCabinet         | Furniture/Storage    |
-| Bookcase                | Furniture/Storage    |
-| Cabinet                 | Furniture/Storage    |
-| CabinetSet              | Furniture/Storage    |
-| ClosetDecor             | Furniture/Storage    |
-| Credenza                | Furniture/Storage    |
-| DisplayCabinet          | Furniture/Storage    |
-| DrawerChest             | Furniture/Storage    |
-| Dresser                 | Furniture/Storage    |
-| EntertainmentCenter     | Furniture/Storage    |
-| OfficeStorage           | Furniture/Storage    |
-| ShelvingUnit            | Furniture/Storage    |
-| Sideboard               | Furniture/Storage    |
-| Storage                 | Furniture/Storage    |
-| TVStand                 | Furniture/Storage    |
-| TvCabinet               | Furniture/Storage    |
-| Wardrobe                | Furniture/Storage    |
-| BarTable                | Furniture/Table      |
-| BedsideTable            | Furniture/Table      |
-| Billiard                | Furniture/Table      |
-| CoffeeTable             | Furniture/Table      |
-| CoffeeTableSet          | Furniture/Table      |
-| ConsoleTable            | Furniture/Table      |
-| Desk                    | Furniture/Table      |
-| DiningSet               | Furniture/Table      |
-| DiningTable             | Furniture/Table      |
-| Nightstand              | Furniture/Table      |
-| OfficeTable             | Furniture/Table      |
-| SideTable               | Furniture/Table      |
-| Table                   | Furniture/Table      |
-| TableCenterpiece        | Furniture/Table      |
-| TableOutdoor            | Furniture/Table      |
-| TableSet                | Furniture/Table      |
-| AssemblyEquipment       | Building             |
-| Canopy                  | Building             |
-| Ceiling                 | Building             |
-| Door                    | Building             |
-| Facade                  | Building             |
-| Fence                   | Building             |
-| FloorElement            | Building             |
-| Gate                    | Building             |
-| Ironmongery             | Building             |
-| Louvre                  | Building             |
-| MEP                     | Building             |
-| Profile                 | Building             |
-| Railing                 | Building             |
-| Roof                    | Building             |
-| Screen                  | Building             |
-| Spandrel                | Building             |
-| Wall                    | Building             |
-| Window                  | Building             |
-| ArchitecturalLight      | Fixture/Lighting     |
-| CeilingLight            | Fixture/Lighting     |
-| Chandelier              | Fixture/Lighting     |
-| DeskLamp                | Fixture/Lighting     |
-| FillLight               | Fixture/Lighting     |
-| FloorLamp               | Fixture/Lighting     |
-| Lantern                 | Fixture/Lighting     |
-| Pendant                 | Fixture/Lighting     |
-| PendantBranched         | Fixture/Lighting     |
-| PendantCaged            | Fixture/Lighting     |
-| PendantCrystal          | Fixture/Lighting     |
-| PendantCylinder         | Fixture/Lighting     |
-| PendantDrum             | Fixture/Lighting     |
-| PendantGlobe            | Fixture/Lighting     |
-| PendantIrregular        | Fixture/Lighting     |
-| PendantLight            | Fixture/Lighting     |
-| PendantLinear           | Fixture/Lighting     |
-| PendantOrb              | Fixture/Lighting     |
-| PendantRattan           | Fixture/Lighting     |
-| PendantRectangular      | Fixture/Lighting     |
-| PendantSet              | Fixture/Lighting     |
-| PendantShaded           | Fixture/Lighting     |
-| PendantSpiral           | Fixture/Lighting     |
-| PendantStar             | Fixture/Lighting     |
-| PendantTiered           | Fixture/Lighting     |
-| PendantWaterfall        | Fixture/Lighting     |
-| ReadingLamp             | Fixture/Lighting     |
-| SkyLight                | Fixture/Lighting     |
-| SpotlightAccent         | Fixture/Lighting     |
-| StreetLight             | Fixture/Lighting     |
-| StripLight              | Fixture/Lighting     |
-| TableLamp               | Fixture/Lighting     |
-| TroughLight             | Fixture/Lighting     |
-| WallLamp                | Fixture/Lighting     |
-| WallLight               | Fixture/Lighting     |
-| Appliance               | Fixture              |
-| BathroomAppliance       | Fixture              |
-| BathroomFabric          | Fixture              |
-| BathroomFixture         | Fixture              |
-| BathroomPlumbing        | Fixture              |
-| Bathtub                 | Fixture              |
-| KitchenAppliance        | Fixture              |
-| KitchenFabric           | Fixture              |
-| KitchenFaucet           | Fixture              |
-| KitchenFixture          | Fixture              |
-| KitchenPlumbing         | Fixture              |
-| KitchenSink             | Fixture              |
-| OfficeAppliance         | Fixture              |
-| RainShower              | Fixture              |
-| ShowerHead              | Fixture              |
-| ShowerMixer             | Fixture              |
-| Sink                    | Fixture              |
-| Toilet                  | Fixture              |
-| Art                     | Object/Decor         |
-| Basket                  | Object/Decor         |
-| Book                    | Object/Tableware     |
-| BookStack               | Object/Tableware     |
-| Bowl                    | Object/Tableware     |
-| Candle                  | Object/Decor         |
-| Clock                   | Object/Decor         |
-| Cookware                | Object/Tableware     |
-| Cushion                 | Object/Decor         |
-| DecorDisplay            | Object/Decor         |
-| DigitalDecor            | Object/Decor         |
-| DiningFood              | Object/Tableware     |
-| DiningTableware         | Object/Tableware     |
-| DisplayTableware        | Object/Tableware     |
-| DrinksSet               | Object/Tableware     |
-| DrinksTray              | Object/Tableware     |
-| FloorPlanter            | Object/Plant         |
-| FoodCart                | Object/Tableware     |
-| FoodDisplay             | Object/Tableware     |
-| FoodDrinks              | Object/Tableware     |
-| FoodTray                | Object/Tableware     |
-| Frame                   | Object/Decor         |
-| FruitBowl               | Object/Tableware     |
-| GreenWall               | Object/Plant         |
-| Hobby                   | Object/Other         |
-| Mirror                  | Object/Decor         |
-| MusicDecor              | Object/Decor         |
-| OfficeDecor             | Object/Decor         |
-| PlanterBox              | Object/Plant         |
-| PottedPlantSet          | Object/Plant         |
-| PottedPlantTable        | Object/Plant         |
-| Sculpture               | Object/Decor         |
-| ServingPlatter          | Object/Tableware     |
-| ShelvingDecor           | Object/Decor         |
-| Tableware               | Object/Tableware     |
-| Toy                     | Object/Other         |
-| Tray                    | Object/Tableware     |
-| Vase                    | Object/Decor         |
-| WallDecor               | Object/Decor         |
-| WineRelated             | Object/Tableware     |
-| AquaticPlant            | Vegetation           |
-| BambooTree              | Vegetation           |
-| Cactus                  | Vegetation           |
-| ConiferTree             | Vegetation           |
-| CreeperPlant            | Vegetation           |
-| CropPlant               | Vegetation           |
-| DryPlant                | Vegetation           |
-| FlowerGrass             | Vegetation           |
-| FlowerPlant             | Vegetation           |
-| FlowerShrub             | Vegetation           |
-| FlowerTree              | Vegetation           |
-| Gravel                  | Vegetation           |
-| GreenWallForest         | Vegetation           |
-| Groundcover             | Vegetation           |
-| Hedge                   | Vegetation           |
-| LargeTree               | Vegetation           |
-| PalmTree                | Vegetation           |
-| Plant                   | Vegetation           |
-| Rock                    | Vegetation           |
-| Shrub                   | Vegetation           |
-| SmallTree               | Vegetation           |
-| Succulent               | Vegetation           |
-| Tree                    | Vegetation           |
-| TreeStump               | Vegetation           |
-| WildGrass               | Vegetation           |
-| WildPlant               | Vegetation           |
-| WinterTree              | Vegetation           |
+Furniture/Bed/Bed
+Furniture/Bed/BunkBed
+Furniture/Bed/Daybed
+Furniture/Bed/Futon
+Furniture/Carpet/Carpet
+Furniture/Curtain/Curtain
+Furniture/Curtain/CurtainBlind
+Furniture/Curtain/RoomDivider
+Furniture/Parasol/Parasol
+Furniture/Seating/Armchair
+Furniture/Seating/ArmchairOutdoor
+Furniture/Seating/Barstool
+Furniture/Seating/BarstoolOutdoor
+Furniture/Seating/Bench
+Furniture/Seating/BenchOutdoor
+Furniture/Seating/Chair
+Furniture/Seating/ChairOutdoor
+Furniture/Seating/DiningChair
+Furniture/Seating/Divan
+Furniture/Seating/HangingChair
+Furniture/Seating/KidsChair
+Furniture/Seating/LoungeChair
+Furniture/Seating/Lounger
+Furniture/Seating/MassageChair
+Furniture/Seating/OfficeChair
+Furniture/Seating/Ottoman
+Furniture/Seating/Pouf
+Furniture/Seating/RattanChair
+Furniture/Seating/Recliner
+Furniture/Seating/RecliningChair
+Furniture/Seating/SideChair
+Furniture/Seating/Stool
+Furniture/Seating/SunLounger
+Furniture/Sofa/Loveseat
+Furniture/Sofa/OfficeSofa
+Furniture/Sofa/SectionalSofa
+Furniture/Sofa/Sofa
+Furniture/Sofa/SofaOutdoor
+Furniture/Storage/BathroomCabinet
+Furniture/Storage/Bookcase
+Furniture/Storage/Cabinet
+Furniture/Storage/CabinetSet
+Furniture/Storage/ClosetDecor
+Furniture/Storage/Credenza
+Furniture/Storage/DisplayCabinet
+Furniture/Storage/DrawerChest
+Furniture/Storage/Dresser
+Furniture/Storage/EntertainmentCenter
+Furniture/Storage/OfficeStorage
+Furniture/Storage/ShelvingUnit
+Furniture/Storage/Sideboard
+Furniture/Storage/Storage
+Furniture/Storage/TVStand
+Furniture/Storage/TvCabinet
+Furniture/Storage/Wardrobe
+Furniture/Table/BarTable
+Furniture/Table/BedsideTable
+Furniture/Table/Billiard
+Furniture/Table/CoffeeTable
+Furniture/Table/CoffeeTableSet
+Furniture/Table/ConsoleTable
+Furniture/Table/Desk
+Furniture/Table/DiningSet
+Furniture/Table/DiningTable
+Furniture/Table/Nightstand
+Furniture/Table/OfficeTable
+Furniture/Table/SideTable
+Furniture/Table/Table
+Furniture/Table/TableCenterpiece
+Furniture/Table/TableOutdoor
+Furniture/Table/TableSet
+Building/AssemblyEquipment
+Building/Canopy
+Building/Ceiling
+Building/Door
+Building/Facade
+Building/Fence
+Building/FloorElement
+Building/Gate
+Building/Ironmongery
+Building/Louvre
+Building/MEP
+Building/Profile
+Building/Railing
+Building/Roof
+Building/Screen
+Building/Spandrel
+Building/Wall
+Building/Window
+Fixture/Lighting/ArchitecturalLight
+Fixture/Lighting/CeilingLight
+Fixture/Lighting/Chandelier
+Fixture/Lighting/DeskLamp
+Fixture/Lighting/FillLight
+Fixture/Lighting/FloorLamp
+Fixture/Lighting/Lantern
+Fixture/Lighting/Pendant
+Fixture/Lighting/PendantBranched
+Fixture/Lighting/PendantCaged
+Fixture/Lighting/PendantCrystal
+Fixture/Lighting/PendantCylinder
+Fixture/Lighting/PendantDrum
+Fixture/Lighting/PendantGlobe
+Fixture/Lighting/PendantIrregular
+Fixture/Lighting/PendantLight
+Fixture/Lighting/PendantLinear
+Fixture/Lighting/PendantOrb
+Fixture/Lighting/PendantRattan
+Fixture/Lighting/PendantRectangular
+Fixture/Lighting/PendantSet
+Fixture/Lighting/PendantShaded
+Fixture/Lighting/PendantSpiral
+Fixture/Lighting/PendantStar
+Fixture/Lighting/PendantTiered
+Fixture/Lighting/PendantWaterfall
+Fixture/Lighting/ReadingLamp
+Fixture/Lighting/SkyLight
+Fixture/Lighting/SpotlightAccent
+Fixture/Lighting/StreetLight
+Fixture/Lighting/StripLight
+Fixture/Lighting/TableLamp
+Fixture/Lighting/TroughLight
+Fixture/Lighting/WallLamp
+Fixture/Lighting/WallLight
+Fixture/Appliance
+Fixture/BathroomAppliance
+Fixture/BathroomFabric
+Fixture/BathroomFixture
+Fixture/BathroomPlumbing
+Fixture/Bathtub
+Fixture/KitchenAppliance
+Fixture/KitchenFabric
+Fixture/KitchenFaucet
+Fixture/KitchenFixture
+Fixture/KitchenPlumbing
+Fixture/KitchenSink
+Fixture/OfficeAppliance
+Fixture/RainShower
+Fixture/ShowerHead
+Fixture/ShowerMixer
+Fixture/Sink
+Fixture/Toilet
+Object/Decor/Art
+Object/Decor/Basket
+Object/Tableware/Book
+Object/Tableware/BookStack
+Object/Tableware/Bowl
+Object/Decor/Candle
+Object/Decor/Clock
+Object/Tableware/Cookware
+Object/Decor/Cushion
+Object/Decor/DecorDisplay
+Object/Decor/DigitalDecor
+Object/Tableware/DiningFood
+Object/Tableware/DiningTableware
+Object/Tableware/DisplayTableware
+Object/Tableware/DrinksSet
+Object/Tableware/DrinksTray
+Object/Plant/FloorPlanter
+Object/Tableware/FoodCart
+Object/Tableware/FoodDisplay
+Object/Tableware/FoodDrinks
+Object/Tableware/FoodTray
+Object/Decor/Frame
+Object/Tableware/FruitBowl
+Object/Plant/GreenWall
+Object/Other/Hobby
+Object/Decor/Mirror
+Object/Decor/MusicDecor
+Object/Decor/OfficeDecor
+Object/Plant/PlanterBox
+Object/Plant/PottedPlantSet
+Object/Plant/PottedPlantTable
+Object/Decor/Sculpture
+Object/Tableware/ServingPlatter
+Object/Decor/ShelvingDecor
+Object/Tableware/Tableware
+Object/Other/Toy
+Object/Tableware/Tray
+Object/Decor/Vase
+Object/Decor/WallDecor
+Object/Tableware/WineRelated
+Vegetation/AquaticPlant
+Vegetation/BambooTree
+Vegetation/Cactus
+Vegetation/ConiferTree
+Vegetation/CreeperPlant
+Vegetation/CropPlant
+Vegetation/DryPlant
+Vegetation/FlowerGrass
+Vegetation/FlowerPlant
+Vegetation/FlowerShrub
+Vegetation/FlowerTree
+Vegetation/Gravel
+Vegetation/GreenWallForest
+Vegetation/Groundcover
+Vegetation/Hedge
+Vegetation/LargeTree
+Vegetation/PalmTree
+Vegetation/Plant
+Vegetation/Rock
+Vegetation/Shrub
+Vegetation/SmallTree
+Vegetation/Succulent
+Vegetation/Tree
+Vegetation/TreeStump
+Vegetation/WildGrass
+Vegetation/WildPlant
+Vegetation/WinterTree
 
 ---
 
