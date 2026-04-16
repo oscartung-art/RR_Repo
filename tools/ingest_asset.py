@@ -2532,6 +2532,17 @@ def find_existing_index_entry(path: Path, crc32_value: str) -> dict[str, str] | 
     return None
 
 
+def find_existing_index_entry_by_filename(path: Path, filename: str) -> dict[str, str] | None:
+    """Find metadata entry by thumbnail filename (for re-enrichment mode)."""
+    if not path.exists() or not filename or filename == "-":
+        return None
+    _, rows = _read_metadata_rows(path)
+    for row in rows:
+        if (row.get("Filename") or "").strip().lower() == filename.strip().lower():
+            return row
+    return None
+
+
 def append_metadata_row(path: Path, row: dict[str, str], overwrite_existing: bool = False) -> None:
     ensure_metadata_file(path)
     row = normalize_efu_row(row)
@@ -2711,6 +2722,99 @@ def move_pair(
     else:
         moved_archive = archive_target
     return moved_image, moved_archive
+
+
+def process_reenrich(
+    image_path: Path,
+    asset_type: str,
+    dry_run: bool = False,
+    auto_yes: bool = False,
+    session_context: str = "",
+    session_hints: dict[str, str] | None = None,
+    enrich_mode: str = "both",
+) -> None:
+    """Re-enrich an existing thumbnail: lookup metadata entry by filename and update it.
+    
+    Used when you have already ingested an image and want to run enrichment again
+    to get further vision-based enrichment without requiring the archive file.
+    """
+    try:
+        if not image_path.exists():
+            print(f"  Image not found: {image_path}")
+            return
+        
+        if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            print(f"  Not an image file (unsupported extension): {image_path.name}")
+            return
+        
+        # Find existing entry by filename
+        existing_entry = find_existing_index_entry_by_filename(METADATA_EFU_PATH, image_path.name)
+        if existing_entry is None:
+            print(f"  No existing index entry found for: {image_path.name}")
+            print(f"    (Check that the file is already in the metadata index)")
+            return
+        
+        crc32_value = (existing_entry.get("CRC-32") or "").strip()
+        if not crc32_value or crc32_value == "-":
+            print(f"  Cannot re-enrich: existing entry has no CRC-32 value for {image_path.name}")
+            return
+        
+        print(f"Re-enriching: {image_path.name}")
+        
+        # Parse any hints from the filename
+        hints = parse_filename_hints(image_path.stem)
+        
+        # Vision label detection
+        vision_detect = enrich_mode in ("vision", "both")
+        if vision_detect:
+            try:
+                label, confidence, label_source = classify_image(image_path)
+                hints["vision_label"] = label
+            except Exception as _ve_label:
+                label = to_camel_case(image_path.stem)
+                confidence = 1.0
+                label_source = "stem"
+        else:
+            label = to_camel_case(image_path.stem)
+            confidence = 1.0
+            label_source = "stem"
+        
+        # Build initial metadata row from existing entry
+        metadata_row = dict(existing_entry)
+        
+        # Re-enrich with models (this is the key step for further enrichment)
+        metadata_row = enrich_row_with_models(
+            image_path=image_path,
+            source_stem=image_path.stem,
+            asset_type=asset_type,
+            hints=hints,
+            row=metadata_row,
+            session_context=session_context,
+            session_hints=session_hints,
+            enrich_mode=enrich_mode,
+        )
+        
+        # Preview the updated metadata
+        print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+        print(f"(preview) CRC-32: {crc32_value}")
+        preview_mapped_metadata(asset_type, metadata_row)
+        
+        if dry_run:
+            print("(dry-run) No metadata was updated.")
+            return
+        
+        if not auto_yes and not confirm_apply():
+            print("Skipped by user.")
+            return
+        
+        # Update metadata in the index (overwrite existing entry)
+        append_metadata_row(METADATA_EFU_PATH, metadata_row, overwrite_existing=True)
+        print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+        print(f"CRC-32: {crc32_value}")
+        print(f"Metadata updated in: {METADATA_EFU_PATH}")
+        
+    except Exception as exc:
+        print(f"Error re-enriching {image_path}: {exc}")
 
 
 def main() -> None:
@@ -3042,36 +3146,67 @@ def main() -> None:
         if len(clean_args) >= 2:
             # Treat all args as a flat list of files; group by stem to find pairs.
             arg_paths = [Path(p) for p in clean_args]
-            from collections import defaultdict
-
-            stems: dict[str, list[Path]] = defaultdict(list)
-            for p in arg_paths:
-                stems[p.stem].append(p)
-
-            stems_items = list(stems.items())
-            total = len(stems_items)
-            if total == 0:
-                print("No file pairs found in arguments.")
-            else:
+            
+            # Check if all args are image files (re-enrich mode) vs looking for pairs
+            all_images = all(p.suffix.lower() in IMAGE_EXTENSIONS for p in arg_paths if p.exists())
+            has_archives = any(p.suffix.lower() in ASSET_FILE_EXTENSIONS for p in arg_paths if p.exists())
+            
+            if all_images and not has_archives:
+                # Re-enrich mode: all args are images, no archives provided
                 if sys.stdout.isatty():
-                    print(f"Processing {total} pair(s)...")
+                    print(f"Re-enrich mode detected: {len(arg_paths)} image(s) without archives")
+                    print("Images will be re-enriched using existing metadata as base.")
+                    print()
+                
                 processed = 0
-                for stem, items in stems_items:
-                    if len(items) != 2:
-                        _print_unpaired_group(stem, items, arg_paths)
+                for img_path in arg_paths:
+                    if img_path.exists():
+                        process_reenrich(
+                            img_path,
+                            asset_type=asset_type,
+                            dry_run=dry_run,
+                            auto_yes=auto_yes,
+                            session_context=session_context,
+                            session_hints=session_hints,
+                            enrich_mode=enrich_mode,
+                        )
+                    else:
+                        print(f"  Image not found: {img_path}")
+                    processed += 1
+                    if sys.stdout.isatty():
+                        _print_progress(processed, len(arg_paths))
+            else:
+                # Standard pairing mode: looking for image/archive pairs
+                from collections import defaultdict
+
+                stems: dict[str, list[Path]] = defaultdict(list)
+                for p in arg_paths:
+                    stems[p.stem].append(p)
+
+                stems_items = list(stems.items())
+                total = len(stems_items)
+                if total == 0:
+                    print("No file pairs found in arguments.")
+                else:
+                    if sys.stdout.isatty():
+                        print(f"Processing {total} pair(s)...")
+                    processed = 0
+                    for stem, items in stems_items:
+                        if len(items) != 2:
+                            _print_unpaired_group(stem, items, arg_paths)
+                            processed += 1
+                            _print_progress(processed, total)
+                            continue
+                        a, b = items
+                        # determine which is image and which is asset/model file
+                        if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                            process_pair(a, b, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
+                        elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                            process_pair(b, a, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
+                        else:
+                            print(f"Skipping stem '{stem}': could not identify image/asset pair ({a}, {b})")
                         processed += 1
                         _print_progress(processed, total)
-                        continue
-                    a, b = items
-                    # determine which is image and which is asset/model file
-                    if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                        process_pair(a, b, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                    elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                        process_pair(b, a, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                    else:
-                        print(f"Skipping stem '{stem}': could not identify image/asset pair ({a}, {b})")
-                    processed += 1
-                    _print_progress(processed, total)
         else:
             # Interactive multiline paste mode.
             # User can paste any number of file paths (one per line, mixed order),
@@ -3145,23 +3280,51 @@ def main() -> None:
                 else:
                     asset_type = "furniture"
 
-            print(f"Processing {total} pair(s)...")
-            processed = 0
-            for stem, items in paste_items:
-                if len(items) != 2:
-                    _print_unpaired_group(stem, items, valid_paste_paths, indent="  ")
+            print(f"Processing {total} item(s)...")
+            
+            # Check if all items are image files (re-enrich mode)
+            all_paste_images = all(p.suffix.lower() in IMAGE_EXTENSIONS for p in valid_paste_paths)
+            paste_has_archives = any(p.suffix.lower() in ASSET_FILE_EXTENSIONS for p in valid_paste_paths)
+            
+            if all_paste_images and not paste_has_archives:
+                # Re-enrich mode in paste: all items are images, no archives
+                if sys.stdout.isatty():
+                    print("Re-enrich mode detected: all items are images without archives")
+                    print("Images will be re-enriched using existing metadata as base.")
+                    print()
+                
+                processed = 0
+                for img_path in valid_paste_paths:
+                    process_reenrich(
+                        img_path,
+                        asset_type=asset_type,
+                        dry_run=dry_run,
+                        auto_yes=auto_yes,
+                        session_context=session_context,
+                        session_hints=session_hints,
+                        enrich_mode=enrich_mode,
+                    )
+                    processed += 1
+                    if sys.stdout.isatty():
+                        _print_progress(processed, len(valid_paste_paths))
+            else:
+                # Standard pairing mode: looking for image/archive pairs
+                processed = 0
+                for stem, items in paste_items:
+                    if len(items) != 2:
+                        _print_unpaired_group(stem, items, valid_paste_paths, indent="  ")
+                        processed += 1
+                        _print_progress(processed, total)
+                        continue
+                    a, b = items
+                    if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                        process_pair(a, b, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
+                    elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                        process_pair(b, a, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
+                    else:
+                        print(f"  Skipping '{stem}': could not identify image/asset pair")
                     processed += 1
                     _print_progress(processed, total)
-                    continue
-                a, b = items
-                if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                    process_pair(a, b, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                    process_pair(b, a, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                else:
-                    print(f"  Skipping '{stem}': could not identify image/asset pair")
-                processed += 1
-                _print_progress(processed, total)
     except KeyboardInterrupt:
         print("Cancelled by user.")
         sys.exit(1)
