@@ -14,15 +14,15 @@ Reference for all available metadata columns in `.metadata.efu`. Use with the cl
 | URL | URL/project codes | Light (~15%) |
 | From | Source origin | Empty |
 | **Subject** | **Primary asset classification** | **Heavy (100%)** |
-| Author | Designer/model/descriptor | Heavy (95%+) |
+| Title | Designer/model/descriptor | Heavy (95%+) |
 | Writer | Brand/designer | Heavy (85%+) |
 | Album | Collection/series | Light (~20%) |
 | Genre | Color/material/finish | Heavy (90%+) |
 | People | Location/context | Moderate (60-70%) |
 | Company | Brand/form/shape | Moderate (50-60%) |
 | Period | Style/era/temporal | Sparse (~5%) |
-| Artist | Size/dimension | Sparse (~10%) |
-| Title | Name/identifier | Sparse (~10%) |
+| Scale | Size/dimension | Sparse (~10%) |
+| Author | Name/identifier | Sparse (~10%) |
 | Comment | Notes/status | Light (~15%) |
 | To | Recipient | Empty |
 | Manager | Category owner | Heavy (100%) |
@@ -58,18 +58,15 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **People**: Activity/pose context (free-text). Examples: `Standing`, `Sitting`, `Walking`
 - **Location**: Category/context (free-text). Examples: `Urban`, `Nature`, `Interior`, `Landscape`, `Environment`
 
-**Author** : Primary descriptor or designer (varies by category)
+**Title** : Primary descriptor or designer (varies by category)
 - **Furniture**: Model name. Examples: `Barcelona`, `Vernis Blend`, `Eames Lounge`
-- **Vegetation**: Approx. height. Examples: `2m`, `150cm`, `Small`
 - **People**: Gender. Examples: `Male`, `Female`
 - **Fixture**: Model name. Examples: `Arco`, `Yoko`, `Tolomeo`
 - **Object**: Model name. Examples: `Sahal`, `Bonbori`
 - **Procedural**: Description
-- **Location**: Subcategory. Examples: `Downtown`, `Forest`, `Bedroom`
 - **Vehicle**: Model. Examples: `Model S`, `Boeing 747`, `Yacht`
-- **VFX**: Description
 
-**Artist** : Size, scale, or dimensional identifier
+**Scale** : Size, scale, or dimensional identifier
 - **Furniture**: Size. Examples: `300x300mm`, `1200x450x350mm`, `Large`
 - **Vegetation**: Size. Examples: `3m`, `Small`, `Medium`
 - **People**: Pose / Activity. Examples: `Standing`, `Sitting`, `Walking`
@@ -90,6 +87,10 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **VFX**: Style/variant. Examples: `Turbulent`, `Smooth`, `Particle-based`
 - **Schedule**: Finish/color. Examples: `Brushed Bronze PVD`, `Matte Black`, `Satin Stainless Steel`
 
+---
+
+## Descriptive
+
 **Period** : Style, era, or temporal classification
 - **Furniture**: Style period. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`
 - **Vegetation**: Seasonal appearance. Examples: `Evergreen`, `Deciduous`, `Spring Blooming`
@@ -102,16 +103,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Location**: Custom/context (optional)
 - **Vehicle**: Year. Examples: `2024`, `1960`, `Contemporary`
 - **Schedule**: Style. Examples: `Modern`, `Contemporary`, or `-`
-
----
-
-## Descriptive
-
-**Title** : Product name, vendor, or primary identifier
-- **Furniture**: Vendor name. Examples: `Dimensiva`, `Design Connected`
-- **Fixture**: Vendor name. Examples: `Dimensiva`, `Design Connected`
-- **Object**: Vendor name
-- **Schedule**: Project code. Examples: `PLS`, `KIL`, `MWR`
 
 **Album** : Collection, series, group, or batch identifier
 - **Furniture**: Collection. Examples: `Vernis Collection`, `Arco Collection`
@@ -143,6 +134,12 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Location**: Width. Examples: `100m`, `Narrow`, `Wide`
 - **Vehicle**: Brand. Examples: `BMW`, `Boeing`, `Ferrari`
 - **Schedule**: Brand. Examples: `Hansgrohe`, `Kumeis`, `Hailo`
+
+**Author** : Product name, vendor, or primary identifier
+- **Furniture**: Vendor name. Examples: `Dimensiva`, `Design Connected`
+- **Fixture**: Vendor name. Examples: `Dimensiva`, `Design Connected`
+- **Object**: Vendor name
+- **Schedule**: Project code. Examples: `PLS`, `KIL`, `MWR`
 
 ---
 
