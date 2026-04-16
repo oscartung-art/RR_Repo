@@ -613,7 +613,6 @@ ASSET_TYPES = {
     "furniture",
     "vegetation",
     "people",
-    "texture",
     "material",
     "layouts",
     "fixture",

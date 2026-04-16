@@ -15,7 +15,7 @@ For EFU export, the `Subject` column stores the full hierarchy path (e.g., `Furn
 
 ## Subcategories
 The single source for all valid subcategory names. Add here **and** add a matching `Prefix Code` entry.
-`ingest_asset.py` validates output against this and derives the EFU `Subject` path from it.
+`ingest_asset.py` validates output against this and derives the EFU `Mood` path from it.
 
 Furniture/Bed/Bed
 Furniture/Bed/BunkBed
@@ -222,7 +222,6 @@ Vegetation/WinterTree
 - Object
 - Vehicle
 - VFX
-- Texture
 - Layouts
 - People
 
@@ -254,7 +253,7 @@ use `custom_property_3` (ChineseName) and `custom_property_4` (LatinName) for bo
 ---
 
 ## Material
-Material samples and finishes. Use `custom_property_0` (Color), `custom_property_2` (Form) for material attributes.
+Material samples, finishes, and texture maps. Use `custom_property_0` (Color), `custom_property_2` (Form/Pattern) for material and texture attributes. Includes material samples, surface finishes, and texture maps for 3D assets.
 
 ---
 
@@ -270,11 +269,6 @@ Vehicles and transportation (13-xx): Aircraft, Boat, Car, Ship, Space.
 
 ## VFX
 Visual effects and procedural elements: Caustics, Emissive, Fire, Pattern, Sky, Smoke, Water.
-
----
-
-## Texture
-Texture maps and surface details. Use `custom_property_0` (Color), `custom_property_2` (Form) for texture attributes.
 
 ---
 

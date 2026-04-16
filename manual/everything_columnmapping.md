@@ -32,8 +32,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Vegetation**: Full path. Examples: `Vegetation/Tree/ConiferTree`, `Vegetation/FlowerShrub`, `Vegetation/Cactus`, `Vegetation/Groundcover`, `Vegetation/Plant`
 - **Layouts**: Full path. Examples: `Layouts/BarTable`, `Layouts/BedSet`, `Layouts/DiningTable`, `Layouts/Seating/SeatingLounge`
 - **Object**: Full path. Examples: `Object/Decor/Vase`, `Object/Decor/Cushion`, `Object/Tableware/Book`, `Object/Decor/Sculpture`, `Object/Tableware/Tableware`
-- **Material**: Full path. Examples: `Material/Leather`, `Material/Wood`, `Material/Metal`, `Material/Glass`
-- **Texture**: Full path. Examples: `Texture/Tile`, `Texture/Fabric`, `Texture/Stone`, `Texture/Plaster`
+- **Material**: Full path. Examples: `Material/Leather`, `Material/Wood`, `Material/Metal`, `Material/Glass`, `Material/Tile`, `Material/Fabric`, `Material/Stone`
 - **Vehicle**: Full path. Examples: `Vehicle/Car`, `Vehicle/Aircraft`, `Vehicle/Boat`, `Vehicle/Ship`, `Vehicle/Space`
 - **VFX**: Full path. Examples: `VFX/Fire`, `VFX/Smoke`, `VFX/Water`, `VFX/Sky`, `VFX/Caustics`, `VFX/Pattern`
 - **People**: Full path. Examples: `People/Standing`, `People/Sitting`, `People/Walking`, `People/Group`
@@ -43,7 +42,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Fixture**: Model name. Examples: `Arco`, `Yoko`, `Tolomeo`
 - **Object**: Model name. Examples: `Sahal`, `Bonbori`
 - **Vehicle**: Model. Examples: `Model S`, `Boeing 747`, `Yacht`
-- **Material/Texture**: Material/finish name. Examples: `White Marble`, `Brushed Steel`, `Oak Wood`
+- **Material**: Material/finish name. Examples: `White Marble`, `Brushed Steel`, `Oak Wood`, `Porcelain Tile`
 
 **Album** : Collection
 - **Furniture**: Collection. Examples: `Vernis Collection`, `Arco Collection`
@@ -63,7 +62,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Fixture**: Brand. Examples: `Flos`, `Foscarini`, `Artemide`, `Hansgrohe`
 - **Object**: Brand. Examples: `Kartell`, `Alessi`
 - **Vehicle**: Brand. Examples: `BMW`, `Boeing`, `Ferrari`
-- **Material/Texture**: Brand/Manufacturer. Examples: `Armani`, `Loro Piana`
+- **Material**: Brand/Manufacturer. Examples: `Armani`, `Loro Piana`
 
 **Author** : Vendor/company name or source
 - **Furniture**: Vendor. Examples: `Dimensiva`, `Design Connected`
@@ -87,16 +86,15 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Furniture**: Primary color/material. Examples: `Chrome`, `Matte Black`, `Wood`, `Leather`
 - **Vegetation**: Primary color/material. Examples: `Green`, `Autumn Red`, `Golden Yellow`
 - **People**: Primary color/material. Examples: `Black Suit`, `Blue Shirt`, `Red Dress`
-- **Material**: Primary color/material. Examples: `White`, `Beige`, `Charcoal`
+- **Material**: Primary color/material. Examples: `White`, `Beige`, `Charcoal`, `Natural Oak`
 - **Fixture**: Primary color/material. Examples: `Chrome`, `Opal Glass`, `Brushed Steel`
 - **Object**: Primary color/material. Examples: `Ceramic`, `Glass`, `Fabric`
 - **Vehicle**: Primary color/material. Examples: `Black`, `Silver Metallic`, `Red`
-- **Schedule**: Finish/color. Examples: `Brushed Bronze PVD`, `Matte Black`, `Satin Stainless Steel`
 
 **Period** : Style, era, or temporal classification
 - **Furniture**: Style. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`
 - **People**:  Style. Examples: `Contemporary`, `Vintage`, `Formal`
-- **Material**: Style. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`
+- **Material**: Style. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`, `Classic`, `Rustic`
 - **Fixture**: Style. Examples: `Modern`, `Industrial`, `Scandinavian`
 - **Object**:  Style. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`
 - **Vehicle**: Year. Examples: `2024`, `1960`, `Contemporary`
@@ -105,7 +103,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Layouts**: Layout shape. Examples: `Circle`, `L-shape`, `U-shape`, `Galley`
 - **Furniture**: Shape/form. Examples: `Round`, `Rectangular`, `Wall-mounted`, `Freestanding`
 - **Vegetation**: Growth form. Examples: `Columnar`, `Conical`, `Spreading`, `Spherical`
-- **Material**: Texture pattern. Examples: `Diamond`, `Mosaic`, `Square`, `Cross-hatch`
+- **Material**: Texture pattern/surface finish. Examples: `Diamond`, `Mosaic`, `Square`, `Cross-hatch`, `Smooth`, `Textured`
 - **Fixture**: Shape/form. Examples: `Wall-mounted`, `Floor-standing`, `Built-in`
 - **Object**: Shape/form. Examples: `Round`, `Rectangular`, `Abstract`
 
@@ -122,7 +120,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 
 ## Unused
 - `writer` - Reserved (formerly Vendor/source)
-- `author` - Reserved (formerly Brand/designer)
+- `artist` - Reserved 
 - `language` - Language code
 - `copyright` - Copyright information
 - `camera-make` - Camera manufacturer
