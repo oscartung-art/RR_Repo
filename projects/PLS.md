@@ -6,7 +6,6 @@
 **Last Updated:** 2026-03-30  
 
 ## Site
-
 **Lot**: APIL 32  
 **Address**: 17-23 Ap Lei Chau Main Street; 7-9 Ping Lan Street & 37-39 San Shi Street
 
@@ -61,8 +60,8 @@
 - [x] Door Schedule
 
 ### Interior Design
-- [x] Material Schedule
-- [x] 3D Model
+- [x] Material Schedule (Interior)
+- [x] 3D Model (Interior)
 - [x] Reference Rendering
 - [x] Working Drawings
 - [x] Furniture Schedule
