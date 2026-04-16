@@ -1900,7 +1900,7 @@ def enrich_row_with_models(
 
     collection = clean_display_case(pick_with_db("collection", "Album", "-"))
     usage_location = validate_usage_location(clean_display_case(pick_with_db("usage_location", "People", "-")))
-    model_name = clean_display_case(pick_with_db("model_name", "Author", "-"))
+    model_name = clean_display_case(pick_with_db("model_name", "Title", "-"))
     stem_model = clean_display_case(hints.get("model", "") or hints.get("lead_desc", ""))
     # Keep a raw fallback token from the original stem (after UID prefix), preserving
     # separators like underscores for cases where that exact token is the model name.
@@ -1915,11 +1915,11 @@ def enrich_row_with_models(
             model_name = stem_model_raw
         elif stem_model and stem_model != "-":
             model_name = stem_model
-    size = pick_with_db("size", "Artist", "-")
-    # Vendor: AI pick → DB Title → brand fallback
+    size = pick_with_db("size", "Scale", "-")
+    # Vendor: AI pick → DB Author → brand fallback
     vendor_name = clean_display_case(pick("vendor_name", ""))
     if not vendor_name or vendor_name == "-":
-        db_vendor = db_get("Title")
+        db_vendor = db_get("Author")
         vendor_name = clean_display_case(db_vendor) if db_vendor else clean_display_case(brand)
     # Carry over Rating from DB if present
     if db_row.get("Rating", "").strip() and db_row["Rating"].strip() not in ("-", "0", ""):
