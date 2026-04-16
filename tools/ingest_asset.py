@@ -21,69 +21,10 @@ import threading
 import time
 import textwrap
 
-# Optional CLIP model support — only needed when USER_LABELS is populated.
-# These are lazily imported in load_clip_model() to avoid hard dependency.
-# import torch       # optional, used only in score_labels()
-# import open_clip   # optional, used only in load_clip_model()
-
-# ---------------------------------------------------------------------------
-# ingest_asset.py branch map (detailed)
-# ---------------------------------------------------------------------------
-#
-#   [main()]
-#      |
-#      +--> parse CLI flags
-#      |      (--asset-type, --dry-run/--quick, --yes)
-#      |
-#      +--> asset_type resolution
-#      |      +--> explicit --asset-type? -> use it
-#      |      `--> auto-detect path
-#      |             +--> detect_asset_category(stem)
-#      |             `--> detect_asset_category_vision(first_image) when stem is weak
-#      |
-#      +--> input grouping
-#      |      +--> args mode: group by exact stem from CLI file list
-#      |      `--> paste mode: read lines, validate files, group by stem
-#      |
-#      +--> for each stem group
-#             +--> not exactly 2 files? -> skip with reason
-#             +--> cannot infer image/asset roles? -> skip with reason
-#             `--> process_pair(image, asset)
-#                    |
-#                    +--> validate_inputs(image, asset)
-#                    +--> label source
-#                    |      +--> vision_detect: classify_image(image)
-#                    |      `--> else: CamelCase stem label
-#                    +--> compute_crc32(asset)
-#                    +--> build_metadata_row(...)
-#                    +--> enrich_row_with_models(...)
-#                    |      |
-#                    |      +--> pass A: filename text hints (if descriptive)
-#                    |      +--> pass B: web_search_enrich
-#                    |      +--> pass C: enrich_vision_pass (if image exists)
-#                    |      +--> shared field resolver pick()/pick_with_db()
-#                    |      +--> deterministic subcategory priorities
-#                    |      |      prefix code > db mood code > ai candidate/fuzzy/keywords
-#                    |      `--> asset-type branch write
-#                    |             + object: dedicated object subcategory matcher + Mood path
-#                    |             ` other: generic/category-specific field mapping
-#                    |
-#                    +--> build_short_base_name(...) + ensure_unique_targets(...)
-#                    +--> preview_mapped_metadata(...)
-#                    |
-#                    +--> dry-run?
-#                    |      `--> yes: stop pair here (no move/write)
-#                    |
-#                    `--> apply stage
-#                           +--> require confirm unless --yes
-#                           +--> move_pair(image, asset)
-#                           `--> append_metadata_row(.metadata.efu)
-#
-
-THUMBNAIL_BASE = Path(r"D:\RR_Repo\Database")
+THUMBNAIL_BASE = Path(r"G:\DB")
 ARCHIVE_BASE = Path(r"G:\DB")
-# Use a hidden index file to avoid collisions with user files.
-METADATA_EFU_PATH = THUMBNAIL_BASE / ".metadata.efu"
+# EFU index lives in the repo regardless of where images are stored.
+METADATA_EFU_PATH = Path(r"D:\RR_Repo\Database") / ".metadata.efu"
 # Legacy alias kept for any code that still references OUTPUT_DIR directly.
 OUTPUT_DIR = THUMBNAIL_BASE
 # Previous DB export used as a supplementary enrichment source.
@@ -98,7 +39,7 @@ if _THUMBNAIL_BASE_ENV:
     THUMBNAIL_BASE = Path(_THUMBNAIL_BASE_ENV)
 if _ARCHIVE_BASE_ENV:
     ARCHIVE_BASE = Path(_ARCHIVE_BASE_ENV)
-    METADATA_EFU_PATH = THUMBNAIL_BASE / ".metadata.efu"  # recompute if base changed
+    # METADATA_EFU_PATH intentionally NOT recomputed — EFU always lives in D:\RR_Repo\Database
 
 
 # ---------------------------------------------------------------------------
@@ -181,136 +122,466 @@ def lookup_current_db(source_stem: str) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Keyword file loader — all taxonomy tables live in manual/ingest_keywords.md
+# Keyword tables — embedded directly to keep this script self-contained.
+# manual/ingest_keywords.md is the human-editable reference document; update
+# the constants below whenever that doc changes.
 # ---------------------------------------------------------------------------
 
-KEYWORDS_MD = Path(__file__).resolve().parents[1] / "manual" / "ingest_keywords.md"
+# Full slash-path subcategory hierarchy (leaf is the canonical subcategory name).
+_KW_SUBCATEGORY_PATHS: tuple[str, ...] = (
+    "Furniture/Bed/Bed",
+    "Furniture/Bed/BunkBed",
+    "Furniture/Bed/Daybed",
+    "Furniture/Bed/Futon",
+    "Furniture/Carpet/Carpet",
+    "Furniture/Curtain/Curtain",
+    "Furniture/Curtain/CurtainBlind",
+    "Furniture/Curtain/RoomDivider",
+    "Furniture/Parasol/Parasol",
+    "Furniture/Seating/Armchair",
+    "Furniture/Seating/ArmchairOutdoor",
+    "Furniture/Seating/Barstool",
+    "Furniture/Seating/BarstoolOutdoor",
+    "Furniture/Seating/Bench",
+    "Furniture/Seating/BenchOutdoor",
+    "Furniture/Seating/Chair",
+    "Furniture/Seating/ChairOutdoor",
+    "Furniture/Seating/DiningChair",
+    "Furniture/Seating/Divan",
+    "Furniture/Seating/HangingChair",
+    "Furniture/Seating/KidsChair",
+    "Furniture/Seating/LoungeChair",
+    "Furniture/Seating/Lounger",
+    "Furniture/Seating/MassageChair",
+    "Furniture/Seating/OfficeChair",
+    "Furniture/Seating/Ottoman",
+    "Furniture/Seating/Pouf",
+    "Furniture/Seating/RattanChair",
+    "Furniture/Seating/Recliner",
+    "Furniture/Seating/RecliningChair",
+    "Furniture/Seating/SideChair",
+    "Furniture/Seating/Stool",
+    "Furniture/Seating/SunLounger",
+    "Furniture/Sofa/Loveseat",
+    "Furniture/Sofa/OfficeSofa",
+    "Furniture/Sofa/SectionalSofa",
+    "Furniture/Sofa/Sofa",
+    "Furniture/Sofa/SofaOutdoor",
+    "Furniture/Storage/BathroomCabinet",
+    "Furniture/Storage/Bookcase",
+    "Furniture/Storage/Cabinet",
+    "Furniture/Storage/CabinetSet",
+    "Furniture/Storage/ClosetDecor",
+    "Furniture/Storage/Credenza",
+    "Furniture/Storage/DisplayCabinet",
+    "Furniture/Storage/DrawerChest",
+    "Furniture/Storage/Dresser",
+    "Furniture/Storage/EntertainmentCenter",
+    "Furniture/Storage/OfficeStorage",
+    "Furniture/Storage/ShelvingUnit",
+    "Furniture/Storage/Sideboard",
+    "Furniture/Storage/Storage",
+    "Furniture/Storage/TVStand",
+    "Furniture/Storage/TvCabinet",
+    "Furniture/Storage/Wardrobe",
+    "Furniture/Table/BarTable",
+    "Furniture/Table/BedsideTable",
+    "Furniture/Table/Billiard",
+    "Furniture/Table/CoffeeTable",
+    "Furniture/Table/CoffeeTableSet",
+    "Furniture/Table/ConsoleTable",
+    "Furniture/Table/Desk",
+    "Furniture/Table/DiningSet",
+    "Furniture/Table/DiningTable",
+    "Furniture/Table/Nightstand",
+    "Furniture/Table/OfficeTable",
+    "Furniture/Table/SideTable",
+    "Furniture/Table/Table",
+    "Furniture/Table/TableCenterpiece",
+    "Furniture/Table/TableOutdoor",
+    "Furniture/Table/TableSet",
+    "Fixture/Lighting/ArchitecturalLight",
+    "Fixture/Lighting/CeilingLight",
+    "Fixture/Lighting/Chandelier",
+    "Fixture/Lighting/DeskLamp",
+    "Fixture/Lighting/FillLight",
+    "Fixture/Lighting/FloorLamp",
+    "Fixture/Lighting/Lantern",
+    "Fixture/Lighting/Pendant",
+    "Fixture/Lighting/PendantBranched",
+    "Fixture/Lighting/PendantCaged",
+    "Fixture/Lighting/PendantCrystal",
+    "Fixture/Lighting/PendantCylinder",
+    "Fixture/Lighting/PendantDrum",
+    "Fixture/Lighting/PendantGlobe",
+    "Fixture/Lighting/PendantIrregular",
+    "Fixture/Lighting/PendantLight",
+    "Fixture/Lighting/PendantLinear",
+    "Fixture/Lighting/PendantOrb",
+    "Fixture/Lighting/PendantRattan",
+    "Fixture/Lighting/PendantRectangular",
+    "Fixture/Lighting/PendantSet",
+    "Fixture/Lighting/PendantShaded",
+    "Fixture/Lighting/PendantSpiral",
+    "Fixture/Lighting/PendantStar",
+    "Fixture/Lighting/PendantTiered",
+    "Fixture/Lighting/PendantWaterfall",
+    "Fixture/Lighting/ReadingLamp",
+    "Fixture/Lighting/SkyLight",
+    "Fixture/Lighting/SpotlightAccent",
+    "Fixture/Lighting/StreetLight",
+    "Fixture/Lighting/StripLight",
+    "Fixture/Lighting/TableLamp",
+    "Fixture/Lighting/TroughLight",
+    "Fixture/Lighting/WallLamp",
+    "Fixture/Lighting/WallLight",
+    "Fixture/Appliance",
+    "Fixture/BathroomAppliance",
+    "Fixture/BathroomFabric",
+    "Fixture/BathroomFixture",
+    "Fixture/BathroomPlumbing",
+    "Fixture/Bathtub",
+    "Fixture/KitchenAppliance",
+    "Fixture/KitchenFabric",
+    "Fixture/KitchenFaucet",
+    "Fixture/KitchenFixture",
+    "Fixture/KitchenPlumbing",
+    "Fixture/KitchenSink",
+    "Fixture/OfficeAppliance",
+    "Fixture/RainShower",
+    "Fixture/ShowerHead",
+    "Fixture/ShowerMixer",
+    "Fixture/Sink",
+    "Fixture/Toilet",
+    "Object/Decor/Art",
+    "Object/Decor/Basket",
+    "Object/Tableware/Book",
+    "Object/Tableware/BookStack",
+    "Object/Tableware/Bowl",
+    "Object/Decor/Candle",
+    "Object/Decor/Clock",
+    "Object/Tableware/Cookware",
+    "Object/Decor/Cushion",
+    "Object/Decor/DecorDisplay",
+    "Object/Decor/DigitalDecor",
+    "Object/Tableware/DiningFood",
+    "Object/Tableware/DiningTableware",
+    "Object/Tableware/DisplayTableware",
+    "Object/Tableware/DrinksSet",
+    "Object/Tableware/DrinksTray",
+    "Object/Plant/FloorPlanter",
+    "Object/Tableware/FoodCart",
+    "Object/Tableware/FoodDisplay",
+    "Object/Tableware/FoodDrinks",
+    "Object/Tableware/FoodTray",
+    "Object/Decor/Frame",
+    "Object/Tableware/FruitBowl",
+    "Object/Plant/GreenWall",
+    "Object/Other/Hobby",
+    "Object/Decor/Mirror",
+    "Object/Decor/MusicDecor",
+    "Object/Decor/OfficeDecor",
+    "Object/Plant/PlanterBox",
+    "Object/Plant/PottedPlantSet",
+    "Object/Plant/PottedPlantTable",
+    "Object/Decor/Sculpture",
+    "Object/Tableware/ServingPlatter",
+    "Object/Decor/ShelvingDecor",
+    "Object/Tableware/Tableware",
+    "Object/Other/Toy",
+    "Object/Tableware/Tray",
+    "Object/Decor/Vase",
+    "Object/Decor/WallDecor",
+    "Object/Tableware/WineRelated",
+    "Vegetation/AquaticPlant",
+    "Vegetation/BambooTree",
+    "Vegetation/Cactus",
+    "Vegetation/ConiferTree",
+    "Vegetation/CreeperPlant",
+    "Vegetation/CropPlant",
+    "Vegetation/DryPlant",
+    "Vegetation/FlowerGrass",
+    "Vegetation/FlowerPlant",
+    "Vegetation/FlowerShrub",
+    "Vegetation/FlowerTree",
+    "Vegetation/Gravel",
+    "Vegetation/GreenWallForest",
+    "Vegetation/Groundcover",
+    "Vegetation/Hedge",
+    "Vegetation/LargeTree",
+    "Vegetation/PalmTree",
+    "Vegetation/Plant",
+    "Vegetation/Rock",
+    "Vegetation/Shrub",
+    "Vegetation/SmallTree",
+    "Vegetation/Succulent",
+    "Vegetation/Tree",
+    "Vegetation/TreeStump",
+    "Vegetation/WildGrass",
+    "Vegetation/WildPlant",
+    "Vegetation/WinterTree",
+)
 
+# Filename prefix code → canonical CamelCase subcategory name.
+# Accepts both "10-01" and compact "1001" forms (normalisation handled in _resolve_db_prefix_code).
+_KW_PREFIX_TO_SUBCATEGORY: dict[str, str] = {
+    "10-01": "Bench",
+    "10-02": "Carpet",
+    "10-03": "Chair",
+    "10-04": "Curtain",
+    "10-05": "Sofa",
+    "10-06": "Sofa",
+    "10-07": "Armchair",
+    "10-08": "Pouf",
+    "10-09": "Ottoman",
+    "10-10": "Stool",
+    "10-11": "Barstool",
+    "10-12": "DiningTable",
+    "10-13": "CoffeeTable",
+    "10-14": "ConsoleTable",
+    "10-15": "Desk",
+    "10-16": "SideTable",
+    "10-17": "Cabinet",
+    "10-17-B": "BathroomCabinet",
+    "10-17-O": "OfficeStorage",
+    "10-17-S": "CabinetSet",
+    "10-18": "Bookcase",
+    "10-19": "TVStand",
+    "10-20": "Table",
+    "10-21": "Daybed",
+    "10-22": "Bed",
+    "10-23": "Wardrobe",
+    "10-24": "Nightstand",
+    "10-25": "ShelvingUnit",
+    "10-26": "Dresser",
+    "10-27": "ArmchairOutdoor",
+    "10-28": "BenchOutdoor",
+    "10-29": "BarstoolOutdoor",
+    "10-30": "ChairOutdoor",
+    "10-37": "SunLounger",
+    "10-38": "Parasol",
+    "10-39": "SofaOutdoor",
+    "10-40": "SideTable",
+    "10-41": "HangingChair",
+    "10-42": "TableOutdoor",
+    "10-43": "OfficeTable",
+    "10-44": "TableSet",
+    "10-45": "DiningSet",
+    "10-46": "CoffeeTableSet",
+    "10-50": "RattanChair",
+    "10-63": "OfficeStorage",
+    "10-64": "OfficeSofa",
+    "10-65": "OfficeChair",
+    "10-71": "KidsChair",
+    "11-01": "Canopy",
+    "11-02": "Ceiling",
+    "11-03": "Door",
+    "11-04": "MEP",
+    "11-05": "Facade",
+    "11-06": "Fence",
+    "11-07": "FloorElement",
+    "11-08": "Gate",
+    "11-09": "Ironmongery",
+    "11-10": "Louvre",
+    "11-11": "Profile",
+    "11-12": "AssemblyEquipment",
+    "11-13": "Railing",
+    "11-14": "Roof",
+    "11-15": "Screen",
+    "11-16": "Spandrel",
+    "11-17": "Wall",
+    "11-18": "Window",
+    "11-21": "Appliance",
+    "11-31": "BathroomAppliance",
+    "11-32": "BathroomFixture",
+    "11-33": "BathroomPlumbing",
+    "11-41": "KitchenAppliance",
+    "11-42": "KitchenFixture",
+    "11-43": "KitchenPlumbing",
+    "11-44": "KitchenSink",
+    "11-45": "KitchenFaucet",
+    "11-46": "RainShower",
+    "11-61": "OfficeAppliance",
+    "12-01": "Art",
+    "12-02": "Book",
+    "12-02-H": "BookStack",
+    "12-02-V": "BookStack",
+    "12-03": "Bowl",
+    "12-04": "Candle",
+    "12-05": "Clock",
+    "12-06": "Cushion",
+    "12-07": "DecorDisplay",
+    "12-08": "Hobby",
+    "12-09": "ShelvingDecor",
+    "12-10": "MusicDecor",
+    "12-11": "Sculpture",
+    "12-12": "Vase",
+    "12-13": "WallDecor",
+    "12-14": "Mirror",
+    "12-15": "Storage",
+    "12-16": "Tray",
+    "12-16-A": "DrinksTray",
+    "12-16-B": "FoodTray",
+    "12-17": "Frame",
+    "12-18": "DigitalDecor",
+    "12-20": "OfficeDecor",
+    "12-21": "ClosetDecor",
+    "12-23": "PottedPlantTable",
+    "12-24": "PottedPlantSet",
+    "12-26": "FloorPlanter",
+    "12-27": "PlanterBox",
+    "12-28": "GreenWall",
+    "12-31": "Tableware",
+    "12-32": "TableCenterpiece",
+    "12-33": "DiningFood",
+    "12-34": "DiningTableware",
+    "12-35": "Cookware",
+    "12-36": "KitchenFabric",
+    "12-37": "DrinksSet",
+    "12-39": "FoodDrinks",
+    "12-40": "FruitBowl",
+    "12-41": "DisplayTableware",
+    "12-47": "FoodDisplay",
+    "12-48": "WineRelated",
+    "12-49": "FoodCart",
+    "12-51": "Toy",
+    "12-56": "BathroomFabric",
+    "14-01": "Groundcover",
+    "14-02": "WildGrass",
+    "14-03": "FlowerGrass",
+    "14-04": "Gravel",
+    "14-06": "Plant",
+    "14-07": "AquaticPlant",
+    "14-08": "Cactus",
+    "14-09": "CropPlant",
+    "14-10": "DryPlant",
+    "14-11": "FlowerPlant",
+    "14-17": "Succulent",
+    "14-18": "CreeperPlant",
+    "14-19": "WildPlant",
+    "14-20": "Rock",
+    "14-21": "Shrub",
+    "14-22": "FlowerShrub",
+    "14-23": "Hedge",
+    "14-24": "Tree",
+    "14-25": "BambooTree",
+    "14-26": "WinterTree",
+    "14-27": "ConiferTree",
+    "14-29": "FlowerTree",
+    "14-30": "LargeTree",
+    "14-32": "PalmTree",
+    "14-33": "SmallTree",
+    "14-34": "TreeStump",
+    "14-35": "GreenWallForest",
+    "15-01": "ArchitecturalLight",
+    "15-02": "CeilingLight",
+    "15-03": "Chandelier",
+    "15-04": "FloorLamp",
+    "15-05": "PendantLight",
+    "15-06": "TableLamp",
+    "15-07": "WallLamp",
+    "15-08": "StreetLight",
+    "15-09": "Lantern",
+    "15-10": "FillLight",
+    "15-11": "SpotlightAccent",
+    "15-12": "SkyLight",
+    "15-20": "PendantDrum",
+    "15-21": "PendantLinear",
+    "15-22": "PendantTiered",
+    "15-23": "PendantStar",
+    "15-24": "PendantShaded",
+    "15-25": "PendantWaterfall",
+    "15-26": "PendantIrregular",
+    "15-27": "PendantOrb",
+    "15-28": "PendantCaged",
+    "15-29": "TroughLight",
+    "15-30": "PendantCrystal",
+    "15-31": "PendantCylinder",
+    "15-32": "PendantBranched",
+    "15-33": "PendantSpiral",
+    "15-34": "PendantRattan",
+    "15-35": "PendantGlobe",
+    "15-36": "PendantRectangular",
+}
 
-@lru_cache(maxsize=1)
-def _load_ingest_keywords() -> dict[str, list[list[str]]]:
-    """Parse manual/ingest_keywords.md → section_name: list of data rows.
+# Allowed usage-location room names.
+_KW_USAGE_LOCATIONS: tuple[str, ...] = (
+    "Bathroom",
+    "Bedroom",
+    "Balcony",
+    "Commercial",
+    "Dining Room",
+    "Entryway",
+    "Garden",
+    "Garage",
+    "Gym",
+    "Hallway",
+    "Hotel",
+    "Kids Room",
+    "Kitchen",
+    "Library",
+    "Living Room",
+    "Lobby",
+    "Office",
+    "Outdoor",
+    "Patio",
+    "Restaurant",
+    "Spa",
+    "Study",
+    "Terrace",
+)
 
-    Each section starts with a ``## Heading``.  The first pipe-table row in a
-    section is the header, the second is the separator (``|---|``); remaining
-    rows are data.  Each data row is a list of stripped cell strings.
-    """
-    if not KEYWORDS_MD.exists():
-        return {}
-    sections: dict[str, list[list[str]]] = {}
-    current: str | None = None
-    table_row_idx = 0
-    for raw in KEYWORDS_MD.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if line.startswith("## "):
-            current = line[3:].strip()
-            sections[current] = []
-            table_row_idx = 0
-            continue
-        if current is None or not line.startswith("|"):
-            continue
-        table_row_idx += 1
-        if table_row_idx <= 2:          # skip header (1) and separator (2)
-            continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if cells:
-            sections[current].append(cells)
-    return sections
+# Folder names to skip during vendor path inference (matched case-insensitively).
+_KW_IGNORE_DIRS: tuple[str, ...] = (
+    "rar_without_zip",
+    "_isolate_missing_pairs",
+    "tmp",
+    "temp",
+    "archive",
+    "unzipped",
+    "images",
+    "photos",
+    "misc",
+    "downloads",
+    "3d",
+)
 
 
 @lru_cache(maxsize=1)
 def _kw_prefix_codes() -> dict[str, str]:
-    """Return {prefix_code: subcategory} from the Prefix Codes section."""
-    rows = _load_ingest_keywords().get("Prefix Codes", [])
-    return {r[0]: r[1] for r in rows if len(r) >= 2 and r[0] and r[1]}
+    """Return {prefix_code: subcategory} from embedded constants."""
+    return dict(_KW_PREFIX_TO_SUBCATEGORY)
 
 
 @lru_cache(maxsize=1)
 def _kw_subcategories() -> set[str]:
-    """Return the full set of allowed subcategory names.
-
-    Prefer a human-editable slash-path allowlist under the `## Subcategories`
-    heading when present (e.g. `Furniture/Seating/LoungeChair`). If no
-    slash-path lines are found, fall back to the existing pipe-table first
-    column to remain backwards-compatible.
-    """
-    # Try to parse slash-path lines from the raw markdown section first.
-    slash_paths: list[str] = []
-    if KEYWORDS_MD.exists():
-        in_section = False
-        for raw in KEYWORDS_MD.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if line.startswith("## "):
-                in_section = (line[3:].strip() == "Subcategories")
-                continue
-            if not in_section:
-                continue
-            if not line:
-                continue
-            # Skip table rows and markdown separators/code fences
-            if line.startswith("|") or line.startswith("---") or line.startswith("```"):
-                continue
-            # Treat a non-pipe line containing a slash as a path entry
-            if "/" in line and re.match(r'^[A-Za-z0-9 _\-\./]+$', line):
-                slash_paths.append(line.strip().strip("/"))
-    if slash_paths:
-        return {p.split("/")[-1] for p in slash_paths if p}
-
-    rows = _load_ingest_keywords().get("Subcategories", [])
-    return {r[0] for r in rows if r and r[0]}
+    """Return the full set of allowed subcategory leaf names."""
+    return {path.split("/")[-1] for path in _KW_SUBCATEGORY_PATHS if path}
 
 
 @lru_cache(maxsize=1)
 def _kw_subcategory_groups() -> dict[str, str]:
-    """Return {subcategory: group_path} from the Subcategories section.
-
-    Prefer building the mapping from any slash-path allowlist lines (parent
-    path = everything before the final segment). Fall back to the pipe-table
-    mapping when no slash-paths are present.
-    """
-    # Parse slash-path lines first (if present) to build leaf->group mapping.
-    slash_paths: list[str] = []
-    if KEYWORDS_MD.exists():
-        in_section = False
-        for raw in KEYWORDS_MD.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if line.startswith("## "):
-                in_section = (line[3:].strip() == "Subcategories")
-                continue
-            if not in_section:
-                continue
-            if not line:
-                continue
-            if line.startswith("|") or line.startswith("---") or line.startswith("```"):
-                continue
-            if "/" in line and re.match(r'^[A-Za-z0-9 _\-\./]+$', line):
-                slash_paths.append(line.strip().strip("/"))
-    if slash_paths:
-        mapping: dict[str, str] = {}
-        for path in slash_paths:
-            parts = [seg.strip().strip("/") for seg in path.split("/") if seg.strip()]
-            if len(parts) >= 2:
-                leaf = parts[-1]
-                group = "/".join(parts[:-1])
-                mapping[leaf] = group
-        return mapping
-
-    rows = _load_ingest_keywords().get("Subcategories", [])
-    return {r[0]: r[1] for r in rows if len(r) >= 2 and r[0] and r[1]}
+    """Return {subcategory_leaf: group_path} from embedded constants."""
+    mapping: dict[str, str] = {}
+    for path in _KW_SUBCATEGORY_PATHS:
+        parts = [seg.strip() for seg in path.split("/") if seg.strip()]
+        if len(parts) >= 2:
+            leaf = parts[-1]
+            group = "/".join(parts[:-1])
+            mapping[leaf] = group
+    return mapping
 
 
 @lru_cache(maxsize=1)
 def _kw_usage_locations() -> set[str]:
     """Return the set of allowed usage-location room names."""
-    rows = _load_ingest_keywords().get("Usage Locations", [])
-    return {r[0] for r in rows if r and r[0]}
+    return set(_KW_USAGE_LOCATIONS)
 
 
 @lru_cache(maxsize=1)
 def _kw_ignore_dirs() -> set[str]:
     """Return the set of folder names to skip during vendor inference."""
-    rows = _load_ingest_keywords().get("Ignore Folders", [])
-    return {r[0].lower() for r in rows if r and r[0]}
+    return {d.lower() for d in _KW_IGNORE_DIRS}
 
 
 # ---------------------------------------------------------------------------
@@ -411,7 +682,6 @@ EFU_HEADERS = [
     "Rating",
     "Tags",
     "URL",
-    "From",
     "Company",
     "Author",
     "Album",
@@ -419,18 +689,26 @@ EFU_HEADERS = [
     "custom_property_1",
     "custom_property_2",
     "Period",
-    "Scale",
     "Title",
     "Comment",
     "ArchiveFile",
     "SourceMetadata",
-    "Pose",
-    "Style",
     "Content Status",
     "custom_property_3",
     "custom_property_4",
+    "custom_property_5",
     "CRC-32",
 ]
+
+# Human-friendly aliases for terminal preview output.
+_PREVIEW_HEADER_ALIASES = {
+    "custom_property_0": "Color",
+    "custom_property_1": "Location",
+    "custom_property_2": "Form",
+    "custom_property_3": "ChineseName",
+    "custom_property_4": "LatinName",
+    "custom_property_5": "Size",
+}
 
 
 # Simple spinner for long-running model calls to show activity.
@@ -499,7 +777,7 @@ def _print_help_table() -> None:
           IMAGE    — path to the .jpg / .png render of the asset
           ARCHIVE  — matching archive or 3D model file (same stem as IMAGE)
           TYPE     — one of: furniture | fixture | vegetation | people |
-                            material | buildings | layouts
+                            material | layouts | object | vehicle | vfx
 
         Options:
           --asset-type=TYPE   (required) Asset category — see TYPE values above
@@ -832,7 +1110,7 @@ def detect_asset_category(stem: str) -> tuple[str, str]:
             image_path=None,
             timeout=45,
             model=OPENROUTER_MODEL,
-            spinner_label="Category detect...",
+            spinner_label=None,
         )
         data = extract_json_payload(raw)
         cat = (data.get("category") or "").strip().lower()
@@ -859,7 +1137,6 @@ def detect_asset_category_vision(image_path: Path) -> tuple[str, str]:
         "material",    # textures, surfaces, finishes, fabrics
         "vehicle",     # cars, bikes, trucks, boats
         "people",      # human figures, characters
-        "buildings",   # architecture, structures, facades
         "layouts",     # room layouts, floor plans
         "vfx",         # visual effects, particles, smoke, fire
         "procedural",  # procedural/parametric assets
@@ -882,7 +1159,7 @@ def detect_asset_category_vision(image_path: Path) -> tuple[str, str]:
         "Use 'low' confidence when the image is ambiguous. "
         "No explanation. No extra keys."
     )
-    raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label="Vision detect... ")
+    raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label="Detecting asset category...")
     try:
         data = extract_json_payload(raw)
         cat = normalize_asset_type((data.get("category") or "").strip().lower())
@@ -918,7 +1195,7 @@ def enrich_vision_pass(
         "(3) Use '-' for any field you cannot confidently determine from the image. "
         "(4) Output ONLY the JSON object. No markdown, no explanation, no extra keys."
     )
-    raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label="Vision enrich... ")
+    raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label="Extracting metadata from image...")
     return extract_json_payload(raw)
 
 
@@ -994,6 +1271,19 @@ def clean_display_case(value: str) -> str:
     return " ".join(out)
 
 
+def build_filename_title_fallback(source_stem: str, hints: dict[str, str]) -> str:
+    """Return a deterministic Title fallback derived from the filename stem."""
+    stem_model_raw = source_stem.strip()
+    uid_hint = (hints.get("uid", "") or "").strip()
+    if uid_hint and stem_model_raw.lower().startswith(uid_hint.lower()):
+        stem_model_raw = stem_model_raw[len(uid_hint):].strip(" ._-")
+
+    candidate = clean_display_case(stem_model_raw)
+    if candidate and candidate != "-":
+        return candidate
+    return clean_display_case(source_stem)
+
+
 def clean_name_with_qwen(asset_type: str, source_stem: str, mapped_subcategory: str, mapped_brand: str) -> str:
     """Use the configured LLM to clean noisy source filename into a concise semantic name."""
     prompt = (
@@ -1006,7 +1296,7 @@ def clean_name_with_qwen(asset_type: str, source_stem: str, mapped_subcategory: 
     text = ollama_generate(
         prompt=prompt,
         timeout=45,
-        spinner_label="Name cleanup...",
+        spinner_label="Normalising product name...",
     ).splitlines()[0].strip()
     # Preserve hyphens and accented characters common in European brand names.
     text = re.sub(r"[^A-Za-z0-9_\-\u00C0-\u024F]+", "_", text)
@@ -1059,7 +1349,7 @@ def ollama_generate(
             data=json.dumps(_vis_payload).encode("utf-8"),
             headers=headers,
         )
-        spinner_msg = spinner_label or f"Vision ({_vision_model.split('/')[-1]})..."
+        spinner_msg = spinner_label or f"Vision: extracting from {_vision_model.split('/')[-1]}..."
         _vis_body: dict = {}
         _vis_max_retries = 4
         for _vis_attempt in range(_vis_max_retries):
@@ -1092,7 +1382,7 @@ def ollama_generate(
     if not model_candidates:
         raise RuntimeError("No OpenRouter model configured. Set OPENROUTER_MODEL or OPENROUTER_FALLBACK_MODELS")
 
-    spinner_msg = spinner_label or "OpenRouter..."
+    spinner_msg = spinner_label or "Waiting for AI response..."
     body: dict = {}
     last_error = ""
     unavailable_models: list[str] = []
@@ -1432,7 +1722,7 @@ def web_search_enrich(
             prompt=prompt,
             timeout=60,
             model=OPENROUTER_MODEL,
-            spinner_label="Web extract...",
+            spinner_label="Extracting metadata from webpage...",
         )
         result = extract_json_payload(raw)
         if used_url and result:
@@ -1513,6 +1803,7 @@ def enrich_row_with_models(
         "period", "size", "vendor_name",
     ]
     if filename_usable:
+        print(f"  Searching web for: {_web_query}", flush=True)
         web_data = web_search_enrich(
             product_query=_web_query,
             schema_keys=_full_schema_keys,
@@ -1537,6 +1828,7 @@ def enrich_row_with_models(
 
     # Pass 3 — Vision extraction always runs when an image exists.
     if image_path.exists():
+        print(f"  Reading image: {image_path.name}", flush=True)
         try:
             vision_data = enrich_vision_pass(image_path, asset_type, subcats_list, location_list)
         except Exception as _ve:
@@ -1613,21 +1905,21 @@ def enrich_row_with_models(
     collection = clean_display_case(pick_with_db("collection", "Album", "-"))
     usage_location = validate_usage_location(clean_display_case(pick_with_db("usage_location", "People", "-")))
     model_name = clean_display_case(pick_with_db("model_name", "Title", "-"))
-    stem_model = clean_display_case(hints.get("model", "") or hints.get("lead_desc", ""))
-    # Keep a raw fallback token from the original stem (after UID prefix), preserving
-    # separators like underscores for cases where that exact token is the model name.
-    stem_model_raw = source_stem.strip()
-    _uid_hint = (hints.get("uid", "") or "").strip()
-    if _uid_hint and stem_model_raw.lower().startswith(_uid_hint.lower()):
-        stem_model_raw = stem_model_raw[len(_uid_hint):].strip(" ._-")
+    stem_title_fallback = build_filename_title_fallback(source_stem, hints)
+
+    # For coded / non-descriptive stems, do not trust AI or DB title guesses.
+    # Use the simple UID-trimmed filename token directly.
+    if not filename_usable and stem_title_fallback:
+        model_name = stem_title_fallback
 
     # Stem fallback is only allowed when filename looks descriptive.
     if (not model_name or model_name == "-") and filename_usable:
-        if stem_model_raw:
-            model_name = stem_model_raw
-        elif stem_model and stem_model != "-":
-            model_name = stem_model
-    size = pick_with_db("size", "Scale", "-")
+        if stem_title_fallback:
+            model_name = stem_title_fallback
+    size = pick_with_db("size", "custom_property_5", "-")
+    if not size or size == "-":
+        # Legacy fallback for older EFU rows that still used Scale.
+        size = clean_display_case(db_get("Scale")) or "-"
     # Vendor: AI pick → DB Author → brand fallback
     vendor_name = clean_display_case(pick("vendor_name", ""))
     if not vendor_name or vendor_name == "-":
@@ -1756,6 +2048,36 @@ def enrich_row_with_models(
         m = model_name.lower()
         if b == m or m.startswith(b + " ") or m.startswith(b + "-"):
             brand = "-"
+
+    # If model_name includes the company/brand, strip it so Title stays product-only.
+    # Examples:
+    # - "Hemicycle Ligne Roset" + brand "Ligne Roset" -> "Hemicycle"
+    # - "Ligne Roset Hemicycle" + brand "Ligne Roset" -> "Hemicycle"
+    if model_name and model_name != "-" and brand and brand != "-":
+        m = model_name.strip()
+        b = brand.strip()
+        m_norm = re.sub(r"\s+", " ", m).strip().lower()
+        b_norm = re.sub(r"\s+", " ", b).strip().lower()
+        if m_norm != b_norm:
+            # Prefix form: "Brand Product"
+            if m_norm.startswith(b_norm + " "):
+                model_name = m[len(b):].strip(" -_/") or "-"
+            # Suffix form: "Product Brand"
+            elif m_norm.endswith(" " + b_norm):
+                model_name = m[:len(m) - len(b)].strip(" -_/") or "-"
+
+    # Apply the same strip rule using vendor_name as fallback company source.
+    if model_name and model_name != "-" and vendor_name and vendor_name != "-":
+        m = model_name.strip()
+        v = vendor_name.strip()
+        m_norm = re.sub(r"\s+", " ", m).strip().lower()
+        v_norm = re.sub(r"\s+", " ", v).strip().lower()
+        if m_norm != v_norm:
+            if m_norm.startswith(v_norm + " "):
+                model_name = m[len(v):].strip(" -_/") or "-"
+            elif m_norm.endswith(" " + v_norm):
+                model_name = m[:len(m) - len(v)].strip(" -_/") or "-"
+
     if vendor_name and model_name and vendor_name != "-" and model_name != "-":
         v = vendor_name.lower()
         m = model_name.lower()
@@ -1764,16 +2086,8 @@ def enrich_row_with_models(
 
     # Final safety net: if post-processing blanked model_name, keep Title populated.
     if not model_name or model_name == "-":
-        for candidate in (
-            stem_model_raw,
-            stem_model,
-            clean_display_case(hints.get("lead_desc", "")),
-            brand,
-            vendor_name,
-        ):
-            if candidate and candidate != "-":
-                model_name = candidate
-                break
+        if stem_title_fallback:
+            model_name = stem_title_fallback
 
     # ── Column writes — vary by asset_type ──────────────────────────────────
     # Extract common EFU field mapping to avoid 10+ repetitions
@@ -1799,7 +2113,7 @@ def enrich_row_with_models(
         row["custom_property_1"] = location_val if location_val else "-"
         row["custom_property_2"] = form_val if form_val else "-"
         row["Period"] = period_val if period_val else "-"
-        row["Scale"] = size_val if size_val else "-"
+        row["custom_property_5"] = size_val if size_val else "-"
         row["Author"] = vendor_val if vendor_val and vendor_val != "-" else (brand_val or "-")
         cur_sourcemetadata = row.get("SourceMetadata", "-")
         if not cur_sourcemetadata or cur_sourcemetadata == "-":
@@ -1819,7 +2133,7 @@ def enrich_row_with_models(
             _obj_subcat = _obj_label_subcat
         else:
             _obj_subcat = "-"
-        _obj_model = clean_display_case((pick("model_name", "") or "").strip()) or "-"
+        _obj_model = model_name if model_name and model_name != "-" else (stem_title_fallback or "-")
         _obj_brand   = clean_display_case((vision_data.get("brand", "")      or pick("brand", "")).strip())       or "-"
         _obj_collection = clean_display_case((pick("collection", "") or "").strip()) or "-"
         _obj_mat     = clean_display_case((vision_data.get("primary_material_or_color", "") or primary_material or "-").strip()) or "-"
@@ -1894,17 +2208,6 @@ def enrich_row_with_models(
             manager_label=_cat_label,
         )
 
-    # Keep deterministic parse as fallback and attach diagnostics non-destructively.
-    diagnostics: list[str] = []
-    if text_error:
-        diagnostics.append(f"text_error={text_error}")
-    if vision_error:
-        diagnostics.append(f"vision_error={vision_error}")
-    if diagnostics:
-        existing = row.get("Comment", "-")
-        suffix = ";" + ";".join(diagnostics)
-        row["Comment"] = (existing + suffix) if existing and existing != "-" else suffix.lstrip(";")
-
     return row
 
 
@@ -1923,15 +2226,15 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
         model_name_token = sanitize_name_token(row.get("Title", "") or "")
         preferred = [mood_value, model_name_token] if model_name_token and model_name_token != "-" else [mood_value]
     elif asset_type == "vegetation":
-        preferred = [mood_value, row.get("Writer", "")]
+        preferred = [mood_value, row.get("Author", "")]
     elif asset_type == "people":
-        preferred = [mood_value, row.get("Writer", "")]
+        preferred = [mood_value, row.get("Author", "")]
     elif asset_type == "material":
         preferred = [mood_value, row.get("Company", "")]
     elif asset_type == "buildings":
         preferred = [mood_value, row.get("Company", "")]
     else:
-        preferred = [mood_value, row.get("People", "")]
+        preferred = [mood_value, row.get("custom_property_1", "")]
 
     tokens = [sanitize_name_token(x) for x in preferred if x]
     tokens = [t for t in tokens if t]
@@ -1947,7 +2250,7 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
             asset_type=asset_type,
             source_stem=fallback,
             mapped_subcategory=row.get("Subject", ""),
-            mapped_brand=row.get("Writer", ""),
+            mapped_brand=row.get("Company", ""),
         )
         qwen_clean = sanitize_name_token(qwen_name.replace("_", " "))
         if qwen_clean:
@@ -2003,46 +2306,39 @@ def build_metadata_row(
         row["Company"] = "-"
         row["Author"] = clean_display_case(hints["brand"] or hints["brand_raw"])
         row["Album"] = clean_display_case(hints["collection"])
-        row["People"] = clean_display_case(hints["lead_desc"])
-        row["Scale"] = hints["size"]
-        row["From"] = "-"
+        row["custom_property_5"] = hints["size"]
         row["SourceMetadata"] = "Furniture"
     elif asset_type == "vegetation":
         row["Subject"] = clean_display_case(hints["lead_desc"] or hints["model"])
         row["Company"] = hints["size"]
         row["Author"] = clean_display_case(hints["model"])
         row["Album"] = clean_display_case(hints["collection"] or hints["lead_desc"])
-        row["Scale"] = hints["size"]
-        row["From"] = "-"
+        row["custom_property_5"] = hints["size"]
         row["SourceMetadata"] = "Vegetation"
     elif asset_type == "people":
         row["Subject"] = clean_display_case(hints["lead_desc"])
         row["Company"] = clean_display_case(hints["model"])
         row["Author"] = clean_display_case(hints["collection"])
-        row["Scale"] = hints["size"]
-        row["From"] = "-"
+        row["custom_property_5"] = hints["size"]
         row["SourceMetadata"] = "People"
     elif asset_type == "material":
         row["Subject"] = clean_display_case(hints["lead_desc"] or hints["model"])
-        row["Genre"] = clean_display_case(hints["collection"])
+        row["Album"] = clean_display_case(hints["collection"])
         row["Company"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case("Material Category")
-        row["Scale"] = hints["size"]
-        row["From"] = "-"
+        row["custom_property_5"] = hints["size"]
         row["SourceMetadata"] = "Material"
     elif asset_type == "buildings":
         row["Subject"] = clean_display_case(hints["lead_desc"])
         row["Company"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case(hints["collection"])
-        row["Scale"] = hints["size"]
-        row["From"] = "-"
+        row["custom_property_5"] = hints["size"]
         row["SourceMetadata"] = "Buildings"
     elif asset_type == "layouts":
         row["Subject"] = clean_display_case(hints["lead_desc"])
-        row["Author"] = hints["size"]
-        row["People"] = clean_display_case(hints["model"])
+        row["Title"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case(hints["collection"])
-        row["From"] = "-"
+        row["custom_property_5"] = hints["size"]
         row["SourceMetadata"] = "Layouts"
     elif asset_type == "object":
         # Object initial row: pre-populate Subject from prefix code if present,
@@ -2053,25 +2349,27 @@ def build_metadata_row(
         row["Company"] = "-"
         row["Author"] = clean_display_case(hints.get("brand", "") or hints.get("brand_raw", ""))
         row["Album"] = "-"
-        row["From"] = "-"
-        row["Manager"] = "Object"
+        row["SourceMetadata"] = "Object"
 
-    # Move source trace into the `Manager` field (Everything mapping change):
-    # include parse notes / source metadata in `Manager` rather than `Comment`.
+    # Keep source trace in SourceMetadata for auditability.
     comment_str = f"src={source_stem};crc32={crc32_value}"
-    cur_manager = row.get("Manager", "-")
-    if not cur_manager or cur_manager == "-":
-        row["Manager"] = comment_str
+    cur_source = row.get("SourceMetadata", "-")
+    if not cur_source or cur_source == "-":
+        row["SourceMetadata"] = comment_str
     else:
-        if comment_str not in cur_manager:
-            row["Manager"] = f"{cur_manager};{comment_str}"
+        if comment_str not in cur_source:
+            row["SourceMetadata"] = f"{cur_source};{comment_str}"
     row["Comment"] = "-"
 
     return row
 
 
 # Fields that carry free-text display values and should be casing-normalized.
-_NORMALIZE_EFU_FIELDS = {"Author", "Writer", "Album", "Genre", "People", "Company", "Period", "Scale", "Title"}
+_NORMALIZE_EFU_FIELDS = {
+    "Author", "Album", "Company", "Period", "Title",
+    "custom_property_0", "custom_property_1", "custom_property_2",
+    "custom_property_3", "custom_property_4", "custom_property_5",
+}
 
 
 def normalize_efu_field(value: str) -> str:
@@ -2127,7 +2425,7 @@ def ensure_metadata_file(path: Path) -> None:
             writer.writeheader()
         return
 
-    # Load existing rows and migrate any `Comment` src= traces into `Manager`.
+    # Load existing rows and migrate legacy columns into the canonical schema.
     # Use utf-8-sig so BOM-prefixed headers (\ufeffFilename) are normalized.
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -2149,15 +2447,31 @@ def ensure_metadata_file(path: Path) -> None:
         row = {k: (v if v not in (None, "") else "-") for k, v in old.items()}
         comment_val = (row.get("Comment") or "").strip()
         manager_val = (row.get("Manager") or "").strip()
+        source_meta_val = (row.get("SourceMetadata") or "").strip()
+        scale_val = (row.get("Scale") or "").strip()
+        cp5_val = (row.get("custom_property_5") or "").strip()
         mood_val = (row.get("Mood") or "").strip()
         subject_val = (row.get("Subject") or "").strip()
-        # If comment contains a src trace and manager doesn't, move it.
-        if comment_val and comment_val != "-" and "src=" in comment_val and "src=" not in manager_val:
-            if not manager_val or manager_val == "-":
-                row["Manager"] = comment_val
+        # If comment contains a src trace, keep it in SourceMetadata (not Manager).
+        if comment_val and comment_val != "-" and "src=" in comment_val and "src=" not in source_meta_val:
+            if not source_meta_val or source_meta_val == "-":
+                row["SourceMetadata"] = comment_val
             else:
-                row["Manager"] = f"{manager_val};{comment_val}"
+                row["SourceMetadata"] = f"{source_meta_val};{comment_val}"
             row["Comment"] = "-"
+            migrated = True
+        # If legacy Manager has source trace, merge it into SourceMetadata.
+        if manager_val and manager_val != "-" and "src=" in manager_val:
+            new_source = (row.get("SourceMetadata") or "-").strip()
+            if not new_source or new_source == "-":
+                row["SourceMetadata"] = manager_val
+                migrated = True
+            elif manager_val not in new_source:
+                row["SourceMetadata"] = f"{new_source};{manager_val}"
+                migrated = True
+        # Legacy Scale column migrated to canonical Size column.
+        if (not cp5_val or cp5_val == "-") and scale_val and scale_val != "-":
+            row["custom_property_5"] = scale_val
             migrated = True
         # Migrate legacy Mood → Subject if Subject is empty/default.
         if mood_val and mood_val not in ("-",) and (not subject_val or subject_val in ("-", "")):
@@ -2224,12 +2538,18 @@ def find_existing_index_entry(path: Path, crc32_value: str) -> dict[str, str] | 
 
 
 def find_existing_index_entry_by_filename(path: Path, filename: str) -> dict[str, str] | None:
-    """Find metadata entry by thumbnail filename (for re-enrichment mode)."""
+    """Find metadata entry by thumbnail filename (for re-enrichment mode).
+
+    Compares by basename only so the lookup works whether Filename is stored
+    as a bare name (legacy) or an absolute path (new style).
+    """
     if not path.exists() or not filename or filename == "-":
         return None
+    query_name = Path(filename).name.strip().lower()
     _, rows = _read_metadata_rows(path)
     for row in rows:
-        if (row.get("Filename") or "").strip().lower() == filename.strip().lower():
+        stored = (row.get("Filename") or "").strip()
+        if Path(stored).name.lower() == query_name:
             return row
     return None
 
@@ -2266,12 +2586,20 @@ def preview_metadata_row(row: dict[str, str]) -> None:
 
 
 def preview_mapped_metadata(asset_type: str, row: dict[str, str]) -> None:
-    """Preview metadata using canonical EFU column names."""
+    """Preview metadata using human-friendly aliases for custom properties."""
 
     print("Header preview:")
     preview_rows: list[tuple[str, str]] = []
     for header in EFU_HEADERS:
-        preview_rows.append((header, row.get(header, "-") or "-"))
+        value = (row.get(header, "") or "").strip()
+        if not value or value == "-":
+            continue
+        display_name = _PREVIEW_HEADER_ALIASES.get(header, header)
+        preview_rows.append((display_name, value))
+
+    if not preview_rows:
+        print("  (no enriched fields)")
+        return
 
     name_w = max(len(name) for name, _ in preview_rows)
     val_w = max(len(value) for _, value in preview_rows)
@@ -2531,6 +2859,8 @@ def main() -> None:
                     source_stem=image_path.stem,
                     crc32_value=crc32_value,
                 )
+                if author_input:
+                    temp_row["Author"] = author_input
                 temp_row = enrich_row_with_models(
                     image_path=image_path,
                     source_stem=image_path.stem,
@@ -2540,6 +2870,9 @@ def main() -> None:
                     session_context=session_context,
                     session_hints=session_hints,
                 )
+                # Restore user-provided Author — prevent AI enrichment from overwriting it.
+                if author_input:
+                    temp_row["Author"] = author_input
                 # Flat output structure: put everything directly into the DB roots.
                 # Do not organize by vendor for now — keep a simple flat layout.
                 image_dir = THUMBNAIL_BASE
@@ -2561,7 +2894,8 @@ def main() -> None:
                     existing_img = (existing_entry.get("Filename") or "").strip()
                     existing_arc = _archive_name_from_row(existing_entry).strip()
                     if existing_img and existing_img != "-":
-                        image_target = image_dir / existing_img
+                        _existing_img_path = Path(existing_img)
+                        image_target = _existing_img_path if _existing_img_path.is_absolute() else image_dir / existing_img
                     if existing_arc:
                         archive_target = archive_dir / existing_arc
                     print("WARNING: Existing index entry found for this CRC-32.")
@@ -2585,35 +2919,9 @@ def main() -> None:
                                 archive_dir=archive_dir,
                             )
                 metadata_row = dict(temp_row)
-                metadata_row["Filename"] = image_target.name
+                metadata_row["Filename"] = str(image_target)
                 # Keep Subject as taxonomy path; track archive filename in ArchiveFile.
                 metadata_row["ArchiveFile"] = archive_target.name
-
-                # Infer vendor from the source path by walking ancestors and skipping
-                # common container folders (e.g. tmp, rar_without_zip). Use the first
-                # ancestor that looks like a vendor folder.
-                ignore_dirs = _kw_ignore_dirs()
-                vendor_candidate = ""
-                for p in image_path.parents:
-                    name = p.name
-                    if not name:
-                        continue
-                    nl = name.lower()
-                    if nl in ignore_dirs or nl.startswith("."):
-                        continue
-                    # skip numeric-ish folders like '10-02'
-                    if re.match(r"^\d{1,4}(?:[-_]\d{1,4})?$", name):
-                        continue
-                    vendor_candidate = name
-                    break
-
-                if not vendor_candidate:
-                    vendor_candidate = image_path.parent.name or ""
-
-                if vendor_candidate and vendor_candidate not in (".", ""):
-                    vendor_clean = clean_display_case(vendor_candidate.replace("_", " ").replace("-", " "))
-                    if vendor_clean:
-                        metadata_row["Author"] = vendor_clean
 
                 # Always preview (dry-run style) first.
                 print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
@@ -2669,7 +2977,7 @@ def main() -> None:
             print("Usage:  python tools/ingest_asset.py --asset-type=TYPE [--dry-run|--quick] [--yes] IMAGE ARCHIVE [IMAGE ARCHIVE ...]")
             print()
             print("  IMAGE   — path to the .jpg render  |  ARCHIVE — matching archive or 3D model file")
-            print("  TYPE    — furniture | fixture | vegetation | people | material | buildings | layouts")
+            print("  TYPE    — furniture | fixture | vegetation | people | material | layouts | object | vehicle | vfx")
             print("  Options — --dry-run/--quick  |  --yes")
             print()
             print("  Run with -h for full reference and examples.")
@@ -2712,27 +3020,17 @@ def main() -> None:
 
         if not asset_type:
             if clean_args:
-                # Find the first image file in the arg list — used for vision option.
-                _first_image: Path | None = next(
-                    (Path(p) for p in clean_args if Path(p).suffix.lower() in IMAGE_EXTENSIONS and Path(p).exists()),
-                    None,
-                )
-                # Text-first detection; vision refines only when text confidence is low/medium
-                # or the filename looks non-descriptive.
                 _first_stem = Path(clean_args[0]).stem
                 _auto_cat, _auto_conf = detect_asset_category(_first_stem)
                 asset_type = _auto_cat
-                if _first_image and (_auto_conf != "high" or not is_descriptive_filename_stem(_first_stem)):
-                    _vis_cat, _vis_conf = detect_asset_category_vision(_first_image)
-                    asset_type = _vis_cat
-                    print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                else:
-                    print(f"(auto-detected) asset type: {asset_type} [{_auto_conf} confidence]")
+                print(f"(auto-detected) asset type: {asset_type}")
 
         # Interactive session context prompt removed to reduce friction.
         # Default to no session context; parse_session_context handles empty.
         session_context = ""
         session_hints: dict[str, str] = {}
+
+        author_input = input("Author (vendor/source, e.g. Dimensiva, DesignConnected): ").strip()
 
         if len(clean_args) >= 2:
             # Treat all args as a flat list of files; group by stem to find pairs.
@@ -2844,12 +3142,7 @@ def main() -> None:
                 if _paste_img:
                     _auto_cat, _auto_conf = detect_asset_category(_paste_img.stem)
                     asset_type = _auto_cat
-                    if _auto_conf != "high" or not is_descriptive_filename_stem(_paste_img.stem):
-                        _vis_cat, _vis_conf = detect_asset_category_vision(_paste_img)
-                        asset_type = _vis_cat
-                        print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                    else:
-                        print(f"(auto-detected) asset type: {asset_type} [{_auto_conf} confidence]")
+                    print(f"(auto-detected) asset type: {asset_type}")
                 else:
                     asset_type = "furniture"
 
