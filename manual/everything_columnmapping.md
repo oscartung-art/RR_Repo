@@ -1,279 +1,221 @@
-# Everything Column Mapping
-Avaliable Columns to use in Everything (strings)
+# Everything Search Metadata Columns
 
-## Category Names
-Furniture
-Vegetation
-People
-Material/Texture
-Buildings
-Layouts
-Fixture
-Object
-Procedural
-Location
-Vehicle
-VFX
-Schedule
-
-## General Mapping Across all Categories
-1.    Filename = the filename of the file or folder (required)
-2.    Rating =  a rating from 1 to 99 (1/5 star to 5/5 stars)
-3.    Tags = a semicolon delimited list of strings
-4.    Manager = (e.g. include parse notes or source metadata)
-5.    Subject = =
-6.    CRC-32 = CRC-64 of the related zip file
-
-## Category Sepcific Mapping
-    URL
-    From
-    Mood
-    Author
-    Writer
-    Album
-    Genre
-    People
-    Company
-    Period
-    Artist
-    Title
-    Comment
-    To
-    
-
-
-  ## Furniture
-  - URL: (e.g. https://www.dimensiva.com/product/vernis-blend-shower-mixer)
-  - Mood: Subcategory (e.g. ShowerMixer, Armchair, CoffeeTable)
-  - Author: Model Name (e.g. Vernis Blend)
-  - Writer: Brand (e.g. Hansgrohe, BBItalia)
-  - Album: Collection (e.g. Vernis Collection)
-  - Genre: Primary Color/Material (e.g. chrome, matte black, wood, leather, glass)
-  - People: Usage Location (e.g. bathroom, living room, office, outdoor)
-  - Company: Shape Form (e.g. round, rectangular, wall-mounted, freestanding)
-  - Period: (e.g. modern, contemporary, classic)
-  - Artist: Size (e.g. 300x300, 1200x450x350mm)
-  - Title: Vendor Name (e.g. Dimensiva)
-  - Comment: 
-  - From: 
-
-  ## Vegetation
-  - Mood: Plant Type (e.g. Tree)
-  - Author: Approx. Height
-  - Writer: Latin Name
-  - Album: Common Name
-  - Genre: Foliage Color
-  - People: Growth Location
-  - Company: Growth Form
-  - Period: Seasonal Appearance
-  - Artist: Size
-  - From: 
-  - Manager: Vegetation
-
-  ## People
-  - Mood: Original Code Hint
-  - Author: Gender
-  - Writer: Ethnicity
-  - Album: Age Group
-  - Genre: Clothing Color
-  - People: Scene Context
-  - Company: (none)
-  - Period: Clothing Style
-  - Artist: Pose / Activity
-  - From: 
-  - Manager: People
-
-  ## Material / Texture
-  - Mood: Material Name
-  - Author: (none)
-  - Writer: (none)
-  - Album: (none)
-  - Genre: Dominant Color
-  - People: (none)
-  - Company: Texture Pattern
-  - Period: Material Category
-  - Artist: Surface Finish
-  - From: 
-  - Manager: Material
-
-  ## Buildings
-  - Mood: Subcategory
-  - Author: (none)
-  - Writer: (none)
-  - Album: (none)
-  - Genre: (none)
-  - People: (none)
-  - Company: Physical Form
-  - Period: Primary Material
-  - Artist: Size
-  - From: 
-  - Manager: Buildings
-
-  ## Layouts
-  - Mood: Layout Type
-  - Author: (none)
-  - Writer: Approx. Size
-  - Album: (none)
-  - Genre: (none)
-  - People: Room Type
-  - Company: (none)
-  - Period: Layout Shape
-  - Artist: (none)
-  - From: 
-  - Manager: Layouts
-
-  ## Fixture
-  > All lamps and lighting (FloorLamp, TableLamp, ReadingLamp, DeskLamp, Pendant, WallLight,
-  > CeilingLight, Chandelier, SpotLight, StreetLight, Lantern etc.) belong here, NOT in Furniture.
-
-  - URL: (e.g. product page URL)
-  - Mood: Subcategory (e.g. TableLamp, FloorLamp, Pendant, WallLight, Chandelier, ShowerHead, KitchenFaucet)
-  - Author: Model Name (e.g. Arco, Yoko, Tolomeo)
-  - Writer: Brand (e.g. Flos, Foscarini, Artemide, Hansgrohe, Grohe)
-  - Album: Collection (e.g. Arco Collection)
-  - Genre: Primary Color/Material (e.g. chrome, matte black, opal glass)
-  - People: Usage Location (e.g. Bathroom, Kitchen, Office, Outdoor, LivingRoom)
-  - Company: Shape Form (e.g. wall-mounted, floor-standing, built-in, freestanding)
-  - Period: Style (e.g. modern, industrial, Scandinavian)
-  - Artist: Size (e.g. 300x300mm)
-  - Title: Vendor Name (e.g. Dimensiva, DesignConnected)
-  - From: 
-  - Manager: Fixture
-
-  ## Object
-  - URL: (e.g. product page URL)
-  - Mood: Subcategory (e.g. Vase, Cushion, Book, Clock, Tray, Candle)
-  - Author: Model Name (e.g. Sahal, Bonbori, Tolomeo)
-  - Writer: Brand (e.g. Kartell, Alessi, Vitra)
-  - Album: 
-  - Genre: Primary Color/Material (e.g. ceramic, glass, fabric)
-  - People: Usage Location (e.g. Kitchen, Bathroom, Office, Dining Room)
-  - Company: Shape Form (e.g. round, rectangular, abstract)
-  - Period: 
-  - Artist: 
-  - Title: Vendor Name
-  - From: 
-  - Manager: Object
-
-  ## Procedural
-  - Mood: Type (e.g. Railing, CurtainWall, Roof, Planter)
-  - Author: Description
-  - Company: Software/Plugin (e.g. Railclone, Forest Pack)
-  - From: 
-  - Manager: Procedural
-
-  ## Location
-  - Mood: Category (e.g. Urban, Nature, Interior)
-  - Author: SubCategory
-  - Writer: Width
-  - Album: Length
-  - Genre: Height
-  - People: Location / Context
-  - Company: Custom
-  - Period: Custom
-  - From: 
-  - Manager: Location
-
-  ## Vehicle
-  - Mood: Type (e.g. Car, Aircraft, Boat, Ship, Space)
-  - Author: Model
-  - Writer: Brand
-  - Genre: Color
-  - Period: Year
-  - Artist: Size
-  - From: 
-  - Manager: Vehicle
-
-  ## VFX
-  - Mood: Type (e.g. Water, Fire, Smoke, Sky, Caustics, Pattern)
-  - Author: Description
-  - Genre: Style/Variant
-  - From: 
-  - Manager: VFX
-
-  ## Schedule
-  > Project fitment/specification schedule items extracted from PDFs
-  > (e.g. kitchen fitment, sanitary fitment, furniture, lighting schedules)
-
-  - URL: Item Reference ID (e.g. KF-01, SF-03) — repurposed; URL unused for project assets
-  - Mood: Item Type / Subcategory (e.g. SinkMixer, KitchenSink, WasteBin, LightStrip)
-  - Author: Model / Spec (full model number or specification descriptor)
-  - Writer: Brand (e.g. Hansgrohe, Kumeis, Hailo — extracted from spec by LLM)
-  - Album: Collection / Series (if stated in spec, else '-')
-  - Genre: Finish / Color (e.g. Brushed Bronze PVD, Matte Black, Satin S/S)
-  - People: Location (e.g. Kitchen, Master Bathroom, Storage Cabinet)
-  - Company: Mounting / Form (e.g. deck-mounted, under-counter, wall-mounted)
-  - Period: Style (e.g. modern, contemporary — if determinable, else '-')
-  - Artist: Dimension (e.g. 450x450x200mm, As Shown)
-  - Title: Project Code (e.g. PLS, KIL, MWR)
-  - Comment: Additional notes or supplementary spec text
-  - From: 
-  - Manager: Schedule
-
-  # Dimensiva Naming pattern
-
-Write a script that does the writes a .metadata.efu file at my desired location
-it will
-1. ask me where i want to save the .metadata.efu file, which is where the thumbnails are located.
-2. ask me what category i want to use (Furniture, Vegetation, People, Material/Texture, Buildings, Layouts)
-3. ask me me to input the pattern that the current naming convention follows (e.g. `<Collection>-<Model Name>-by-<Brand>-<Width>x<Height>.jpg`)
-4. It then translates to the corresponding mapping column as specified in @everything_columnmapping.md
-<Album>-<Author>-by-<Writer>-.jpg, if the mapping does not exists, skip
-5. Then create csv file with the following columns first
-
-    Filename = the filename of the file or folder (required)
-    Rating =  a rating from 1 to 99 (1/5 star to 5/5 stars)
-    Tags = a semicolon delimited list of strings
-    Manager = CRC-64 of the parent thumbnail file
-    Subject = CRC-64 of the related zip file
-
-6. Then create the other column based on the filename translated value
-
-  - URL:
-  - Mood: Subcategory (e.g. Armchair)
-  - Author: Model Name
-  - Writer: Brand (e.g. BBItalia)
-  - Album: Collection
-  - Genre: Color
-  - People: Usage Location
-  - Company: Shape Form
-  - Period: Material
-  - Artist: Size
-  - Title: Vendor Name
-  - From: 
-
-7.
-
-
-
-- `<collection-or-series>-<product-description>-by-<brand>-<width>x<height>.jpg`
-
-Examples:
-- `sailing-built-in-thermostatic-shower-mixer-by-fantini-300x300.jpg`
-  - collection: `sailing`
-  - product: `built in thermostatic shower mixer`
-  - brand: `fantini`
-  - size: `300x300`
-- `sahal-ceramic-vase-by-bloomingville-280x280.jpg`
-  - collection: `sahal`
-  Editable mapping (grouped by column headings):
+Reference for all available metadata columns in `.metadata.efu`. Use with the clipboard tagger: `columnname:<value> filename.jpg`
 
 ---
 
-## Available Canonical Property Names (String Only) for CSV Headers
+## Column Usage Overview
 
-Use these string properties as column headers in your CSV files.
+| Column | Usage | Status |
+|--------|-------|--------|
+| Filename | Asset filename matching | Sparse (~1.5%) |
+| Rating | Star ratings (1,25,50,75,99) | Sparse (~5%) |
+| Tags | Keyword list | Empty |
+| URL | URL/project codes | Light (~15%) |
+| From | Source origin | Empty |
+| **Subject** | **Primary asset classification** | **Heavy (100%)** |
+| Author | Designer/model/descriptor | Heavy (95%+) |
+| Writer | Brand/designer | Heavy (85%+) |
+| Album | Collection/series | Light (~20%) |
+| Genre | Color/material/finish | Heavy (90%+) |
+| People | Location/context | Moderate (60-70%) |
+| Company | Brand/form/shape | Moderate (50-60%) |
+| Period | Style/era/temporal | Sparse (~5%) |
+| Artist | Size/dimension | Sparse (~10%) |
+| Title | Name/identifier | Sparse (~10%) |
+| Comment | Notes/status | Light (~15%) |
+| To | Recipient | Empty |
+| Manager | Category owner | Heavy (100%) |
+| CRC-32 | Archive checksum | Heavy (100%) |
 
-### Core Properties (String)
-- `name` - Filename
-- `filename` - Filename only
-- `path` - Full path
-- `type` - File type
+---
 
-### Your Currently Used Properties
-- `rating` - Rating value
-- `tags` - Semicolon-delimited list
-- `mood` - Custom semantic field
+## Core Fields
+
+**Filename** : Asset filename (read-only, used for matching)  
+Examples: `Armchair_BernieBright_4E85EE94.jpg`, `CoffeeTable_Modern_Design.jpg`
+
+**Rating** : Star rating as numeric value (1, 25, 50, 75, 99)  
+Examples: `99` (5★), `75` (4★), `50` (3★), `25` (2★), `1` (1★)
+
+**CRC-32** : Checksum of source archive file (read-only)  
+Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
+
+---
+
+## Categorization
+
+**Subject** : Asset classification (primary categorization field)
+- **Furniture**: Subcategory path. Examples: `Furniture/Seating/Armchair`, `Furniture/Table/CoffeeTable`, `Fixture/ShowerMixer`
+- **Vegetation**: Plant type. Examples: `Tree`, `FlowerShrub`, `Cactus`, `Shrub`, `Grass`
+- **People**: Activity/pose context. Examples: `Standing`, `Sitting`, `Walking`
+- **Material**: Material name. Examples: `Wood`, `Leather`, `Glass`, `Ceramic`, `Metal`, `Fabric`
+- **Buildings**: Subcategory. Examples: `Door`, `Window`, `Railing`, `Facade`, `Roof`
+- **Layouts**: Layout type. Examples: `BarTable`, `BedSet`, `DiningTable`, `KitchenLayout`
+- **Fixture**: Subcategory. Examples: `TableLamp`, `FloorLamp`, `Pendant`, `ShowerHead`, `KitchenFaucet`
+- **Object**: Subcategory. Examples: `Vase`, `Cushion`, `Book`, `Clock`, `Tray`, `Tableware`, `Sculpture`
+- **Procedural**: Type. Examples: `Railing`, `CurtainWall`, `Roof`, `Planter`, `Staircase`
+- **Location**: Category. Examples: `Urban`, `Nature`, `Interior`, `Landscape`, `Environment`
+- **Vehicle**: Type. Examples: `Car`, `Aircraft`, `Boat`, `Ship`, `Space`, `Motorcycle`
+- **VFX**: Type. Examples: `Water`, `Fire`, `Smoke`, `Sky`, `Caustics`, `Pattern`, `Lightning`
+- **Schedule**: Item type. Examples: `KitchenFaucet`, `ShowerMixer`, `KitchenSink`, `WasteBin`, `LightStrip`, `Appliance`
+
+**Author** : Primary descriptor or designer (varies by category)
+- **Furniture**: Model name. Examples: `Barcelona`, `Vernis Blend`, `Eames Lounge`
+- **Vegetation**: Approx. height. Examples: `2m`, `150cm`, `Small`
+- **People**: Gender. Examples: `Male`, `Female`
+- **Fixture**: Model name. Examples: `Arco`, `Yoko`, `Tolomeo`
+- **Object**: Model name. Examples: `Sahal`, `Bonbori`
+- **Procedural**: Description
+- **Location**: Subcategory. Examples: `Downtown`, `Forest`, `Bedroom`
+- **Vehicle**: Model. Examples: `Model S`, `Boeing 747`, `Yacht`
+- **VFX**: Description
+
+**Artist** : Size, scale, or dimensional identifier
+- **Furniture**: Size. Examples: `300x300mm`, `1200x450x350mm`, `Large`
+- **Vegetation**: Size. Examples: `3m`, `Small`, `Medium`
+- **People**: Pose / Activity. Examples: `Standing`, `Sitting`, `Walking`
+- **Buildings**: Size
+- **Fixture**: Size. Examples: `300x300mm`, `450x450mm`
+- **Vehicle**: Size. Examples: `1800mm length`, `Compact`
+- **Schedule**: Dimension. Examples: `450x450x200mm`, `As Shown`
+
+**Genre** : Color, material, finish, or aesthetic quality
+- **Furniture**: Primary color/material. Examples: `Chrome`, `Matte Black`, `Wood`, `Leather`
+- **Vegetation**: Foliage color. Examples: `Green`, `Autumn Red`, `Golden Yellow`
+- **People**: Clothing color. Examples: `Black Suit`, `Blue Shirt`, `Red Dress`
+- **Material**: Dominant color. Examples: `White`, `Beige`, `Charcoal`
+- **Fixture**: Primary color/material. Examples: `Chrome`, `Opal Glass`, `Brushed Steel`
+- **Object**: Primary color/material. Examples: `Ceramic`, `Glass`, `Fabric`
+- **Location**: Height. Examples: `Urban Core`, `Elevated`, `Ground Level`
+- **Vehicle**: Color. Examples: `Black`, `Silver Metallic`, `Red`
+- **VFX**: Style/variant. Examples: `Turbulent`, `Smooth`, `Particle-based`
+- **Schedule**: Finish/color. Examples: `Brushed Bronze PVD`, `Matte Black`, `Satin Stainless Steel`
+
+**Period** : Style, era, or temporal classification
+- **Furniture**: Style period. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`
+- **Vegetation**: Seasonal appearance. Examples: `Evergreen`, `Deciduous`, `Spring Blooming`
+- **People**: Clothing style. Examples: `Contemporary`, `Vintage`, `Formal`
+- **Material**: Material category. Examples: `Stone`, `Metal`, `Textile`
+- **Buildings**: Primary material. Examples: `Concrete`, `Glass`, `Steel`
+- **Fixture**: Style. Examples: `Modern`, `Industrial`, `Scandinavian`
+- **Object**: Style (optional)
+- **Layouts**: Layout shape. Examples: `Circle`, `L-shape`, `U-shape`, `Galley`
+- **Location**: Custom/context (optional)
+- **Vehicle**: Year. Examples: `2024`, `1960`, `Contemporary`
+- **Schedule**: Style. Examples: `Modern`, `Contemporary`, or `-`
+
+---
+
+## Descriptive
+
+**Title** : Product name, vendor, or primary identifier
+- **Furniture**: Vendor name. Examples: `Dimensiva`, `Design Connected`
+- **Fixture**: Vendor name. Examples: `Dimensiva`, `Design Connected`
+- **Object**: Vendor name
+- **Schedule**: Project code. Examples: `PLS`, `KIL`, `MWR`
+
+**Album** : Collection, series, group, or batch identifier
+- **Furniture**: Collection. Examples: `Vernis Collection`, `Arco Collection`
+- **Vegetation**: Common name. Examples: `Oak Tree`, `Rose`, `Bamboo`
+- **People**: Age group. Examples: `20-30`, `40-50`, `Child`
+- **Fixture**: Collection. Examples: `Arco Collection`
+- **Object**: (varies)
+- **Layouts**: (varies)
+- **Schedule**: Collection/series. If stated in spec, else `-`. Examples: `Standard`, `Premium`
+
+**Company** : Brand, manufacturer, publisher, or form factor
+- **Furniture**: Shape/form. Examples: `Round`, `Rectangular`, `Wall-mounted`, `Freestanding`
+- **Vegetation**: Growth form. Examples: `Columnar`, `Conical`, `Spreading`, `Spherical`
+- **Material**: Texture pattern. Examples: `Diamond`, `Mosaic`, `Square`, `Cross-hatch`
+- **Buildings**: Physical form. Examples: `Load-bearing`, `Modular`, `Structural`
+- **Fixture**: Shape/form. Examples: `Wall-mounted`, `Floor-standing`, `Built-in`
+- **Object**: Shape/form. Examples: `Round`, `Rectangular`, `Abstract`
+- **Layouts**: (none)
+- **Location**: Custom/context (optional)
+- **Procedural**: Software/plugin. Examples: `Railclone`, `Forest Pack`, `Rhino`
+
+**Writer** : Brand, designer, or secondary descriptor
+- **Furniture**: Brand. Examples: `BBItalia`, `Hansgrohe`, `Herman Miller`
+- **Vegetation**: Latin/scientific name. Examples: `Quercus robur`, `Rosa damascena`
+- **People**: Ethnicity. Examples: `Caucasian`, `Asian`, `Mixed`
+- **Fixture**: Brand. Examples: `Flos`, `Foscarini`, `Artemide`, `Hansgrohe`
+- **Object**: Brand. Examples: `Kartell`, `Alessi`, `Vitra`
+- **Layouts**: Approx. size. Examples: `Small`, `Medium`, `Large`, `2x3m`
+- **Location**: Width. Examples: `100m`, `Narrow`, `Wide`
+- **Vehicle**: Brand. Examples: `BMW`, `Boeing`, `Ferrari`
+- **Schedule**: Brand. Examples: `Hansgrohe`, `Kumeis`, `Hailo`
+
+---
+
+## Context & Location
+
+**From** : Source origin, provider, or reference
+- Used across all categories. Examples: `Design Connected`, `TurboSquid`, `3D Warehouse`, `Archive`
+
+**People** : Usage context, location, or occupancy
+- **Furniture**: Usage location. Examples: `Living Room`, `Bedroom`, `Office`, `Outdoor`
+- **Vegetation**: Growth location/habitat. Examples: `Aquatic`, `Home Garden`, `Outdoor`, `Lawn`
+- **People**: Scene context. Examples: `Office Meeting`, `Home Environment`, `Outdoor Activity`
+- **Layouts**: Room type. Examples: `Kitchen`, `Bedroom`, `Living Room`, `Dining Room`
+- **Fixture**: Usage location. Examples: `Bathroom`, `Kitchen`, `Office`, `Living Room`
+- **Object**: Usage location. Examples: `Kitchen`, `Bathroom`, `Office`, `Dining Room`
+- **Location**: Location/context. Examples: `Downtown`, `Suburban`, `Rural`, `Indoor`
+- **Schedule**: Location. Examples: `Kitchen`, `Master Bathroom`, `Storage Cabinet`
+
+**Manager** : Category, ownership, project assignment, or responsibility
+- **Furniture**: `Furniture`
+- **Vegetation**: `Vegetation`
+- **People**: `People`
+- **Material**: `Material` or `Texture`
+- **Buildings**: `Buildings`
+- **Layouts**: `Layouts`
+- **Fixture**: `Fixture`
+- **Object**: `Object`
+- **Procedural**: `Procedural`
+- **Location**: `Location`
+- **Vehicle**: `Vehicle`
+- **VFX**: `VFX`
+- **Schedule**: `Schedule`
+- **Projects**: `Project-<code>` (e.g. `Project-MLS`, `Project-KIL`)
+
+**Comment** : Free-text notes, warnings, status, or additional info
+- Examples: `Needs texture update`, `Client favorite`, `High priority`, `Pending review`, `CRC mismatch`
+
+**Tags** : Semicolon-delimited keyword list for search/filtering
+- Furniture examples: `modern;black;leather;designer`, `outdoor;seating;weather-resistant`
+- Material examples: `stone;natural;textured`, `metal;reflective;industrial`
+- Vegetation examples: `native;perennial;drought-resistant`, `tropical;ornamental`
+
+**URL** : Associated URL, reference, product page, or project code
+- **Furniture/Fixture**: Product page. Example: `https://www.dimensiva.com/product/vernis-blend`
+- **Object**: Product page
+- **Schedule**: Item reference ID. Example: `KF-01`, `SF-03` (repurposed from URL field)
+
+**To** : Destination, recipient, or target audience
+- Examples: `Client XYZ`, `Archive`, `Production`, `QA Review`, `Final Export`
+
+---
+
+## Usage with Clipboard Tagger
+
+Format: `columnname:<value> filename.jpg | file2.jpg`
+
+**Examples across categories:**
+- `rating:<99> Armchair.jpg` — Set 5-star rating
+- `subject:<Furniture/Seating/Armchair> file1.jpg | file2.jpg` — Set furniture hierarchy
+- `subject:<Tree> Plant.jpg` — Set vegetation type
+- `author:<Rossin> Armchair.jpg` — Set designer/model name
+- `genre:<Black Leather> Armchair.jpg` — Set material/color
+- `period:<Modern> Table.jpg` — Set style period
+- `album:<MoMA Collection> file.jpg` — Set collection name
+- `company:<Round> Table.jpg` — Set shape/form
+- `people:<Living Room> Sofa.jpg` — Set usage location
+- `comment:<Needs texture check> asset.jpg` — Add notes
+
+**Delete command:**
+- `delete: file1.jpg | file2.jpg | file3.jpg` — Remove entries + images + archives
+- `subject` - Asset classification field
 - `author` - Custom semantic field
 - `writer` - Custom semantic field
 - `album` - Custom semantic field
@@ -284,7 +226,6 @@ Use these string properties as column headers in your CSV files.
 - `artist` - Custom semantic field
 - `title` - Custom semantic field
 - `comment` - Custom semantic field
-- `subject` - Custom semantic field
 - `url` - URL field
 - `from` - Custom semantic field
 - `manager` - Identifier/reference
