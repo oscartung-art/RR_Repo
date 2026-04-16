@@ -56,11 +56,10 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Vehicle**: Full path. Examples: `Vehicle/Car`, `Vehicle/Aircraft`, `Vehicle/Boat`, `Vehicle/Ship`, `Vehicle/Space`
 - **VFX**: Full path. Examples: `VFX/Fire`, `VFX/Smoke`, `VFX/Water`, `VFX/Sky`, `VFX/Caustics`, `VFX/Pattern`
 - **People**: Activity/pose context (free-text). Examples: `Standing`, `Sitting`, `Walking`
-- **Location**: Category/context (free-text). Examples: `Urban`, `Nature`, `Interior`, `Landscape`, `Environment`
 
 **Title** : Primary descriptor or designer (varies by category)
 - **Furniture**: Model name. Examples: `Barcelona`, `Vernis Blend`, `Eames Lounge`
-- **People**: Gender. Examples: `Male`, `Female`
+- **People**: Model name. Examples: `David`, `Mary`
 - **Fixture**: Model name. Examples: `Arco`, `Yoko`, `Tolomeo`
 - **Object**: Model name. Examples: `Sahal`, `Bonbori`
 - **Procedural**: Description
@@ -82,7 +81,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Material**: Dominant color. Examples: `White`, `Beige`, `Charcoal`
 - **Fixture**: Primary color/material. Examples: `Chrome`, `Opal Glass`, `Brushed Steel`
 - **Object**: Primary color/material. Examples: `Ceramic`, `Glass`, `Fabric`
-- **Location**: Height. Examples: `Urban Core`, `Elevated`, `Ground Level`
 - **Vehicle**: Color. Examples: `Black`, `Silver Metallic`, `Red`
 - **VFX**: Style/variant. Examples: `Turbulent`, `Smooth`, `Particle-based`
 - **Schedule**: Finish/color. Examples: `Brushed Bronze PVD`, `Matte Black`, `Satin Stainless Steel`
@@ -100,7 +98,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Fixture**: Style. Examples: `Modern`, `Industrial`, `Scandinavian`
 - **Object**: Style (optional)
 - **Layouts**: Layout shape. Examples: `Circle`, `L-shape`, `U-shape`, `Galley`
-- **Location**: Custom/context (optional)
 - **Vehicle**: Year. Examples: `2024`, `1960`, `Contemporary`
 - **Schedule**: Style. Examples: `Modern`, `Contemporary`, or `-`
 
@@ -121,7 +118,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Fixture**: Shape/form. Examples: `Wall-mounted`, `Floor-standing`, `Built-in`
 - **Object**: Shape/form. Examples: `Round`, `Rectangular`, `Abstract`
 - **Layouts**: (none)
-- **Location**: Custom/context (optional)
 - **Procedural**: Software/plugin. Examples: `Railclone`, `Forest Pack`, `Rhino`
 
 **Writer** : Brand, designer, or secondary descriptor
@@ -131,7 +127,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Fixture**: Brand. Examples: `Flos`, `Foscarini`, `Artemide`, `Hansgrohe`
 - **Object**: Brand. Examples: `Kartell`, `Alessi`, `Vitra`
 - **Layouts**: Approx. size. Examples: `Small`, `Medium`, `Large`, `2x3m`
-- **Location**: Width. Examples: `100m`, `Narrow`, `Wide`
 - **Vehicle**: Brand. Examples: `BMW`, `Boeing`, `Ferrari`
 - **Schedule**: Brand. Examples: `Hansgrohe`, `Kumeis`, `Hailo`
 
@@ -155,7 +150,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Layouts**: Room type. Examples: `Kitchen`, `Bedroom`, `Living Room`, `Dining Room`
 - **Fixture**: Usage location. Examples: `Bathroom`, `Kitchen`, `Office`, `Living Room`
 - **Object**: Usage location. Examples: `Kitchen`, `Bathroom`, `Office`, `Dining Room`
-- **Location**: Location/context. Examples: `Downtown`, `Suburban`, `Rural`, `Indoor`
 - **Schedule**: Location. Examples: `Kitchen`, `Master Bathroom`, `Storage Cabinet`
 
 **Manager** : Category, ownership, project assignment, or responsibility
@@ -168,7 +162,6 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 - **Fixture**: `Fixture`
 - **Object**: `Object`
 - **Procedural**: `Procedural`
-- **Location**: `Location`
 - **Vehicle**: `Vehicle`
 - **VFX**: `VFX`
 - **Schedule**: `Schedule`
