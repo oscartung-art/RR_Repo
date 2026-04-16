@@ -4,14 +4,13 @@ import re
 import shutil
 import sys
 import zlib
+import concurrent.futures
 import csv
 import os
 import difflib
 from functools import lru_cache
 from pathlib import Path
 
-import open_clip
-import torch
 from PIL import Image
 import base64
 import json
@@ -19,11 +18,14 @@ import urllib.error
 import urllib.request
 import urllib.parse
 import html
-import subprocess
 import threading
-import itertools
 import time
 import textwrap
+
+# Optional CLIP model support — only needed when USER_LABELS is populated.
+# These are lazily imported in load_clip_model() to avoid hard dependency.
+# import torch       # optional, used only in score_labels()
+# import open_clip   # optional, used only in load_clip_model()
 
 # ---------------------------------------------------------------------------
 # ingest_asset.py branch map (detailed)
@@ -111,6 +113,34 @@ OUTPUT_DIR = THUMBNAIL_BASE
 # Keys are lowercase bare filename stems (no extension, no vendor folder prefix).
 CURRENT_DB_PATH = Path(r"E:\Database\CurrentDB.csv")
 _CURRENT_DB_CACHE: dict[str, dict[str, str]] | None = None
+
+# Configurable path overrides — set via env vars or CLI flags to remap drives.
+_THUMBNAIL_BASE_ENV = os.environ.get("INGEST_THUMBNAIL_BASE", "")
+_ARCHIVE_BASE_ENV = os.environ.get("INGEST_ARCHIVE_BASE", "")
+if _THUMBNAIL_BASE_ENV:
+    THUMBNAIL_BASE = Path(_THUMBNAIL_BASE_ENV)
+if _ARCHIVE_BASE_ENV:
+    ARCHIVE_BASE = Path(_ARCHIVE_BASE_ENV)
+    METADATA_EFU_PATH = THUMBNAIL_BASE / ".metadata.efu"  # recompute if base changed
+
+
+def _validate_base_paths() -> None:
+    """Ensure all required base directories exist before any file operations.
+
+    Exits with a clear error message if a drive is missing or unreachable.
+    """
+    missing = []
+    for label, path in [("THUMBNAIL_BASE (D: drive)", THUMBNAIL_BASE),
+                        ("ARCHIVE_BASE (G: drive)", ARCHIVE_BASE)]:
+        if not path.exists():
+            missing.append(f"  {label}: {path}")
+    if missing:
+        print("\n[ERROR] Required base paths are missing:")
+        for m in missing:
+            print(m)
+        print("\nCheck that your drives are connected and accessible.")
+        print("Override with env vars: INGEST_THUMBNAIL_BASE, INGEST_ARCHIVE_BASE")
+        sys.exit(1)
 
 
 def _load_local_env_vars() -> None:
@@ -430,7 +460,7 @@ EFU_HEADERS = [
     "People",
     "Company",
     "Period",
-    "Artist",
+    "Scale",
     "Title",
     "Comment",
     "To",
@@ -460,8 +490,10 @@ class _Spinner:
                 try:
                     sys.stderr.write(f"\r{label} {progress:5.1f}%")
                     sys.stderr.flush()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    # Log spinner errors instead of silently dying.
+                    sys.stderr.write(f"\r{label} [stderr error: {exc}]\n")
+                    sys.stderr.flush()
                 time.sleep(0.12)
                 progress += step
                 if progress >= 95.0:
@@ -471,12 +503,13 @@ class _Spinner:
             try:
                 sys.stderr.write(f"\r{label} 100.0%" + " " * 10 + "\n")
                 sys.stderr.flush()
-            except Exception:
-                pass
-        except Exception:
+            except Exception as exc:
+                sys.stderr.write(f"\r{label} [complete write error: {exc}]\n")
+                sys.stderr.flush()
+        except Exception as exc:
             # Fallback to a minimal indicator on failure
             try:
-                sys.stderr.write(f"\r{label}\n")
+                sys.stderr.write(f"\r{label} [spinner error: {exc}]\n")
                 sys.stderr.flush()
             except Exception:
                 pass
@@ -591,40 +624,40 @@ ASSET_TYPES = {
 PREVIEW_LABELS = {
     "furniture": {
         "Mood": "Subcategory Path",
-        "Author": "Model Name",
+        "Title": "Model Name",
         "Writer": "Brand",
         "Album": "Collection",
         "Genre": "Primary Color/Material",
         "People": "Usage Location",
         "Company": "Shape Form",
         "Period": "Period",
-        "Artist": "Size",
-        "Title": "Vendor Name",
+        "Scale": "Size",
+        "Author": "Vendor Name",
         "From": "From",
         "Manager": "Category",
     },
     "vegetation": {
         "Mood": "Plant Type",
-        "Author": "Approx. Height",
+        "Title": "Approx. Height",
         "Writer": "Latin Name",
         "Album": "Common Name",
         "Genre": "Foliage Color",
         "People": "Growth Location",
         "Company": "Growth Form",
         "Period": "Seasonal Appearance",
-        "Artist": "Size",
+        "Scale": "Size",
         "From": "From",
         "Manager": "Category",
     },
     "people": {
         "Mood": "Original Code Hint",
-        "Author": "Gender",
+        "Title": "Gender",
         "Writer": "Ethnicity",
         "Album": "Age Group",
         "Genre": "Clothing Color",
         "People": "Scene Context",
         "Period": "Clothing Style",
-        "Artist": "Pose / Activity",
+        "Scale": "Pose / Activity",
         "From": "From",
         "Manager": "Category",
     },
@@ -633,7 +666,7 @@ PREVIEW_LABELS = {
         "Genre": "Dominant Color",
         "Company": "Texture Pattern",
         "Period": "Material Category",
-        "Artist": "Surface Finish",
+        "Scale": "Surface Finish",
         "From": "From",
         "Manager": "Category",
     },
@@ -641,7 +674,7 @@ PREVIEW_LABELS = {
         "Mood": "Subcategory",
         "Company": "Physical Form",
         "Period": "Primary Material",
-        "Artist": "Size",
+        "Scale": "Size",
         "From": "From",
         "Manager": "Category",
     },
@@ -655,40 +688,40 @@ PREVIEW_LABELS = {
     },
     "fixture": {
         "Mood": "Category",
-        "Author": "Primary Description",
+        "Title": "Primary Description",
         "Writer": "Brand",
         "Album": "Material",
         "Genre": "Form",
         "People": "Usage Location",
-        "Artist": "Size",
-        "Title": "Vendor Name",
+        "Scale": "Size",
+        "Author": "Vendor Name",
         "From": "From",
         "Manager": "Category",
     },
     "object": {
         "Mood": "Subcategory Path",
-        "Author": "SubCategory",
+        "Title": "SubCategory",
         "Writer": "Brand",
         "Album": "Collection",
         "Genre": "Primary Color/Material",
         "People": "Usage Location",
         "Company": "Shape Form",
         "Period": "Style/Period",
-        "Artist": "Size",
-        "Title": "Vendor Name",
+        "Scale": "Size",
+        "Author": "Vendor Name",
         "From": "From",
         "Manager": "Category",
     },
     "procedural": {
         "Mood": "Type",
-        "Author": "Description",
+        "Title": "Description",
         "Company": "Software/Plugin",
         "From": "From",
         "Manager": "Category",
     },
     "location": {
         "Mood": "Category",
-        "Author": "SubCategory",
+        "Title": "SubCategory",
         "Writer": "Width",
         "Album": "Length",
         "Genre": "Height",
@@ -698,17 +731,17 @@ PREVIEW_LABELS = {
     },
     "vehicle": {
         "Mood": "Type",
-        "Author": "Model",
+        "Title": "Model",
         "Writer": "Brand",
         "Genre": "Color",
         "Period": "Year",
-        "Artist": "Size",
+        "Scale": "Size",
         "From": "From",
         "Manager": "Category",
     },
     "vfx": {
         "Mood": "Type",
-        "Author": "Description",
+        "Title": "Description",
         "Genre": "Style/Variant",
         "From": "From",
         "Manager": "Category",
@@ -969,25 +1002,6 @@ def prompt_session_context() -> str:
     return raw
 
 
-def parse_session_context(context: str) -> dict[str, str]:
-    """Extract vendor/subcategory hints from free-text session description using gemma."""
-    if not context:
-        return {}
-    allowed_subcats = sorted(load_furniture_subcategories())
-    location_list = ", ".join(sorted(USAGE_LOCATION_ROOMS))
-    prompt = (
-        "Extract metadata hints from this session description. "
-        "Return ONLY compact JSON with keys: vendor, subcategory, usage_location, brand. "
-        "Use '-' for anything not mentioned. "
-        f"subcategory must be one of: {', '.join(allowed_subcats)}. "
-        f"usage_location must be one of: {location_list}. "
-        f"Description: {context}"
-    )       
-    # Text model disabled; do not attempt remote text normalization.
-    return {}
-
-
-
 def detect_asset_category(stem: str) -> tuple[str, str]:
     """Use gemma4:26b to auto-detect asset category from filename stem.
 
@@ -1242,7 +1256,8 @@ def clean_name_with_qwen(asset_type: str, source_stem: str, mapped_subcategory: 
         timeout=45,
         spinner_label="Name cleanup...",
     ).splitlines()[0].strip()
-    text = re.sub(r"[^A-Za-z0-9_]+", "", text)
+    # Preserve hyphens and accented characters common in European brand names.
+    text = re.sub(r"[^A-Za-z0-9_\-\u00C0-\u024F]+", "_", text)
     return text
 
 
@@ -1523,22 +1538,37 @@ def _ddg_search_urls(query: str, max_results: int = 8) -> list[str]:
     except Exception:
         return []
     # Extract result URLs from DuckDuckGo HTML (href in result__a links)
+    # DDG's HTML structure changes frequently — try multiple patterns as fallback.
     urls: list[str] = []
-    for m in re.finditer(r'class="result__a"[^>]*href="([^"]+)"', body):
-        href = html.unescape(m.group(1))
-        # DDG wraps links in a redirect — extract the actual URL
-        qs = urllib.parse.urlparse(href).query
-        params = urllib.parse.parse_qs(qs)
-        actual = params.get("uddg", [href])[0]
-        if actual.startswith("http"):
-            urls.append(actual)
-        if len(urls) >= max_results:
+    patterns = [
+        r'class="result__a"[^>]*href="([^"]+)"',
+        r'class="result__url"[^>]*href="([^"]+)"',
+        r'<a[^>]*class="[^"]*result[^"]*"[^>]*href="([^"]+)"',
+    ]
+    for pattern in patterns:
+        for m in re.finditer(pattern, body):
+            href = html.unescape(m.group(1))
+            qs = urllib.parse.urlparse(href).query
+            params = urllib.parse.parse_qs(qs)
+            actual = params.get("uddg", [href])[0]
+            if actual.startswith("http"):
+                urls.append(actual)
+            if len(urls) >= max_results:
+                break
+        if urls:
             break
+    if not urls:
+        # DDG returned no results — log for diagnostics.
+        pass
     return urls
 
 
-def _fetch_page_text(url: str, max_chars: int = 3000) -> str:
-    """Fetch a URL and return stripped plain text (no HTML tags), truncated."""
+def _fetch_page_text(url: str, max_chars: int = 8000) -> str:
+    """Fetch a URL and return stripped plain text (no HTML tags), truncated.
+
+    Increased default from 3000 to 8000 chars to capture product details
+    that appear deeper in the page (brand names, model numbers, specs).
+    """
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Mozilla/5.0 (compatible; AssetIngestor/1.0)"},
@@ -1550,6 +1580,11 @@ def _fetch_page_text(url: str, max_chars: int = 3000) -> str:
         return ""
     # Strip script/style blocks
     raw = re.sub(r"<(script|style)[^>]*>[\s\S]*?</\1>", " ", raw, flags=re.IGNORECASE)
+    # Extract useful structured content first (headings, meta, product titles)
+    structured = ""
+    for tag in ("h1", "h2", "h3", "title", "meta"):
+        for m in re.finditer(rf"<{tag}[^>]*>(.*?)</{tag}>", raw, re.IGNORECASE | re.DOTALL):
+            structured += re.sub(r"<[^>]+>", " ", m.group(1)) + "\n"
     # Strip all remaining tags
     text = re.sub(r"<[^>]+>", " ", raw)
     # Collapse whitespace
@@ -1619,7 +1654,7 @@ def web_search_enrich(
         _broad_hint = subcategory_hint or "designer furniture lighting brand"
         urls = _ddg_search_urls(f"{product_query} {_broad_hint}", max_results=12)
     if not urls:
-        return {}
+        return {"_error": "no search results from DuckDuckGo"}
 
     # Prefer trusted design/product domains; fall back to whatever DDG returned.
     def _domain_rank(u: str) -> int:
@@ -1642,14 +1677,14 @@ def web_search_enrich(
         parsed_path = urllib.parse.urlparse(u).path.strip("/")
         if not parsed_path or re.fullmatch(r'[a-z]{2}(-[a-z]{2})?', parsed_path):
             continue
-        t = _fetch_page_text(u, max_chars=3000)
+        t = _fetch_page_text(u)
         if len(t) > 200:
             page_text = t
             used_url = u
             break
 
     if not page_text:
-        return {}
+        return {"_error": "no usable page content found"}
 
     schema_text = ", ".join(schema_keys)
     prompt = (
@@ -2029,6 +2064,37 @@ def enrich_row_with_models(
                 break
 
     # ── Column writes — vary by asset_type ──────────────────────────────────
+    # Extract common EFU field mapping to avoid 10+ repetitions
+    def _write_efu_fields(
+        subcategory_val: str,
+        model_val: str,
+        brand_val: str,
+        collection_val: str,
+        material_val: str,
+        location_val: str,
+        form_val: str,
+        period_val: str,
+        size_val: str,
+        vendor_val: str,
+        manager_label: str,
+    ) -> None:
+        """Write standardized metadata to the EFU row dict."""
+        row["Mood"] = build_mood_hierarchy(subcategory_val) if subcategory_val else "-"
+        row["Author"] = model_val if model_val else "-"
+        row["Writer"] = brand_val if brand_val else "-"
+        row["Album"] = collection_val if collection_val else "-"
+        row["Genre"] = material_val if material_val else "-"
+        row["People"] = location_val if location_val else "-"
+        row["Company"] = form_val if form_val else "-"
+        row["Period"] = period_val if period_val else "-"
+        row["Artist"] = size_val if size_val else "-"
+        row["Title"] = vendor_val if vendor_val and vendor_val != "-" else (brand_val or "-")
+        cur_manager = row.get("Manager", "-")
+        if not cur_manager or cur_manager == "-":
+            row["Manager"] = manager_label
+        elif manager_label not in cur_manager:
+            row["Manager"] = f"{manager_label};{cur_manager}"
+
     if asset_type == "object":
         # Object mapping (from column spec):
         # Mood=Subcategory Path, Author=Model Name, Writer=Brand, Album=Collection,
@@ -2042,10 +2108,6 @@ def enrich_row_with_models(
         #
         # Priority 1: prefix code from filename (e.g. "12-11 object_0" -> Sculpture)
         _obj_uid_subcat = PREFIX_TO_SUBCATEGORY.get(hints.get("uid", ""), "") if hints.get("uid") else ""
-        print(
-            f"  [DEBUG object branch] vision_data={vision_data!r}  uid_subcat={_obj_uid_subcat!r}",
-            flush=True,
-        )
         # Priority 2: vision model output
         _raw_subcat  = clean_display_case((vision_data.get("subcategory", "") or pick("subcategory", "")).strip())
         # Normalize raw label against the allowlist: handle cases like "ModernSculpture" → "Sculpture".
@@ -2095,201 +2157,71 @@ def enrich_row_with_models(
         _obj_loc     = clean_display_case((vision_data.get("usage_location", "") or usage_location or "-").strip()) or "-"
         _obj_size    = clean_display_case((vision_data.get("size", "")        or size or "-").strip())             or "-"
         _obj_vendor  = clean_display_case((vision_data.get("vendor_name", "") or vendor_name or brand or "-").strip()) or "-"
-        row["Mood"]   = build_mood_hierarchy(_obj_subcat) if _obj_subcat and _obj_subcat != "-" else "-"
-        row["Author"] = _obj_model
-        row["Writer"] = _obj_brand
-        row["Album"]  = _obj_collection
-        row["Genre"]  = _obj_mat
-        row["People"] = _obj_loc
-        row["Company"]= _obj_form
-        row["Period"] = _obj_period
-        row["Artist"] = _obj_size
-        row["Title"]  = _obj_vendor
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Object"
-        elif "Object" not in cur_manager:
-            row["Manager"] = f"Object;{cur_manager}"
-    elif asset_type == "fixture":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Fixture"
-        elif "Fixture" not in cur_manager:
-            row["Manager"] = f"Fixture;{cur_manager}"
-    elif asset_type == "vegetation":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Vegetation"
-        elif "Vegetation" not in cur_manager:
-            row["Manager"] = f"Vegetation;{cur_manager}"
-    elif asset_type == "people":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "People"
-        elif "People" not in cur_manager:
-            row["Manager"] = f"People;{cur_manager}"
-    elif asset_type == "material":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Material"
-        elif "Material" not in cur_manager:
-            row["Manager"] = f"Material;{cur_manager}"
-    elif asset_type == "buildings":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Buildings"
-        elif "Buildings" not in cur_manager:
-            row["Manager"] = f"Buildings;{cur_manager}"
-    elif asset_type == "layouts":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Layouts"
-        elif "Layouts" not in cur_manager:
-            row["Manager"] = f"Layouts;{cur_manager}"
-    elif asset_type == "vehicle":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Vehicle"
-        elif "Vehicle" not in cur_manager:
-            row["Manager"] = f"Vehicle;{cur_manager}"
-    elif asset_type == "vfx":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "VFX"
-        elif "VFX" not in cur_manager:
-            row["Manager"] = f"VFX;{cur_manager}"
-    elif asset_type == "procedural":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Procedural"
-        elif "Procedural" not in cur_manager:
-            row["Manager"] = f"Procedural;{cur_manager}"
-    elif asset_type == "location":
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = "Location"
-        elif "Location" not in cur_manager:
-            row["Manager"] = f"Location;{cur_manager}"
+        _write_efu_fields(
+            subcategory_val=_obj_subcat,
+            model_val=_obj_model,
+            brand_val=_obj_brand,
+            collection_val=_obj_collection,
+            material_val=_obj_mat,
+            location_val=_obj_loc,
+            form_val=_obj_form,
+            period_val=_obj_period,
+            size_val=_obj_size,
+            vendor_val=_obj_vendor,
+            manager_label="Object",
+        )
+    # Standardized EFU field values shared by most asset types.
+    _vendor_final = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
+
+    # Data-driven dispatch for all non-object asset types.
+    # The "object" type has custom subcategory resolution logic above — kept separate.
+    _MANAGER_MAP = {
+        "fixture":      "Fixture",
+        "vegetation":   "Vegetation",
+        "people":       "People",
+        "material":     "Material",
+        "buildings":    "Buildings",
+        "layouts":      "Layouts",
+        "vehicle":      "Vehicle",
+        "vfx":          "VFX",
+        "procedural":   "Procedural",
+        "location":     "Location",
+    }
+
+    if asset_type == "object":
+        # Object mapping is handled above with dedicated subcategory resolution.
+        # _write_efu_fields already called in the object block — skip re-dispatch.
+        pass
+    elif asset_type in _MANAGER_MAP:
+        _write_efu_fields(
+            subcategory_val=subcategory,
+            model_val=model_name,
+            brand_val=brand,
+            collection_val=collection,
+            material_val=primary_material,
+            location_val=usage_location,
+            form_val=shape_form,
+            period_val=period,
+            size_val=size,
+            vendor_val=_vendor_final,
+            manager_label=_MANAGER_MAP[asset_type],
+        )
     else:
         # Generic fallback for furniture and any future asset types not yet enumerated.
-        row["Mood"] = build_mood_hierarchy(subcategory) if subcategory else "-"
-        row["Author"] = model_name if model_name else "-"
-        row["Writer"] = brand if brand else "-"
-        row["Album"] = collection if collection else "-"
-        row["Genre"] = primary_material if primary_material else "-"
-        row["People"] = usage_location if usage_location else "-"
-        row["Company"] = shape_form if shape_form else "-"
-        row["Period"] = period if period else "-"
-        row["Artist"] = size if size else "-"
-        row["Title"] = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
-        # Ensure the Manager field includes the category while preserving any existing
-        # parse/source trace that may already be stored there.
         _cat_label = asset_type.capitalize() if asset_type else "Furniture"
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = _cat_label
-        elif _cat_label not in cur_manager:
-            row["Manager"] = f"{_cat_label};{cur_manager}"
+        _write_efu_fields(
+            subcategory_val=subcategory,
+            model_val=model_name,
+            brand_val=brand,
+            collection_val=collection,
+            material_val=primary_material,
+            location_val=usage_location,
+            form_val=shape_form,
+            period_val=period,
+            size_val=size,
+            vendor_val=_vendor_final,
+            manager_label=_cat_label,
+        )
 
     # Keep deterministic parse as fallback and attach diagnostics non-destructively.
     diagnostics: list[str] = []
@@ -2371,8 +2303,17 @@ def ensure_unique_targets(
     while True:
         image_target = img_dir / f"{candidate}{image_suffix}"
         archive_target = arc_dir / f"{candidate}{archive_suffix}"
+        # Check existence first (fast path).
         if not image_target.exists() and not archive_target.exists():
-            return image_target, archive_target, candidate
+            # Use exclusive creation to prevent race conditions.
+            try:
+                for p in (image_target, archive_target):
+                    fd = os.open(str(p), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                    os.close(fd)
+                return image_target, archive_target, candidate
+            except FileExistsError:
+                # Another process created the file between our check and ours.
+                pass
         candidate = f"{base_name}_{counter}"
         counter += 1
 
@@ -2471,7 +2412,7 @@ def build_metadata_row(
 
 
 # Fields that carry free-text display values and should be casing-normalized.
-_NORMALIZE_EFU_FIELDS = {"Author", "Writer", "Album", "Genre", "People", "Company", "Period", "Artist", "Title"}
+_NORMALIZE_EFU_FIELDS = {"Author", "Writer", "Album", "Genre", "People", "Company", "Period", "Scale", "Title"}
 
 
 def normalize_efu_field(value: str) -> str:
@@ -2612,6 +2553,14 @@ def confirm_apply() -> bool:
 
 @lru_cache(maxsize=1)
 def load_clip_model():
+    try:
+        import torch
+        import open_clip
+    except ImportError as exc:
+        raise ImportError(
+            "CLIP scoring requires 'torch' and 'open_clip'. "
+            "Install them: pip install torch open_clip_torch"
+        ) from exc
     model, _, preprocess = open_clip.create_model_and_transforms(MODEL_NAME, pretrained=PRETRAINED)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device).eval()
@@ -2652,6 +2601,20 @@ def classify_image(image_path: Path) -> tuple[str, float, str]:
     return to_camel_case(resp_text.splitlines()[0]), 1.0, "qwen-vision"
 
 
+def _move_with_timeout(src: str, dst: str, timeout: float = 30.0) -> Path:
+    """Move a file with a timeout to prevent hanging on network drives."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(shutil.move, src, dst)
+        try:
+            result = future.result(timeout=timeout)
+            return Path(result)
+        except concurrent.futures.TimeoutError:
+            raise TimeoutError(
+                f"File move timed out after {timeout}s: {src} -> {dst}. "
+                "Check for locked files or network drive issues."
+            )
+
+
 def move_pair(
     image_path: Path,
     archive_path: Path,
@@ -2666,14 +2629,18 @@ def move_pair(
         image_dir=image_dir,
         archive_dir=archive_dir,
     )
-    moved_image = Path(shutil.move(str(image_path), str(image_target)))
-    moved_archive = Path(shutil.move(str(archive_path), str(archive_target)))
+    moved_image = _move_with_timeout(str(image_path), str(image_target))
+    moved_archive = _move_with_timeout(str(archive_path), str(archive_target))
     return moved_image, moved_archive
 
 
 def main() -> None:
     try:
-        global ACTIVE_BACKEND
+        # Validate all base paths before any file operations.
+        _validate_base_paths()
+        # Use a local variable — do NOT mutate the module-level ACTIVE_BACKEND.
+        # This avoids state leakage across multiple invocations.
+        _active_backend: str | None = None
         # command-line flags
         dry_run = False
         auto_yes = False
@@ -2883,9 +2850,9 @@ def main() -> None:
                 backend = prompt_backend(default_backend=ACTIVE_BACKEND)
             else:
                 backend = ACTIVE_BACKEND
-        ACTIVE_BACKEND = normalize_backend(backend)
+        _active_backend = normalize_backend(backend)
         if sys.stdout.isatty():
-            print(f"Backend: {ACTIVE_BACKEND}")
+            print(f"Backend: {_active_backend}")
 
         # Enrichment mode prompt — only when interactive and not already set by flag.
         if enrich_mode == "text" and not enrich_mode_explicit and sys.stdout.isatty():
