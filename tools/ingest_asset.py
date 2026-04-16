@@ -7,7 +7,6 @@ import zlib
 import concurrent.futures
 import csv
 import os
-import difflib
 from functools import lru_cache
 from pathlib import Path
 
@@ -34,36 +33,13 @@ import textwrap
 #   [main()]
 #      |
 #      +--> parse CLI flags
-#      |      (--backend, --enrich-mode, --asset-type, --dry-run, --yes)
-#      |
-#      +--> backend resolution
-#      |      +--> local  -> Ollama calls
-#      |      `--> online -> OpenRouter calls (429 retries on model calls)
-#      |
-#      +--> enrich_mode resolution
-#      |      +--> text
-#      |      +--> vision
-#      |      `--> both
+#      |      (--asset-type, --dry-run/--quick, --yes)
 #      |
 #      +--> asset_type resolution
 #      |      +--> explicit --asset-type? -> use it
 #      |      `--> auto-detect path
-#      |             +--> source = CLI args (clean_args)
-#      |             |      +--> mode=text:
-#      |             |      |      detect_asset_category(stem)
-#      |             |      |      + interactive: accept / V / manual override
-#      |             |      |
-#      |             |      +--> mode=vision:
-#      |             |      |      detect_asset_category_vision(first_image)
-#      |             |      |      (stem ignored for type routing)
-#      |             |      |
-#      |             |      `--> mode=both:
-#      |             |             detect_asset_category(stem)
-#      |             |             + if conf != high and image exists:
-#      |             |                  detect_asset_category_vision(first_image)
-#      |             |
-#      |             `--> source = interactive paste paths
-#      |                    (same mode policy as above, using first pasted image)
+#      |             +--> detect_asset_category(stem)
+#      |             `--> detect_asset_category_vision(first_image) when stem is weak
 #      |
 #      +--> input grouping
 #      |      +--> args mode: group by exact stem from CLI file list
@@ -82,8 +58,9 @@ import textwrap
 #                    +--> build_metadata_row(...)
 #                    +--> enrich_row_with_models(...)
 #                    |      |
-#                    |      +--> pass A: web_search_enrich (disabled in vision-only)
-#                    |      +--> pass B: enrich_vision_pass (vision/both + image exists)
+#                    |      +--> pass A: filename text hints (if descriptive)
+#                    |      +--> pass B: web_search_enrich
+#                    |      +--> pass C: enrich_vision_pass (if image exists)
 #                    |      +--> shared field resolver pick()/pick_with_db()
 #                    |      +--> deterministic subcategory priorities
 #                    |      |      prefix code > db mood code > ai candidate/fuzzy/keywords
@@ -122,6 +99,12 @@ if _THUMBNAIL_BASE_ENV:
 if _ARCHIVE_BASE_ENV:
     ARCHIVE_BASE = Path(_ARCHIVE_BASE_ENV)
     METADATA_EFU_PATH = THUMBNAIL_BASE / ".metadata.efu"  # recompute if base changed
+
+
+# ---------------------------------------------------------------------------
+# Column filling is documented in manual/everything_columnmapping.md.
+# This script now keeps EFU column names as-is with no alias mapping layer.
+# ---------------------------------------------------------------------------
 
 
 def _validate_base_paths() -> None:
@@ -335,10 +318,6 @@ def _kw_ignore_dirs() -> set[str]:
 MODEL_NAME = "ViT-L-14"
 PRETRAINED = "openai"
 CUSTOM_LABEL_MIN_CONFIDENCE = 0.30
-OLLAMA_VISION_MODEL = "qwen3-vl:latest"   # used by enrich_visual.py for material/color/shape
-OLLAMA_TEXT_MODEL  = "gemma4:26b"           # fast text pass in ingest_asset.py
-OLLAMA_MODEL = OLLAMA_VISION_MODEL           # legacy alias used by classify_image / clean_name_with_qwen
-OLLAMA_ENDPOINT = "http://127.0.0.1:11434/api/generate"
 # Optional online backend via OpenRouter.
 _load_local_env_vars()
 # Default model for this script — Gemini 2.5 Flash Lite is the best balance of
@@ -356,7 +335,6 @@ OPENROUTER_FALLBACK_MODELS = [
         "openai/gpt-4o-mini,google/gemini-2.5-flash,deepseek/deepseek-v3.2",
     ).split(",") if m.strip()
 ]
-ACTIVE_BACKEND = os.environ.get("INGEST_BACKEND", "online").strip().lower() or "online"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 ARCHIVE_EXTENSIONS = {".zip", ".rar", ".7z"}
 MODEL_EXTENSIONS = {
@@ -383,31 +361,12 @@ MODEL_EXTENSIONS = {
 }
 ASSET_FILE_EXTENSIONS = ARCHIVE_EXTENSIONS | MODEL_EXTENSIONS
 
-OLLAMA_BASE_URL = "http://127.0.0.1:11434"
-
-
-def _check_ollama_available() -> None:
-    """Raise RuntimeError immediately if the local Ollama daemon is not reachable.
-
-    Uses a 2-second timeout so callers fail fast instead of hanging for the full
-    vision timeout (120 s) when Ollama is not running.
-    """
-    try:
-        with urllib.request.urlopen(OLLAMA_BASE_URL, timeout=2) as resp:
-            resp.read()
-    except Exception as exc:
-        raise RuntimeError(
-            f"Vision requires local Ollama running at {OLLAMA_BASE_URL}. "
-            "Start Ollama first (e.g. 'ollama serve'), then retry. "
-            f"(connection error: {exc})"
-        ) from exc
-
 
 def _openrouter_model_candidates(preferred: str | None = None) -> list[str]:
     """Return an ordered unique list of OpenRouter models to try."""
     candidates: list[str] = []
     first = (preferred or "").strip()
-    # Ignore local Ollama model IDs (e.g. gemma4:26b) when using OpenRouter.
+    # Ignore non-provider-qualified model IDs (e.g. bare aliases).
     if first and "/" not in first and first != "openrouter/auto":
         first = ""
     if not first:
@@ -534,8 +493,8 @@ def _print_help_table() -> None:
         from the web and filename, moves the files into the DB folder, and
         appends a row to .metadata.efu for Everything Search.
 
-        Usage:
-          python tools/ingest_asset.py --asset-type=TYPE [OPTIONS] IMAGE ARCHIVE [IMAGE ARCHIVE ...]
+                Usage:
+                    python tools/ingest_asset.py --asset-type=TYPE [OPTIONS] IMAGE ARCHIVE [IMAGE ARCHIVE ...]
 
           IMAGE    — path to the .jpg / .png render of the asset
           ARCHIVE  — matching archive or 3D model file (same stem as IMAGE)
@@ -544,8 +503,6 @@ def _print_help_table() -> None:
 
         Options:
           --asset-type=TYPE   (required) Asset category — see TYPE values above
-          --backend=MODE      local | online (OpenRouter API)
-                    --enrich-mode=MODE  text | vision | both
           --dry-run           Preview result; no files moved, nothing written to index
                     --quick             Legacy alias for --dry-run (accepted for compatibility)
           --yes, -y           Skip confirmation prompt and apply immediately
@@ -579,9 +536,13 @@ def _print_examples() -> None:
               "G:/3D/designconnected/10-03 mychair.jpg"  "G:/3D/designconnected/10-03 mychair.rar"
               "G:/3D/designconnected/10-03 mytable.jpg"  "G:/3D/designconnected/10-03 mytable.rar"
 
-          # Use online backend (OpenRouter API) instead of local Ollama
-          python tools/ingest_asset.py --backend=online --dry-run --asset-type=furniture
-              "G:/3D/designconnected/10-03 mychair.jpg" "G:/3D/designconnected/10-03 mychair.rar"
+          # Re-enrich existing thumbnails (image-only input)
+          python tools/ingest_asset.py --dry-run --asset-type=furniture
+              "D:/RR_Repo/Database/Armchair_Example_4E85EE94.jpg"
+
+          # Weird filename + image-only input (re-enrich path)
+          python tools/ingest_asset.py --dry-run --asset-type=furniture
+              "D:/RR_Repo/Database/123.239sfabb.jpg"
     """).strip())
     print()
 
@@ -619,113 +580,6 @@ ASSET_TYPES = {
     "object",
     "vehicle",
     "vfx",
-}
-PREVIEW_LABELS = {
-    "furniture": {
-        "Subject": "Subcategory Path",
-        "Title": "Model Name",
-        "Author": "Vendor Name",
-        "Album": "Collection",
-        "Genre": "Primary Color/Material",
-        "People": "Usage Location",
-        "Period": "Period",
-        "Scale": "Size",
-        "Company": "Brand",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "vegetation": {
-        "Subject": "Plant Type",
-        "Title": "Approx. Height",
-        "Author": "Vendor Name",
-        "Album": "Common Name",
-        "Genre": "Foliage Color",
-        "People": "Growth Location",
-        "Company": "Growth Form",
-        "Period": "Seasonal Appearance",
-        "Scale": "Size",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "people": {
-        "Subject": "Original Code Hint",
-        "Title": "Gender",
-        "Author": "Vendor Name",
-        "Album": "Age Group",
-        "Genre": "Clothing Color",
-        "People": "Scene Context",
-        "Period": "Clothing Style",
-        "Scale": "Pose / Activity",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "material": {
-        "Subject": "Material Name",
-        "Genre": "Dominant Color",
-        "Company": "Texture Pattern",
-        "Period": "Material Category",
-        "Scale": "Surface Finish",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "buildings": {
-        "Subject": "Subcategory",
-        "Company": "Physical Form",
-        "Period": "Primary Material",
-        "Scale": "Size",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "layouts": {
-        "Subject": "Layout Type",
-        "Author": "Vendor Name",
-        "People": "Room Type",
-        "Period": "Layout Shape",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "fixture": {
-        "Subject": "Category",
-        "Title": "Primary Description",
-        "Author": "Vendor Name",
-        "Album": "Material",
-        "Genre": "Form",
-        "People": "Usage Location",
-        "Scale": "Size",
-        "Company": "Brand",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "object": {
-        "Subject": "Subcategory Path",
-        "Title": "SubCategory",
-        "Author": "Vendor Name",
-        "Album": "Collection",
-        "Genre": "Primary Color/Material",
-        "People": "Usage Location",
-        "Period": "Style/Period",
-        "Scale": "Size",
-        "Company": "Brand",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "vehicle": {
-        "Subject": "Type",
-        "Title": "Model",
-        "Author": "Vendor Name",
-        "Genre": "Color",
-        "Period": "Year",
-        "Scale": "Size",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
-    "vfx": {
-        "Subject": "Type",
-        "Title": "Description",
-        "Genre": "Style/Variant",
-        "From": "From",
-        "SourceMetadata": "Category",
-    },
 }
 USER_LABELS: list[str] = []
 
@@ -931,57 +785,8 @@ def normalize_asset_type(raw: str) -> str:
     return value
 
 
-def normalize_backend(raw: str) -> str:
-    value = (raw or "").strip().lower()
-    if value in {"online", "api", "openrouter"}:
-        return "online"
-    return "local"
-
-
-def prompt_backend(default_backend: str = "local") -> str:
-    default = normalize_backend(default_backend)
-    print()
-    print("Choose enrichment backend:")
-    print("  1) local   (Ollama models)")
-    print("  2) online  (OpenRouter API)")
-    raw = input(f"Backend [1/2] (default: {default}): ").strip().lower()
-    if not raw:
-        return default
-    if raw in {"1", "l", "local"}:
-        return "local"
-    if raw in {"2", "o", "online", "api", "openrouter"}:
-        return "online"
-    return default
-
-
-def prompt_enrich_mode() -> str:
-    """Ask the user which enrichment strategy to use for this session.
-
-    Returns one of: "text" | "vision" | "both"
-    """
-    print()
-    print("Choose enrichment mode:")
-    print("  1) text   — filename is descriptive; web/text search fills columns (fast)")
-    print("  2) vision — filename is gibberish; vision model fills all columns from the image")
-    print("  3) both   — text fills identity fields (brand/model), vision enhances material/color/form")
-    raw = input("Mode [1/2/3] (default: 1 - text): ").strip().lower()
-    if raw in {"2", "v", "vision"}:
-        return "vision"
-    if raw in {"3", "b", "both"}:
-        return "both"
-    return "text"
-
-
-def prompt_session_context() -> str:
-    print()
-    print("Session context (optional): describe what you are importing.")
-    print("  e.g. 'Importing bathroom faucets from Hansgrohe' or press Enter to skip.")
-    raw = input("Context: ").strip()
-    return raw
-
-
 def detect_asset_category(stem: str) -> tuple[str, str]:
-    """Use gemma4:26b to auto-detect asset category from filename stem.
+    """Auto-detect asset category from filename stem.
 
     Returns (category, confidence) where confidence is 'high', 'medium', or 'low'.
     Falls back to 'furniture' with 'low' confidence on any error.
@@ -1026,7 +831,7 @@ def detect_asset_category(stem: str) -> tuple[str, str]:
             prompt=prompt,
             image_path=None,
             timeout=45,
-            model=OLLAMA_TEXT_MODEL,
+            model=OPENROUTER_MODEL,
             spinner_label="Category detect...",
         )
         data = extract_json_payload(raw)
@@ -1041,7 +846,7 @@ def detect_asset_category(stem: str) -> tuple[str, str]:
 
 
 def detect_asset_category_vision(image_path: Path) -> tuple[str, str]:
-    """Use Ollama vision model to classify a 3D asset category from its render image.
+    """Use vision model to classify a 3D asset category from its render image.
 
     Returns (category, confidence) in the same format as detect_asset_category.
     Falls back to 'furniture' with 'low' confidence on any error.
@@ -1095,7 +900,7 @@ def enrich_vision_pass(
     subcats_list: str,
     location_list: str,
 ) -> dict[str, str]:
-    """Use the local Ollama vision model to extract all EFU metadata fields from a render image.
+    """Use the vision model to extract EFU metadata fields from a render image.
 
     Returns a dict with the same keys used by web_search_enrich (e.g. subcategory,
     model_name, brand, primary_material_or_color, shape_form, etc).
@@ -1106,72 +911,15 @@ def enrich_vision_pass(
         '"subcategory", "model_name", "brand", "collection", '
         '"primary_material_or_color", "usage_location", "shape_form", "period", "size", "vendor_name". '
         "STRICT rules: "
-        f"(1) subcategory MUST be exactly one value from this list: {subcats_list}. "
+        f"(1) subcategory must be a CamelCase hierarchy path describing what you see, "
+        f"formatted as 'AssetType/Group/Leaf' (e.g. 'Furniture/Seating/Armchair', "
+        f"'Fixture/Lighting/WallLamp', 'Object/Decor/Vase'). Use your best judgment. "
         f"(2) usage_location MUST be exactly one value from this list: {location_list}. "
         "(3) Use '-' for any field you cannot confidently determine from the image. "
         "(4) Output ONLY the JSON object. No markdown, no explanation, no extra keys."
     )
     raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label="Vision enrich... ")
     return extract_json_payload(raw)
-
-
-def prompt_asset_type() -> str:
-    # Present a compact numbered menu and accept number, short abbreviation or full name.
-    options = [
-        ("furniture", "Furniture", "F"),
-        ("vegetation", "Vegetation", "V"),
-        ("people", "People", "P"),
-        ("material", "Material", "M"),
-        ("buildings", "Buildings", "B"),
-        ("layouts", "Layouts", "L"),
-        ("fixture", "Fixture", "T"),
-        ("object", "Object", "O"),
-        ("procedural", "Procedural", "R"),
-        ("location", "Location", "C"),
-        ("vehicle", "Vehicle", "H"),
-        ("vfx", "VFX", "X"),
-    ]
-    print()
-    print("Select asset type:")
-    # Render as a compact ASCII table for better scanning.
-    num_w = len(str(len(options)))
-    key_w = max(len(k) for k, _, _ in options)
-    label_w = max(len(label) for _, label, _ in options)
-    abbr_w = max(len(abbr) for _, _, abbr in options)
-    header = f"  {'No'.rjust(num_w)} | {'Key'.ljust(key_w)} | {'Label'.ljust(label_w)} | {'Abbr'.ljust(abbr_w)}"
-    sep = '  ' + '-' * (len(header) - 2)
-    print(header)
-    print(sep)
-    for idx, (key, label, abbr) in enumerate(options, start=1):
-        print(f"  {str(idx).rjust(num_w)} | {key.ljust(key_w)} | {label.ljust(label_w)} | {abbr.center(abbr_w)}")
-    print(sep)
-    raw = input("Choose (number, letter, or name): ").strip()
-    if not raw:
-        raise ValueError("Asset type is required.")
-
-    # Numeric selection
-    if raw.isdigit():
-        n = int(raw)
-        if 1 <= n <= len(options):
-            return options[n - 1][0]
-
-    norm = raw.strip().lower()
-    # Allow single-letter abbreviations mapping
-    abbr_map = {abbr.lower(): key for key, _, abbr in options}
-    if norm in abbr_map:
-        return abbr_map[norm]
-
-    # Allow names and small synonyms
-    norm2 = normalize_asset_type(norm)
-    if norm2 in ASSET_TYPES:
-        return norm2
-
-    # Fallback: try direct match against option labels
-    for key, label, _ in options:
-        if norm == label.lower() or norm == key:
-            return key
-
-    raise ValueError(f"Unsupported asset type: {raw}")
 
 
 def parse_filename_hints(stem: str) -> dict[str, str]:
@@ -1203,6 +951,33 @@ def parse_filename_hints(stem: str) -> dict[str, str]:
     }
 
 
+def is_descriptive_filename_stem(stem: str) -> bool:
+    """Return True when a filename stem appears human-descriptive.
+
+    Very short, mostly numeric, or random token-like stems are treated as
+    non-descriptive and should not be trusted for text-first enrichment.
+    """
+    if not stem:
+        return False
+    cleaned = stem.strip().lower()
+    if not cleaned:
+        return False
+    if re.fullmatch(r"[0-9a-f._-]+", cleaned):
+        return False
+    alpha_tokens = re.findall(r"[a-z]+", cleaned)
+    if not alpha_tokens:
+        return False
+    long_tokens = [t for t in alpha_tokens if len(t) >= 4]
+    if not long_tokens:
+        return False
+    for token in long_tokens:
+        if token in {"asset", "model", "image", "photo", "render", "final", "copy"}:
+            continue
+        if re.search(r"[aeiou]", token):
+            return True
+    return False
+
+
 def clean_display_case(value: str) -> str:
     """Normalize casing for display fields while preserving existing mixed-case tokens."""
     value = value.strip()
@@ -1220,7 +995,7 @@ def clean_display_case(value: str) -> str:
 
 
 def clean_name_with_qwen(asset_type: str, source_stem: str, mapped_subcategory: str, mapped_brand: str) -> str:
-    """Use local Ollama model to clean noisy source filename into a concise semantic name."""
+    """Use the configured LLM to clean noisy source filename into a concise semantic name."""
     prompt = (
         "Create a short clean asset filename from noisy text. "
         "Rules: remove ids/codes/checksums/numbers unless part of product model, "
@@ -1245,35 +1020,6 @@ def ollama_generate(
     model: str | None = None,
     spinner_label: str | None = None,
 ) -> str:
-    backend = normalize_backend(ACTIVE_BACKEND)
-
-    if backend == "local":
-        payload = {
-            "model": model or OLLAMA_VISION_MODEL,
-            "prompt": prompt,
-            "stream": False,
-        }
-        if image_path is not None:
-            payload["images"] = [base64.b64encode(image_path.read_bytes()).decode("utf-8")]
-
-        req = urllib.request.Request(
-            OLLAMA_ENDPOINT,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
-        spinner_msg = spinner_label or ("Vision model..." if image_path is not None else "Text model...")
-        spinner = _Spinner(spinner_msg)
-        spinner.start()
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-        finally:
-            try:
-                spinner.stop()
-            except Exception:
-                pass
-        return (body.get("response") or "").strip()
-
     api_key = OPENROUTER_API_KEY.strip() or os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError(
@@ -1673,7 +1419,8 @@ def web_search_enrich(
         f"{schema_text}. "
         "STRICT rules: "
         "(1) Use '-' for any field you cannot confidently extract from the text. "
-        f"(2) subcategory MUST be one of: {subcats_list}. "
+        "(2) subcategory must be a CamelCase hierarchy path like 'Furniture/Seating/Armchair', "
+        "'Fixture/Lighting/WallLamp', 'Object/Decor/Vase'. Infer from product type and context. "
         "(3) brand must be ONLY the manufacturer name, NOT the designer name. "
         "(4) model_name is the product name, NOT a category. "
         f"(5) usage_location MUST be one of: {location_list}. "
@@ -1684,7 +1431,7 @@ def web_search_enrich(
         raw = ollama_generate(
             prompt=prompt,
             timeout=60,
-            model=OLLAMA_TEXT_MODEL,
+            model=OPENROUTER_MODEL,
             spinner_label="Web extract...",
         )
         result = extract_json_payload(raw)
@@ -1703,36 +1450,25 @@ def enrich_row_with_models(
     row: dict[str, str],
     session_context: str = "",
     session_hints: dict[str, str] | None = None,
-    enrich_mode: str = "both",
 ) -> dict[str, str]:
-    """Metadata enrichment pipeline to fill metadata columns from web search.
+    """Metadata enrichment pipeline.
 
-    Web pass:  DuckDuckGo search → fetch product page → LLM extract.
-               Runs for all assets. Returns canonical brand names, correct
-               brand/designer separation, and subcategory from real product data.
-               Visual fields (Genre/Company/Period) also filled if found on page.
+    Priority order:
+    1) filename-derived text hints (when the stem is descriptive)
+    2) web extraction
+    3) vision extraction
     """
-    # All asset types flow through this enrichment pipeline in both text and vision modes.
-    # Prefix codes resolve subcategory for every category; the web pass
-    # additionally fills brand/model/collection fields when a useful query can be built.
 
-    vision_data: dict[str, str] = {}   # kept for pick() compatibility; always empty here
-    text_data: dict[str, str] = {}     # kept for pick() compatibility; always empty here
+    vision_data: dict[str, str] = {}
+    text_data: dict[str, str] = {}
     # Diagnostics placeholders retained for backward compatibility with the
     # existing Comment-field trace logic at the end of this function.
     vision_error = ""
     text_error = ""
 
-    # Build subcategory list scoped to the actual asset_type so the vision prompt
-    # receives the correct candidates (e.g. Object subcats for object type, not Furniture).
-    _type_prefix = asset_type.capitalize()  # "furniture" -> "Furniture", "object" -> "Object", etc.
-    _all_groups = _kw_subcategory_groups()
-    _type_subcats = sorted(
-        subcat for subcat, grp in _all_groups.items()
-        if grp.lower().startswith(_type_prefix.lower())
-    )
-    allowed_subcats = _type_subcats if _type_subcats else sorted(load_furniture_subcategories())
-    subcats_list = ", ".join(allowed_subcats)
+    # Subcategory is intentionally unconstrained; only usage_location is validated.
+    allowed_subcats: list[str] = []
+    subcats_list = ""
     location_list = ", ".join(sorted(USAGE_LOCATION_ROOMS))
 
     session_hint_str = ""
@@ -1740,7 +1476,24 @@ def enrich_row_with_models(
         session_hint_str = f"Session context from user: '{session_context}'. "
     sh = session_hints or {}
 
-    # Pass 1 — Web search: skipped in vision-only mode.
+    filename_usable = is_descriptive_filename_stem(source_stem)
+
+    # Text-first hints are only trusted when filename looks descriptive.
+    if filename_usable:
+        hint_model = clean_display_case(hints.get("model", "") or hints.get("lead_desc", ""))
+        hint_brand = clean_display_case(hints.get("brand", "") or hints.get("brand_raw", ""))
+        hint_collection = clean_display_case(hints.get("collection", ""))
+        hint_size = (hints.get("size", "") or "").strip()
+        if hint_model and hint_model != "-":
+            text_data["model_name"] = hint_model
+        if hint_brand and hint_brand != "-":
+            text_data["brand"] = hint_brand
+        if hint_collection and hint_collection != "-":
+            text_data["collection"] = hint_collection
+        if hint_size and hint_size != "-":
+            text_data["size"] = hint_size
+
+    # Pass 2 — Web search.
     web_data: dict[str, str] = {}
     _clean_stem = re.sub(r'^[\d\s\-\.]+', '', source_stem).strip()
     _web_query = (_clean_stem or source_stem).replace(".", " ").replace("_", " ").replace("-", " ")
@@ -1753,13 +1506,13 @@ def enrich_row_with_models(
     if _subcat_hint_words and _subcat_hint_words not in _web_query.lower():
         _web_query = f"{_web_query} {_subcat_hint_words}".strip()
 
-    # Web pass uses the full schema so it can also fill visual fields if available
+    # Web pass uses the full schema so it can also fill visual fields if available.
     _full_schema_keys = [
         "subcategory", "model_name", "brand", "collection",
         "primary_material_or_color", "usage_location", "shape_form",
         "period", "size", "vendor_name",
     ]
-    if enrich_mode != "vision":
+    if filename_usable:
         web_data = web_search_enrich(
             product_query=_web_query,
             schema_keys=_full_schema_keys,
@@ -1779,9 +1532,11 @@ def enrich_row_with_models(
         _web_url = web_data.pop("_web_url", "")
         if _web_url and not row.get("URL", "").strip():
             row["URL"] = _web_url
+    else:
+        text_error = ""
 
-    # Vision pass: populates vision_data when enrich_mode is "vision" or "both".
-    if enrich_mode in ("vision", "both") and image_path.exists():
+    # Pass 3 — Vision extraction always runs when an image exists.
+    if image_path.exists():
         try:
             vision_data = enrich_vision_pass(image_path, asset_type, subcats_list, location_list)
         except Exception as _ve:
@@ -1792,18 +1547,14 @@ def enrich_row_with_models(
                     flush=True,
                 )
 
-    # Text pass removed — web pass is the sole text enrichment path.
-    # Tests showed web pass is strictly superior: better brand name formatting,
-    # correct brand vs designer separation, and handles all stem types equally well.
-
     def pick(key: str, fallback: str = "-") -> str:
-        wval = (web_data.get(key, "") or "").strip()
         tval = (text_data.get(key, "") or "").strip()
+        wval = (web_data.get(key, "") or "").strip()
         vval = (vision_data.get(key, "") or "").strip()
-        if wval and wval != "-":
-            return wval
         if tval and tval != "-":
             return tval
+        if wval and wval != "-":
+            return wval
         if vval and vval != "-":
             return vval
         return fallback
@@ -1842,27 +1593,11 @@ def enrich_row_with_models(
     # 2. DB Mood column — may be stored as '1001' (needs normalisation to '10-01').
     _db_subcategory = _resolve_db_prefix_code(db_get("Mood"))
 
-    # 3. AI model output — used only when both deterministic sources miss.
-    # Use the type-scoped allowed_subcats (already built above) so that object/sculpture,
-    # vegetation/tree, etc. are matched correctly — not just furniture subcategories.
+    # 3. AI model output — accept freely; the AI is prompted to return full hierarchy paths
+    # (e.g. 'Furniture/Seating/Armchair') so no keyword-list validation is needed.
     _ai_candidate = pick("subcategory", row.get("Subject", "-"))
-    _ai_candidate_clean = sanitize_name_token(_ai_candidate)
-    if _ai_candidate_clean in allowed_subcats:
-        _ai_subcategory = _ai_candidate_clean
-    else:
-        _ai_subcategory = ""
-        # Fuzzy / substring match of the AI candidate against the type-scoped list.
-        _cand_norm = re.sub(r"[^a-z0-9]+", "", _ai_candidate_clean.lower())
-        _cand_dedup = re.sub(r"(.)\1+", r"\1", _cand_norm)
-        for _sc in allowed_subcats:
-            _sc_norm = re.sub(r"[^a-z0-9]+", "", _sc.lower())
-            if _sc_norm and (_sc_norm in _cand_norm or _sc_norm in _cand_dedup):
-                _ai_subcategory = _sc
-                break
-        if not _ai_subcategory:
-            # Last resort: fall back to furniture-aware normalizer for furniture/fixture.
-            if asset_type in ("furniture", "fixture"):
-                _ai_subcategory = normalize_furniture_subcategory(_ai_candidate, source_stem, hints)
+    _ai_candidate_clean = _ai_candidate.strip() if _ai_candidate and _ai_candidate != "-" else ""
+    _ai_subcategory = _ai_candidate_clean  # accept directly — no constraint filtering
 
     if _uid_subcategory:
         subcategory = _uid_subcategory
@@ -1886,8 +1621,8 @@ def enrich_row_with_models(
     if _uid_hint and stem_model_raw.lower().startswith(_uid_hint.lower()):
         stem_model_raw = stem_model_raw[len(_uid_hint):].strip(" ._-")
 
-    # Stem fallback: skip in vision-only mode (stem is likely gibberish).
-    if (not model_name or model_name == "-") and enrich_mode != "vision":
+    # Stem fallback is only allowed when filename looks descriptive.
+    if (not model_name or model_name == "-") and filename_usable:
         if stem_model_raw:
             model_name = stem_model_raw
         elif stem_model and stem_model != "-":
@@ -2060,9 +1795,9 @@ def enrich_row_with_models(
         row["Title"] = model_val if model_val else "-"
         row["Company"] = brand_val if brand_val else "-"
         row["Album"] = collection_val if collection_val else "-"
-        row["custom_property_0"] = material_val if material_val else "-"  # Color/Material
-        row["custom_property_1"] = location_val if location_val else "-"  # Location
-        row["custom_property_2"] = form_val if form_val else "-"  # Form
+        row["custom_property_0"] = material_val if material_val else "-"
+        row["custom_property_1"] = location_val if location_val else "-"
+        row["custom_property_2"] = form_val if form_val else "-"
         row["Period"] = period_val if period_val else "-"
         row["Scale"] = size_val if size_val else "-"
         row["Author"] = vendor_val if vendor_val and vendor_val != "-" else (brand_val or "-")
@@ -2073,58 +1808,17 @@ def enrich_row_with_models(
             row["SourceMetadata"] = f"{manager_label};{cur_sourcemetadata}"
 
     if asset_type == "object":
-        # Object mapping (from column spec):
-        # Subject=Subcategory Path, Title=Model Name, Writer=Brand, Album=Collection,
-        # Genre=Primary Color/Material, People=UsageLocation, Company=Shape Form,
-        # Period=Style/Period, Scale=Size, Author=VendorName
-        #
-        # Subcategory resolution order for object type:
-        #   1. Filename prefix code (e.g. 12-11 -> Sculpture) — fully deterministic.
-        #   2. Vision model output (when enrich_mode is "vision" or "both").
-        #   3. hints["vision_label"] from classify_image (last resort).
-        #
-        # Priority 1: prefix code from filename (e.g. "12-11 object_0" -> Sculpture)
         _obj_uid_subcat = PREFIX_TO_SUBCATEGORY.get(hints.get("uid", ""), "") if hints.get("uid") else ""
-        # Priority 2: vision model output
-        _raw_subcat  = clean_display_case((vision_data.get("subcategory", "") or pick("subcategory", "")).strip())
-        # Normalize raw label against the allowlist: handle cases like "ModernSculpture" → "Sculpture".
-        def _match_allowlist(raw: str) -> str:
-            if not raw or raw == "-":
-                return ""
-            if raw in allowed_subcats:
-                return raw
-            raw_spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", raw).lower()
-            raw_norm = re.sub(r"[^a-z0-9]+", "", raw_spaced)
-            raw_dedup = re.sub(r"(.)\1+", r"\1", raw_norm)
-
-            # Substring match against normalized forms first.
-            best = ""
-            for subcat in allowed_subcats:
-                sub_norm = re.sub(r"[^a-z0-9]+", "", subcat.lower())
-                if not sub_norm:
-                    continue
-                if sub_norm in raw_norm or sub_norm in raw_dedup:
-                    if len(subcat) > len(best):
-                        best = subcat
-            if best:
-                return best
-
-            # Fuzzy fallback for noisy/typo labels from vision (e.g. Modernscuulpture).
-            norm_to_sub = {
-                re.sub(r"[^a-z0-9]+", "", s.lower()): s
-                for s in allowed_subcats
-            }
-            close = difflib.get_close_matches(raw_dedup or raw_norm, list(norm_to_sub.keys()), n=1, cutoff=0.72)
-            if close:
-                return norm_to_sub[close[0]]
-            return best
-        _obj_subcat = _match_allowlist(_raw_subcat)
-        # Priority 1 wins over vision: apply prefix code if present.
-        if _obj_uid_subcat and _obj_uid_subcat in allowed_subcats:
+        _obj_ai_subcat = clean_display_case((pick("subcategory", "") or "").strip())
+        _obj_label_subcat = clean_display_case(hints.get("vision_label", "") or "")
+        if _obj_uid_subcat:
             _obj_subcat = _obj_uid_subcat
-        # Final fallback: try hints["vision_label"] (from classify_image).
-        if not _obj_subcat or _obj_subcat == "-":
-            _obj_subcat = _match_allowlist(hints.get("vision_label", "")) or "-"
+        elif _obj_ai_subcat and _obj_ai_subcat != "-":
+            _obj_subcat = _obj_ai_subcat
+        elif _obj_label_subcat and _obj_label_subcat != "-":
+            _obj_subcat = _obj_label_subcat
+        else:
+            _obj_subcat = "-"
         _obj_model = clean_display_case((pick("model_name", "") or "").strip()) or "-"
         _obj_brand   = clean_display_case((vision_data.get("brand", "")      or pick("brand", "")).strip())       or "-"
         _obj_collection = clean_display_case((pick("collection", "") or "").strip()) or "-"
@@ -2225,7 +1919,7 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
     mood_value = mood_hierarchy_leaf(row.get("Subject", "")) or row.get("Subject", "")
     if asset_type == "furniture":
         # Filename format: SubcategoryLeaf_ModelName_CRC32
-        # Title (Model Name) is included so files are human-readable without opening the index.
+        # Title is included so files are human-readable without opening the index.
         model_name_token = sanitize_name_token(row.get("Title", "") or "")
         preferred = [mood_value, model_name_token] if model_name_token and model_name_token != "-" else [mood_value]
     elif asset_type == "vegetation":
@@ -2304,9 +1998,6 @@ def build_metadata_row(
     row["CRC-32"] = crc32_value
 
     if asset_type == "furniture":
-        # Furniture mapping from everything_columnmapping.md:
-        # Subject=Subcategory, Title=Model Name, Writer=Brand, Album=Collection,
-        # People=Usage Location, Scale=Size.
         row["Subject"] = sanitize_name_token(hints["model"] or hints["lead_desc"])
         row["Title"] = clean_display_case(hints["model"] or hints["lead_desc"])
         row["Company"] = "-"
@@ -2575,40 +2266,12 @@ def preview_metadata_row(row: dict[str, str]) -> None:
 
 
 def preview_mapped_metadata(asset_type: str, row: dict[str, str]) -> None:
-    """Preview metadata with semantic display names for custom properties."""
-    # Map technical column names to semantic display names
-    display_names = {
-        "Filename": "Filename",
-        "Subject": "Subject",
-        "Rating": "Rating",
-        "Tags": "Tags",
-        "URL": "URL",
-        "From": "From",
-        "Company": "Company",
-        "Author": "Author",
-        "Album": "Album",
-        "custom_property_0": "Color/Material",
-        "custom_property_1": "Location",
-        "custom_property_2": "Form",
-        "Period": "Period",
-        "Scale": "Scale",
-        "Title": "Title",
-        "Comment": "Comment",
-        "ArchiveFile": "ArchiveFile",
-        "SourceMetadata": "SourceMetadata",
-        "Pose": "Pose",
-        "Style": "Style",
-        "Content Status": "Content Status",
-        "custom_property_3": "ChineseName",
-        "custom_property_4": "LatinName",
-        "CRC-32": "CRC-32",
-    }
-    
+    """Preview metadata using canonical EFU column names."""
+
     print("Header preview:")
     preview_rows: list[tuple[str, str]] = []
     for header in EFU_HEADERS:
-        display_name = display_names.get(header, header)
-        preview_rows.append((display_name, row.get(header, "-") or "-"))
+        preview_rows.append((header, row.get(header, "-") or "-"))
 
     name_w = max(len(name) for name, _ in preview_rows)
     val_w = max(len(value) for _, value in preview_rows)
@@ -2644,6 +2307,8 @@ def load_clip_model():
 def score_labels(image_path: Path, labels: list[str]) -> tuple[str, float]:
     if not labels:
         raise ValueError("At least one label is required for CLIP scoring.")
+    import torch
+
     model, preprocess, tokenizer, device = load_clip_model()
     image = Image.open(image_path).convert("RGB")
     image_tensor = preprocess(image).unsqueeze(0).to(device)
@@ -2666,7 +2331,7 @@ def classify_image(image_path: Path) -> tuple[str, float, str]:
         user_label, user_confidence = score_labels(image_path, USER_LABELS)
         if user_confidence >= CUSTOM_LABEL_MIN_CONFIDENCE:
             return to_camel_case(user_label), user_confidence, "custom"
-    # Use vision model (local Ollama or OpenRouter depending on backend)
+    # Use vision model
     _label_prompt = "Return one short CamelCase product label describing the main object. No explanation."
     resp_text = ollama_generate(_label_prompt, image_path=image_path, timeout=120, spinner_label=f"Vision label: {image_path.name}")
     if not resp_text:
@@ -2731,7 +2396,6 @@ def process_reenrich(
     auto_yes: bool = False,
     session_context: str = "",
     session_hints: dict[str, str] | None = None,
-    enrich_mode: str = "both",
 ) -> None:
     """Re-enrich an existing thumbnail: lookup metadata entry by filename and update it.
     
@@ -2765,16 +2429,10 @@ def process_reenrich(
         hints = parse_filename_hints(image_path.stem)
         
         # Vision label detection
-        vision_detect = enrich_mode in ("vision", "both")
-        if vision_detect:
-            try:
-                label, confidence, label_source = classify_image(image_path)
-                hints["vision_label"] = label
-            except Exception as _ve_label:
-                label = to_camel_case(image_path.stem)
-                confidence = 1.0
-                label_source = "stem"
-        else:
+        try:
+            label, confidence, label_source = classify_image(image_path)
+            hints["vision_label"] = label
+        except Exception:
             label = to_camel_case(image_path.stem)
             confidence = 1.0
             label_source = "stem"
@@ -2791,7 +2449,6 @@ def process_reenrich(
             row=metadata_row,
             session_context=session_context,
             session_hints=session_hints,
-            enrich_mode=enrich_mode,
         )
         
         # Preview the updated metadata
@@ -2821,13 +2478,9 @@ def main() -> None:
     try:
         # Validate all base paths before any file operations.
         _validate_base_paths()
-        # Use a local variable — do NOT mutate the module-level ACTIVE_BACKEND.
-        # This avoids state leakage across multiple invocations.
-        _active_backend: str | None = None
         # command-line flags
         dry_run = False
         auto_yes = False
-        backend: str | None = None
         asset_type: str | None = None
         # Allow non-interactive invocation with multiple file arguments (pairs)
         def process_pair(
@@ -2886,7 +2539,6 @@ def main() -> None:
                     row=temp_row,
                     session_context=session_context,
                     session_hints=session_hints,
-                    enrich_mode=enrich_mode,
                 )
                 # Flat output structure: put everything directly into the DB roots.
                 # Do not organize by vendor for now — keep a simple flat layout.
@@ -3014,18 +2666,16 @@ def main() -> None:
         # Print a compact usage reminder and a short loading screen when running interactively.
         if sys.stdout.isatty():
             show_startup_loading(duration=0.9, width=30)
-            print("Usage:  python tools/ingest_asset.py --asset-type=TYPE [--backend=local|online] [--enrich-mode=text|vision|both] [--dry-run|--quick] [--yes] IMAGE ARCHIVE [IMAGE ARCHIVE ...]")
+            print("Usage:  python tools/ingest_asset.py --asset-type=TYPE [--dry-run|--quick] [--yes] IMAGE ARCHIVE [IMAGE ARCHIVE ...]")
             print()
             print("  IMAGE   — path to the .jpg render  |  ARCHIVE — matching archive or 3D model file")
             print("  TYPE    — furniture | fixture | vegetation | people | material | buildings | layouts")
-            print("  Options — --backend=local|online  |  --enrich-mode=text|vision|both  |  --dry-run/--quick  |  --yes")
+            print("  Options — --dry-run/--quick  |  --yes")
             print()
             print("  Run with -h for full reference and examples.")
             print()
         flags = ["--dry-run"]
         clean_args: list[str] = []
-        enrich_mode = "both"   # "text" | "vision" | "both"
-        enrich_mode_explicit = False
         quick_alias_used = False
         unknown_options: list[str] = []
         for a in argv:
@@ -3035,23 +2685,14 @@ def main() -> None:
                     quick_alias_used = True
             elif a in {"--yes", "-y"}:
                 auto_yes = True
-            elif a.startswith("--backend="):
-                backend = normalize_backend(a.split("=", 1)[1])
-            elif a == "--online":
-                backend = "online"
-            elif a == "--local":
-                backend = "local"
             elif a.startswith("--asset-type="):
                 asset_type = normalize_asset_type(a.split("=", 1)[1])
-            elif a in {"--vision-detect", "--enrich-mode=vision"}:
-                enrich_mode = "vision"
-                enrich_mode_explicit = True
-            elif a == "--enrich-mode=both":
-                enrich_mode = "both"
-                enrich_mode_explicit = True
-            elif a == "--enrich-mode=text":
-                enrich_mode = "text"
-                enrich_mode_explicit = True
+            elif a.startswith("--backend=") or a in {
+                "--online", "--local", "--vision-detect",
+                "--enrich-mode=vision", "--enrich-mode=both", "--enrich-mode=text",
+            }:
+                # Legacy flags are accepted for compatibility and ignored.
+                continue
             elif a.startswith("-"):
                 unknown_options.append(a)
             else:
@@ -3063,31 +2704,11 @@ def main() -> None:
             )
         if quick_alias_used and sys.stdout.isatty():
             print("Note: --quick is treated as a legacy alias for --dry-run.")
-
-        if backend is None:
-            if sys.stdout.isatty() and not auto_yes:
-                backend = prompt_backend(default_backend=ACTIVE_BACKEND)
-            else:
-                backend = ACTIVE_BACKEND
-        _active_backend = normalize_backend(backend)
-        if sys.stdout.isatty():
-            print(f"Backend: {_active_backend}")
-
-        # Enrichment mode prompt — only when interactive and not already set by flag.
-        if enrich_mode == "text" and not enrich_mode_explicit and sys.stdout.isatty():
-            enrich_mode = prompt_enrich_mode()
-
-        # Derive vision_detect: enables vision for category detection + per-pair label.
-        vision_detect = enrich_mode in ("vision", "both")
+        # Unified enrichment flow always runs vision extraction when images are present.
+        vision_detect = True
 
         if asset_type and asset_type not in ASSET_TYPES:
             raise ValueError(f"Unsupported asset type: {asset_type}")
-
-        if asset_type == "object" and enrich_mode == "text" and not enrich_mode_explicit:
-            enrich_mode = "vision"
-            vision_detect = True
-            if sys.stdout.isatty():
-                print("Object assets default to vision enrichment; switching to vision mode.")
 
         if not asset_type:
             if clean_args:
@@ -3096,47 +2717,17 @@ def main() -> None:
                     (Path(p) for p in clean_args if Path(p).suffix.lower() in IMAGE_EXTENSIONS and Path(p).exists()),
                     None,
                 )
-                # Mode policy:
-                # - text: use filename stem detector
-                # - vision: use vision detector only (ignore filename stem)
-                # - both: stem first, vision refines low/medium-confidence stems
-                if enrich_mode == "vision":
-                    if _first_image:
-                        _vis_cat, _vis_conf = detect_asset_category_vision(_first_image)
-                        asset_type = _vis_cat
-                        print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                    else:
-                        asset_type = "furniture"
-                        print("(vision-detected) no image found for category detection; defaulting to furniture [low confidence]")
+                # Text-first detection; vision refines only when text confidence is low/medium
+                # or the filename looks non-descriptive.
+                _first_stem = Path(clean_args[0]).stem
+                _auto_cat, _auto_conf = detect_asset_category(_first_stem)
+                asset_type = _auto_cat
+                if _first_image and (_auto_conf != "high" or not is_descriptive_filename_stem(_first_stem)):
+                    _vis_cat, _vis_conf = detect_asset_category_vision(_first_image)
+                    asset_type = _vis_cat
+                    print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
                 else:
-                    # Text stem auto-detect always runs first for text/both modes.
-                    _first_stem = Path(clean_args[0]).stem
-                    _auto_cat, _auto_conf = detect_asset_category(_first_stem)
-
-                    # In both mode, refine with vision when stem confidence is low/medium.
-                    if enrich_mode == "both" and _first_image and _auto_conf != "high":
-                        _vis_cat, _vis_conf = detect_asset_category_vision(_first_image)
-                        asset_type = _vis_cat
-                        print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                    else:
-                        if sys.stdout.isatty():
-                            print(f"(auto-detected) asset type: {_auto_cat} [{_auto_conf} confidence]")
-                            print("  Accept? Press Enter to confirm, V to vision-scan the image, or type a category name:")
-                            if _first_image:
-                                print(f"  (vision will scan: {_first_image.name})")
-                            _choice = input("> ").strip().lower()
-                            if _choice in {"v", "vision"} and _first_image and _first_image.exists():
-                                _vis_cat, _vis_conf = detect_asset_category_vision(_first_image)
-                                asset_type = _vis_cat
-                                print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                            elif _choice and _choice not in {"", "y", "yes"}:
-                                _manual = normalize_asset_type(_choice)
-                                asset_type = _manual if _manual in ASSET_TYPES else _auto_cat
-                            else:
-                                asset_type = _auto_cat
-                        else:
-                            asset_type = _auto_cat
-                            print(f"(auto-detected) asset type: {asset_type} [{_auto_conf} confidence]")
+                    print(f"(auto-detected) asset type: {asset_type} [{_auto_conf} confidence]")
 
         # Interactive session context prompt removed to reduce friction.
         # Default to no session context; parse_session_context handles empty.
@@ -3168,7 +2759,6 @@ def main() -> None:
                             auto_yes=auto_yes,
                             session_context=session_context,
                             session_hints=session_hints,
-                            enrich_mode=enrich_mode,
                         )
                     else:
                         print(f"  Image not found: {img_path}")
@@ -3252,31 +2842,14 @@ def main() -> None:
                     None,
                 )
                 if _paste_img:
-                    if enrich_mode == "vision":
+                    _auto_cat, _auto_conf = detect_asset_category(_paste_img.stem)
+                    asset_type = _auto_cat
+                    if _auto_conf != "high" or not is_descriptive_filename_stem(_paste_img.stem):
                         _vis_cat, _vis_conf = detect_asset_category_vision(_paste_img)
                         asset_type = _vis_cat
                         print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
                     else:
-                        _auto_cat, _auto_conf = detect_asset_category(_paste_img.stem)
-                        if enrich_mode == "both" and _auto_conf != "high":
-                            _vis_cat, _vis_conf = detect_asset_category_vision(_paste_img)
-                            asset_type = _vis_cat
-                            print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                        elif sys.stdout.isatty():
-                            print(f"(auto-detected) asset type: {_auto_cat} [{_auto_conf} confidence]")
-                            print("  Accept? Press Enter to confirm, V to vision-scan the image, or type a category name:")
-                            _paste_choice = input("> ").strip().lower()
-                            if _paste_choice in {"v", "vision"} and _paste_img.exists():
-                                _vis_cat, _vis_conf = detect_asset_category_vision(_paste_img)
-                                asset_type = _vis_cat
-                                print(f"(vision-detected) asset type: {asset_type} [{_vis_conf} confidence]")
-                            elif _paste_choice and _paste_choice not in {"", "y", "yes"}:
-                                _manual = normalize_asset_type(_paste_choice)
-                                asset_type = _manual if _manual in ASSET_TYPES else _auto_cat
-                            else:
-                                asset_type = _auto_cat
-                        else:
-                            asset_type = _auto_cat
+                        print(f"(auto-detected) asset type: {asset_type} [{_auto_conf} confidence]")
                 else:
                     asset_type = "furniture"
 
@@ -3302,7 +2875,6 @@ def main() -> None:
                         auto_yes=auto_yes,
                         session_context=session_context,
                         session_hints=session_hints,
-                        enrich_mode=enrich_mode,
                     )
                     processed += 1
                     if sys.stdout.isatty():

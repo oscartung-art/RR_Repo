@@ -1,41 +1,42 @@
----
-code: "MWR"
-name: "PROPOSED COMPOSITE REDEVELOPMENT AT"
-client: "New Merit Limited(WOP)"
-f_drive_path: "F:/MWR mawo road"
-status: "Lead"
-last_updated: "2026-03-30"
+# MWR - PROPOSED COMPOSITE REDEVELOPMENT AT
 
-# Site Information
-site_info:
-  lot: "-"
-  address: "-"
+**Client:** New Merit Limited (WOP)  
+**Status:** Lead  
+**F: Drive:** F:\MWR mawo road  
+**Last Updated:** 2026-03-30  
 
-# Contact Information
-contacts:
-  client:
-    name: "New Merit Limited(WOP)"
-    email: "-"
-    address: "-"
-    phone: "-"
-  cg:
-    name: "RealRendering"
-    email: "info@real-hk.com"
-  team:
-    architect: "-"
+## Contacts
 
-# GIS Data
-gis:
-  transformation: "-"
+### Client
+- **Name:** New Merit Limited
+- **Email:** -
+- **Phone:** -
 
-# Important Links
-links:
-  rr_share: "-"
----
+### CG (Internal)
+- **Name:** RealRendering
+- **Email:** info@real-hk.com
+
+## Design Documents
+
+*(none yet)*
+
+## Links
+
+- **RR Share:** -
+
+## GIS
 
 
-# MWR
+- **Transformation:** -
 
-- **Project Name**: PROPOSED COMPOSITE REDEVELOPMENT AT
-- **Client**: New Merit Limited(WOP)
-- **F: Drive Path**: F:/MWR mawo road
+## Renderings
+
+*(none yet)*
+
+## Animations
+
+*(none yet)*
+
+## Notes
+
+*(no notes yet)*

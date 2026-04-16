@@ -1,41 +1,40 @@
- ---
-code: "FFS"
-name: "-"
-client: "Unknown"
-f_drive_path: "F:/FFS"
-status: "Lead"
-last_updated: "2026-03-30"
-
-# Site Information
-site_info:
-  lot: "-"
-  address: "-"
-
-# Contact Information
-contacts:
-  client:
-    name: "Unknown"
-    email: "-"
-    address: "-"
-    phone: "-"
-  cg:
-    name: "RealRendering"
-    email: "info@real-hk.com"
-  team:
-    architect: "-"
-
-# GIS Data
-gis:
-  transformation: "-"
-
-# Important Links
-links:
-  rr_share: "-"
----
-
-
 # FFS
 
-- **Project Name**: -
-- **Client**: Unknown
-- **F: Drive Path**: F:/FFS
+**Client:** Unknown  
+**Status:** Lead  
+**F: Drive:** F:\FFS  
+**Last Updated:** 2026-03-30  
+
+## Contacts
+
+### Client
+- **Name:** Unknown
+- **Email:** -
+
+### CG (Internal)
+- **Name:** RealRendering
+- **Email:** info@real-hk.com
+
+## Design Documents
+
+*(none yet)*
+
+## Links
+
+- **RR Share:** -
+
+## GIS
+
+- **Transformation:** -
+
+## Renderings
+
+*(none yet)*
+
+## Animations
+
+*(none yet)*
+
+## Notes
+
+*(no notes yet)*

@@ -1,71 +1,49 @@
+# PLS - Ping Lan Street
 
----
-code: PLS
-name: Ping Lan Street
-client: New Merit Limited (WO Properties)
-status: Active
-f_drive: "F:/PLS"
-last_updated: 2026-03-30
----
-
-# PLS — Ping Lan Street
+**Client:** New Merit Limited (WO Properties)  
+**Status:** Active  
+**F: Drive:** F:\PLS  
+**Last Updated:** 2026-03-30  
 
 ## Site
-| Field   | Value |
-|---------|-------|
-| Lot     | APIL 32 |
-| Address | 17-23 Ap Lei Chau Main Street; 7-9 Ping Lan Street & 37-39 San Shi Street |
+
+**Lot**: APIL 32  
+**Address**: 17-23 Ap Lei Chau Main Street; 7-9 Ping Lan Street & 37-39 San Shi Street
 
 ## Contacts
 
 ### Client
-| Field        | Value |
-|--------------|-------|
-| Name         | Bella KP Fung |
-| Organization | WO Properties |
-| SPV          | New Merit Limited |
-| Email        | bella.kp.fung@woproperties.com |
-| Phone        | (852) 2312 8288 |
-| Address      | Suite 3201, 32/F., Skyline Tower, 39 Wang Kwong Road, Kowloon Bay |
+**Name**: Bella KP Fung  
+**Organization**: WO Properties  
+**SPV**: New Merit Limited  
+**Email**: bella.kp.fung@woproperties.com  
+**Phone**: (852) 2312 8288  
+**Address**: Suite 3201, 32/F., Skyline Tower, 39 Wang Kwong Road, Kowloon Bay
 
 ### Billing
-| Field | Value |
-|-------|-------|
-| Name  | Candy Mak |
-| Email | candy.st.mak@woproperties.com |
+**Name**: Candy Mak  
+**Email**: candy.st.mak@woproperties.com
 
 ### CG (Internal)
-| Field        | Value |
-|--------------|-------|
-| Name         | Oscar Tung |
-| Organization | Real Rendering |
-| Email        | oscartung@real-hk.com |
-| Phone        | (852) 2110 1652 |
+**Name**: Oscar Tung  
+**Organization**: Real Rendering  
+**Email**: oscartung@real-hk.com  
+**Phone**: (852) 2110 1652
 
 ### Historical
-| Field | Value |
-|-------|-------|
-| Name  | Alex Liang |
-| Email | jalexliang@hkhs.com |
-| Note  | Previously WOP |
+**Name**: Alex Liang  
+**Email**: jalexliang@hkhs.com  
+**Note**: Previously WOP
 
 ## Project Team
-| Role             | Firm |
-|------------------|------|
-| Architect        | MLA  |
-| Interior Design  | ARK  |
-| Landscape        | —    |
-| Structure        | —    |
-| Advertising      | —    |
+**Architect**: MLA  
+**Interior Design**: ARK  
+**Landscape**: —  
+**Structure**: —  
+**Advertising**: —
 
 ## GIS
-| Field          | Value |
-|----------------|-------|
-| Transformation | AxisX=-49578.0, AxisY=-82592.906, AxisZ=4543.254, RotationZ=-90 |
-| Longitude      | —     |
-| Latitude       | —     |
-| IB1000         | —     |
-| IB5000         | —     |
+**Transformation**: AxisX=-49578.0, AxisY=-82592.906, AxisZ=4543.254, RotationZ=-90
 
 ## Design Documents
 
@@ -133,7 +111,7 @@ last_updated: 2026-03-30
 |-----------------|-----|
 | CG Drive        | https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWe_fdGVfX-T7mAKhjR-Ao |
 | Architect Drive | https://drive.google.com/drive/folders/1Lr77RpvVY0aCWnsbC6MTjz7-xkVSM81t |
-| Interior Drive  | https://drive.google.com/drive/folders/p1Furpfn0LIbdKee1F2ZrPg0vO5-IjuBK1 |
+| Interior Drive  | https://drive.google.com/drive/folders/p1Furpfn0LIbdKee1F2ZrPg0vO5-IjuBK11 |
 | Client Drive    | https://wangonlimited-my.sharepoint.com/personal/bella_kp_fung_woproperties_com/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fbella_kp_fung_woproperties_com%2FDocuments%2FWOP Projects%2FPing Lan Street%2FRendering&ga=1 |
 
 ## Timeline
@@ -162,8 +140,430 @@ last_updated: 2026-03-30
 | KF-12 | Sliding Track (Upper Tray)    | EKU-FORTE170/340, HKS-2706A           | As Shown                    | As Shown             | Kitchen Cab|
 
 ## Notes
-<!-- Free-form section: meeting notes, decisions, context -->
+
 abc123testing
 
 testing234
 
+## Material Data
+
+**ProjectInfo**
+- **Type:** SiteInfo
+- **Category:** PLS
+
+**ProjectInfo**
+- **Type:** SiteInfo
+- **Category:** APIL 32
+
+**ProjectInfo**
+- **Type:** SiteInfo
+- **Category:** 17-23 AP LEI CHAU MAIN STREET; 7-9 PING I.AN STREET & 37-39 SAN SHI STREET
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** NewMeritLimited
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** bella.kp.fung@woproperties.com
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** Suite3201,32/F.,SkylineTower,39WangKwongRoad,KowloonBay,Kowloon,HongKong|
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** (852)23128288
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** RealRendering
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** info@real-hk.com
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** Unit1001,10/F,MiraPlaceTowerA,132NathanRoad,TsimShaTsui,Kowloon,HongKong|
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** (852)21101652
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** MLA
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** ARK
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** Contact
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** GIS
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** GIS
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** GIS
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** GIS
+- **Category:** -
+
+**ProjectInfo**
+- **Type:** GIS
+- **Category:** AxisX=-49578.0
+- **Location:** AxisY=-82592.906
+
+**ProjectInfo**
+- **Type:** Link
+- **Category:** https://realrendering.synology.me:5001/d/s/wFsOMrykg0XdP9C21toBTge1kQiviIG4/iV5Lck2dFFS3VCpF8NJc-GhWe_fdGVfX-T7mAKhjR-Ao|
+
+**ProjectInfo**
+- **Type:** Link
+- **Category:** https://drive.google.com/drive/folders/1Lr77RpvVY0aCWnsbC6MTjz7-xkVSM81t
+
+**ProjectInfo**
+- **Type:** Link
+- **Category:** https://drive.google.com/drive/folders/p1Furpfn0LIbdKee1F2ZrPg0vO5-IjuBK1
+
+**ProjectInfo**
+- **Type:** Link
+- **Category:** https://wangonlimited-my.sharepoint.com/personal/bella_kp_fung_woproperties_com/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fbella_kp_fung_woproperties_com%2FDocuments%2FWOP Projects%2FPing Lan Street%2FRendering&ga=1
+
+**DesignDocument**
+- **Type:** Client
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Client
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Client
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Arch
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Arch
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Arch
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Arch
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Arch
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Arch
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**DesignDocument**
+- **Type:** Interior
+- **Category:** Received
+- **Location:** Confirmed
+
+**Client**
+- **Type:** Client
+
+**MetalAluminium**
+- **Type:** Material
+- **Category:** MetalAluminium
+- **Location:** Logo
+- **Material:** M01
+
+**Metal**
+- **Type:** Material
+- **Category:** Metal
+- **Location:** Logo
+- **Material:** M02
+
+**Graphic**
+- **Type:** Material
+- **Category:** Graphic
+- **Location:** Logo
+- **Material:** M03
+
+**Logo**
+- **Type:** Material
+- **Category:** Logo
+- **Location:** Matte
+- **Material:** PT04
+
+**Logo**
+- **Type:** Material
+- **Category:** Logo
+- **Location:** Matte
+- **Material:** PT05
+
+**Logo**
+- **Type:** Material
+- **Category:** Logo
+- **Location:** Matte
+- **Material:** PT06
+
+**Logo**
+- **Type:** Material
+- **Category:** Logo
+- **Location:** Matte
+- **Material:** PT07
+
+**Logo**
+- **Type:** Material
+- **Category:** Logo
+- **Location:** Matte
+- **Material:** PT08
+
+**Rendering01**
+- **Type:** Rendering01
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.01
+- **Material:** 220
+
+**Rendering02**
+- **Type:** Rendering02
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.01
+- **Material:** 220
+
+**Rendering03**
+- **Type:** Rendering03
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.0175
+- **Material:** 384
+
+**Rendering04**
+- **Type:** Rendering04
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.288
+- **Material:** 6,322
+
+**RemovedShadow**
+- **Type:** Rendering05
+- **Category:** RemovedShadow
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.75*0.2
+- **Material:** 3,293
+
+**Rendering06**
+- **Type:** Rendering06
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 0
+
+**Rendering07**
+- **Type:** Rendering07
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 21950*0.5*0.06
+- **Material:** 659
+
+**Rendering08**
+- **Type:** Rendering08
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.46*0.24
+- **Material:** 2,423
+
+**AddedPlanterLight**
+- **Type:** Rendering09
+- **Category:** AddedPlanterLight
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 21950*0.21*0.65
+- **Material:** 2,996
+
+**Rendering10**
+- **Type:** Rendering10
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 0
+
+**Rendering11**
+- **Type:** Rendering11
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 0
+
+**Rendering12**
+- **Type:** Rendering12
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 0
+
+**Rendering13**
+- **Type:** Rendering13
+- **Location:** OK
+- **Material:** Fusion
+- **Material:** 21950*0.1*0.19
+- **Material:** 417
+
+**Rendering14**
+- **Type:** Rendering14
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 21950*(0.07*0.24+0.1*0.17)
+- **Material:** 742
+
+**Rendering15**
+- **Type:** Rendering15
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 21950*0.01
+- **Material:** 220
+
+**Rendering16**
+- **Type:** Rendering16
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 21950*0.44*0.28
+- **Material:** 220
+
+**Rendering17**
+- **Type:** Rendering17
+- **Location:** OK
+- **Material:** Direct
+- **Material:** 21950*0.44*0.28
+- **Material:** 220
+
+**AddedFloorPlant**
+- **Type:** Rendering18
+- **Category:** AddedFloorPlant
+- **Location:** OK
+- **Material:** Direct
+- **Size:** 21950*0.1x0.66
+- **Material:** 220
+
+**Animation01**
+- **Type:** Animation01
+- **Location:** OK
+- **Material:** 0
+
+**Animation02**
+- **Type:** Animation02
+- **Location:** OK
+- **Material:** 1000*1
+- **Material:** 21,000
+
+**Animation03**
+- **Type:** Animation03
+- **Location:** OK
+- **Material:** 0
+
+**Clubhouse**
+- **Type:** Animation04
+- **Category:** Clubhouse
+- **Location:** OK
+- **Material:** 1000*3
+- **Material:** 3,000
+
+**Animation05**
+- **Type:** Animation05
+- **Location:** OK
+- **Material:** 0
+
+**Animation06**
+- **Type:** Animation06
+- **Location:** OK
+- **Material:** 0
+
+**Animation07**
+- **Type:** Animation07
+- **Location:** OK
+- **Material:** 0
+
+**Animation08**
+- **Type:** Animation08
+- **Location:** OK
+- **Material:** 1000*3
+- **Material:** 3,000
+
+**Animation09**
+- **Type:** Animation09
+- **Location:** OK
+- **Material:** 0
+
+**Animation10**
+- **Type:** Animation10
+- **Location:** OK
+- **Material:** 1000*3
+- **Material:** 3,000
+
+**E-LFB-01**
+- **Type:** Texture
+- **Material:** 48,552

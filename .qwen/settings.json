@@ -5,8 +5,15 @@
       "Bash(dir *)",
       "Bash(pwsh *)",
       "Bash(del *)",
-      "Bash(rm *)"
+      "Bash(rm *)",
+      "Bash(copy *)",
+      "Bash(tasklist)"
     ]
   },
-  "$version": 3
+  "$version": 3,
+  "model": {
+    "provider": "ollama",
+    "model": "qwen3-vl",
+    "baseUrl": "http://localhost:11434"
+  }
 }

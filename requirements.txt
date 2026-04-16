@@ -4,12 +4,6 @@
 #
 # Standard library modules used (no install needed):
 #   os, sys, re, csv, argparse, pathlib, datetime, subprocess
-#
-# Optional: install if using Google Sheets integration
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client
 
 # LanceDB Search Stack (search_lancedb_indexer.py, search_clipboard_daemon.py)
 lancedb[embeddings]
@@ -19,3 +13,7 @@ torch
 pyperclip
 pywin32
 Pillow
+
+# PDF Processing (pdf_to_spec.py, pdf_to_excel_docling.py)
+PyMuPDF
+pdfplumber

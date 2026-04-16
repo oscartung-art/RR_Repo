@@ -55,9 +55,9 @@ SPEC_COLUMNS = [
 
 # EFU metadata columns — must exactly match EFU_HEADERS in ingest_asset.py.
 EFU_COLUMNS = [
-    "Filename", "Rating", "Tags", "URL", "From", "Mood",
+    "Filename", "Rating", "Tags", "URL", "From",
     "Author", "Writer", "Album", "Genre", "People", "Company",
-    "Period", "Artist", "Title", "Comment", "To", "Manager", "Subject", "CRC-32",
+    "Period", "Scale", "Title", "Comment", "To", "Manager", "Subject", "CRC-32",
 ]
 
 # Flat output directory for thumbnails and EFU (mirrors ingest_asset.py THUMBNAIL_BASE).
@@ -522,7 +522,6 @@ def _spec_to_efu_row(row: dict, project_code: str, pdf_crc32: str) -> dict:
         "Tags":     "",
         "URL":      row.get("ID", "-"),
         "From":     "",
-        "Mood":     mood,
         "Author":   clean_spec_author(row),
         "Writer":   row.get("Brand", "-"),
         "Album":    row.get("Collection", "-"),
@@ -530,12 +529,12 @@ def _spec_to_efu_row(row: dict, project_code: str, pdf_crc32: str) -> dict:
         "People":   row.get("Location", "-"),
         "Company":  row.get("Mounting", "-"),
         "Period":   "-",
-        "Artist":   row.get("Dimension", "-"),
+        "Scale":    row.get("Dimension", "-"),
         "Title":    project_code or "-",
-        "Comment":  "",
+        "Comment":  f"pdf_crc32={pdf_crc32}" if pdf_crc32 else "",
         "To":       "",
         "Manager":  "Schedule",
-        "Subject":  pdf_crc32,
+        "Subject":  mood,
         "CRC-32":   row.get("_thumb_crc32", ""),
     }
 

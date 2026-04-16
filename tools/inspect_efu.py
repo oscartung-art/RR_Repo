@@ -15,7 +15,6 @@ print()
 for r in rows[:5]:
     print(f"  Filename : {r.get('Filename','-')}")
     print(f"  Subject  : {r.get('Subject','-')}")
-    print(f"  Mood     : {r.get('Mood','-')}")
     print(f"  Author   : {r.get('Author','-')}")
     print(f"  Writer   : {r.get('Writer','-')}")
     print(f"  Album    : {r.get('Album','-')}")
@@ -26,7 +25,7 @@ for r in rows[:5]:
     print()
 
 # Summary: fill rates
-fields = ["Mood", "Author", "Writer", "Album", "Genre", "Company", "Period", "People"]
+fields = ["Subject", "Author", "Writer", "Album", "Genre", "Company", "Period", "People"]
 print("Field fill rates:")
 for field in fields:
     filled = sum(1 for r in rows if r.get(field, "").strip() not in ("", "-"))

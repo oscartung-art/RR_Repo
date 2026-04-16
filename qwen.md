@@ -1,6 +1,6 @@
 # RR_Repo: The Studio Brain
 
-> **Single Source of Truth** for Gemini Web, Gemini CLI, and Manus AI.
+> **Single Source of Truth** for Qwen Code.
 > Raw Markdown only. No extensions. No Wikilinks. No Mermaid. Navigation via native VS Code tools.
 
 ---
@@ -15,21 +15,21 @@ The project is split across three distinct storage zones to balance speed, stora
 
 | Zone | Path | Content | Role |
 | :--- | :--- | :--- | :--- |
-| **The Brain** | `D:\GoogleDrive\RR_Repo\` | Scripts, SOPs, Tasks, CRM, DB | Mirrored to Cloud. AI context anchor. |
+| **The Brain** | `D:\RR_Repo\` | Scripts, SOPs, Tasks, CRM, DB | Local + Git version control. AI context anchor. |
 | **Project Mass** | `F:\` | 3ds Max, Unreal, Renders | High-speed local NAS. No cloud sync. |
 | **Asset Mass** | `G:\` | 3D Library, Textures, HDRI | Indexed via `_index.parquet` and sidecar metadata. |
 
-- **Local Path:** `D:\GoogleDrive\RR_Repo` — same on Desktop and Notebook via Google Drive for Desktop.
+- **Local Path:** `D:\RR_Repo` — Git-managed repo.
 - **Shared Python Module:** `Shared/config.py` — Pathlib-based constants for all drive roots.
 - **Shared YAML Parser:** `Shared/frontmatter.py` — single authoritative parser for all project `.md` files.
-- Primary sync is Google Drive for Desktop. Git can still be used for version control when needed.
+- Version control via Git.
 
 ---
 
 ## 2. Repository Structure
 
 ```text
-D:\GoogleDrive\RR_Repo
+D:\RR_Repo
 ├── qwen.md                <- Single brain (this file)
 ├── Active_Projects.md     <- Canonical project dashboard
 ├── inbox.md               <- Raw inbox capture (to be processed)
@@ -42,9 +42,8 @@ D:\GoogleDrive\RR_Repo
 ├── tools/                 <- rr CLI commands and user-facing scripts
 │   └── rr/                <- rr subcommand package (cmd_p, cmd_dash, etc.)
 ├── scripts/               <- Background/maintenance automation (audits, syncs)
-├── pipeline/              <- Asset enrichment scripts
 ├── projects/              <- Per-project .md files with YAML front matter
-├── db/                    <- Local data stores (Master_CRM.csv, projects.json)
+├── db/                    <- Local data stores (Master_CRM.csv)
 ├── log/                   <- Logs, notes, orphan reports
 ├── ipc/                   <- Everything Search SDK (DLL, header, examples)
 ├── example/quotes/        <- Sample client quotations (automation prototyping)
@@ -56,41 +55,43 @@ D:\GoogleDrive\RR_Repo
 
 ## 3. Executive Functions
 
+- **Tone & Style:** Always explain things simply, like talking to a beginner. Use analogies, avoid jargon, and break down complex concepts into bite-sized pieces. Be direct, casual, and friendly.
 - **Memory Capture:** Use `log/brain_dump.md` or `inbox.md` for rapid thought capture. Say *"Log to inbox: [text]"* to append a row with today's date and status `Unfiled`.
 - **Consistency Audits:** Run `python tools/audit_assets.py [path]` periodically on `G:\Assets` and active projects to ensure naming compliance.
-- **Project Setup:** Use `python tools/init_project.py` (or `python tools/new_project.py`) for new commissions.
 - **Proactive Maintenance:** Qwen CLI updates `qwen.md` automatically when new preferences or tools are discovered. Fixes hardcoded paths.
 - **Task Tracking:** Active tasks are manually pasted into `log/action_log.md`. Use the Minimalist table format.
 - **Cancellation Rule:** When any system, tool, or workflow is cancelled, the agent MUST remove it from code, delete related files, and wipe all references from documentation.
 - **File Write Safety:** Always perform a `read_file` on `qwen.md` before writing (Read-Modify-Write protocol).
+- **Documentation Hygiene:** Keep qwen.md lean. Remove redundant sections, stale references, and outdated goals regularly.
 
 ---
 
-## 4. rr CLI
+## 4. Project Management (Flexible Markdown)
 
-The `rr` command is the unified terminal interface for the Studio Brain. Wired via a Bash alias pointing to `tools/rr.py`.
+All project data is stored in `projects/[CODE].md` as clean, flexible markdown.
+**No YAML, no rigid schema** — each project has different sections, add/remove as needed.
 
-**Setup (run once per machine):**
-```bash
-bash tools/setup_bash.sh
-source ~/.bashrc
+**Format:**
+```markdown
+# CODE - Project Name
+
+**Client:** Client Name  
+**Status:** Lead | Active | Completed  
+**F: Drive:** F:\[CODE]  
+**Last Updated:** YYYY-MM-DD  
+
+## Contacts
+## Design Documents
+## Links
+## Renderings
+## Animations
+## Notes
 ```
 
-**Commands:**
-
-| Command | Description |
-| :--- | :--- |
-| `rr p [CODE] [view]` | Project Inspector. Views: `docs`, `contacts`, `links`, `rend`, `ani`, `full` |
-| `rr open [CODE]` | Open project F: drive folder in Windows Explorer |
-| `rr c [CODE] [cat] [field]` | Copy a project field to clipboard |
-| `rr dash` | Terminal project dashboard (Leads / Active / Completed) |
-| `rr crm [search]` | CRM viewer with optional search filter |
-| `rr log [CODE] [message]` | Append timestamped entry to project CHANGELOG |
-| `rr help [command]` | Show help for all or a specific command |
-
-**Hybrid Strategy (Bash vs. Gemini Custom Commands):**
-- Keep `rr` Bash commands for high-frequency utility (instant, free, offline).
-- Use Gemini CLI `.toml` custom commands only when AI interpretation adds value (e.g., summarizing project status, flagging missing docs). Token cost is real — use sparingly.
+**How to use:**
+- Tell Qwen: *"Add contact John to KL1"*, *"Update PLS status to Active"*, *"Note that KL1 architect docs are confirmed"*
+- Ask naturally: *"What's the status of KL1?"*, *"Which projects have pending architect docs?"*
+- Qwen reads/updates files directly — no CLI needed
 
 ---
 
@@ -100,7 +101,7 @@ source ~/.bashrc
 
 | Context | Convention | Example |
 | :--- | :--- | :--- |
-| Folder names / filenames | `lower_case` | `pipeline/`, `sync_assets.py` |
+| Folder names / filenames | `lower_case` | `tools/`, `ingest_asset.py` |
 | Knowledge files | `Title_Case_With_Underscores` | `Naming_Convention.md` |
 | DB values / unique IDs / contact names | `PascalCase` | `HermanMiller`, `OscarTung` |
 | Project folder | `CODE_PascalCase` | `3HG_HillGrove` |
@@ -176,7 +177,7 @@ Similarity is calculated via Cosine Similarity between query vector and stored v
 
 **Step A — Audit (`tools/audit_assets.py`):** Run before any indexing. Identifies Orphans (models without thumbnails) and Ghosts (thumbnails without models). No asset enters the index until it is a valid Pair.
 
-**Step B — Index (`scripts/index_master.py`):** Batch-processes thumbnails into `_index.parquet` using the RTX 4090. Incremental mode: only processes new or modified files.
+**Step B — Index (`scripts/search_index_master.py`):** Batch-processes thumbnails into `_index.parquet` using the RTX 4090. Incremental mode: only processes new or modified files.
 
 **Step C — Find (`scripts/search_clip_text.py`):** Primary retrieval interface.
 - Terminal: `rr find "Modern Eames Chair"` or `rr find "G:/ref/client_photo.jpg"`
@@ -272,7 +273,7 @@ animations: {}
 
 - **File:** `db/Master_CRM.csv`
 - **Rule:** Contacts must be deduplicated by email. Role-based keys in project files must link to the `Name` column in this CSV.
-- The `rr p [CODE] contacts` command validates contacts against CRM and flags mismatches.
+- Qwen validates contacts against CRM when reading project files.
 
 ---
 
@@ -369,30 +370,25 @@ Content/
 ## 15. Strategic Workflows
 
 1. **Asset Ingest:** New downloads → `tools/ingest_asset.py` → rename, hash for duplicates, move to `G:\`.
-2. **Asset Sync:** `tools/sync_assets.py` → scan `G:\`, maintain `_index.parquet`, mirror/update metadata artifacts.
-3. **Tag Export:** `scripts/tag_assets.py` → write `.metadata.efu` sidecars for Everything Search ratings/vendor/category.
-4. **Project Init:** `tools/init_project.py` or `tools/new_project.py` → scaffold F: folder + create `projects/[CODE].md`.
-5. **Quotations:** Sample markdown source in `example/quotes/` for ingestion/automation prototyping.
-6. **Secrets:** API/local secrets in `.env` (excluded from sync). Passwords in Google Password Manager.
-7. **Inbox Processing:** Paste raw client text (WhatsApp, email) into `inbox.md`. Ask AI to process and extract tasks.
+2. **Project Init:** Manual scaffold of F: folder + create `projects/[CODE].md`.
+3. **Quotations:** Sample markdown source in `example/quotes/` for ingestion/automation prototyping.
+4. **Secrets:** API/local secrets in `.env` (excluded from sync). Passwords in Google Password Manager.
+5. **Inbox Processing:** Paste raw client text (WhatsApp, email) into `inbox.md`. Ask AI to process and extract tasks.
 
 ---
 
 ## 16. Key Automation Goals (Phase 1)
 
-- [ ] **`tools/sync_assets.py`** — Scan G:\ and keep index/metadata current.
 - [ ] **`tools/ingest_asset.py`** — Normalization Station: rename, hash, move to G:\.
-- [ ] **`tools/init_project.py`** — Generate standard project folder on F:\ with `CHANGELOG.md`.
-- [ ] **`scripts/tag_assets.py`** — Continue hardening EFU sidecar generation for Everything workflow.
 - [ ] **`tools/unreal_cleanup.py`** — Automate Unreal Engine Flat & Singular asset structure.
 
 ---
 
-## 17. Gemini CLI Directives
+## 17. AI Directives
 
 > **"You are my Studio Manager. My UI is raw Markdown. When a new project starts:**
 > 1. Create `projects/[CODE].md` with the standard YAML front matter (Section 8).
-> 2. Run `python tools/init_project.py` (or `python tools/new_project.py`) to scaffold the F: drive folder.
+> 2. Manually scaffold F: drive folder with `01_Brief/`, `02_Work/`, `03_Shared/` and `CHANGELOG.md`.
 > 3. Use standard Markdown links `[Title](path)`, **NOT** Wikilinks `[[Title]]`.
 > 4. Keep text aligned and tidy using whitespace.
 > 5. Always include a README file with generated code. The README must explain the purpose of the code and provide clear instructions on how to run it."
@@ -409,9 +405,9 @@ Content/
 
 - **Automation:** Python 3.9+, Unreal Engine Python API
 - **Search:** Everything Search (VoidTools) + `_index.parquet` + `.metadata.efu` sidecars
-- **Documentation:** Markdown (VS Code / Gemini) — raw, no extensions
+- **Documentation:** Markdown (VS Code / Qwen Code) — raw, no extensions
 - **Visualization:** Text-based ASCII flowcharts and structured Markdown tables (no Mermaid.js)
-- **AI Agents:** Gemini Web (discussion) → Gemini CLI (local execution) → Manus (heavy lifting)
+- **AI Agent:** Qwen Code (CLI) — local code operations, documentation, automation
 
 ---
 
@@ -419,18 +415,17 @@ Content/
 
 **New machine setup (run once):**
 ```powershell
-D:\GoogleDrive\RR_Repo\tools\setup_notebook.ps1
+D:\RR_Repo\tools\setup_notebook.ps1
 ```
 Then:
 ```bash
 bash tools/setup_bash.sh
 source ~/.bashrc
-gemini  # enter API key when prompted
 ```
 
 **Daily resumption:**
-1. Confirm Google Drive tray icon shows sync complete.
-2. Launch `qwen` — it auto-loads `qwen.md`.
+1. Confirm Git sync is complete (if using Git).
+2. Launch Qwen Code — it auto-loads `qwen.md`.
 3. If context is stale mid-session: *"Re-read `qwen.md`."*
 
 ---
@@ -441,6 +436,11 @@ Chronological record of significant actions. Most recent first.
 
 | Date | Agent | Action |
 | :--- | :--- | :--- |
+| 2026-04-14 | Qwen | Retired entire rr CLI system (`tools/rr.py`, `tools/rr/`, `p.bat`). Converted all 8 project files from YAML to flexible markdown. Updated README.md and qwen.md to reflect new workflow (natural language Qwen queries replace CLI). |
+| 2026-04-14 | Qwen | Cleaned up Drive/Google tooling: deleted `find_cloud_refs.py`, `fix_drive_filenames.py`, `rebuild_drive_index.py`, `scan_drive_all_files.py`, `deploy_meta.py`. Only `copy_data.py` (backend for `rr c`) retained. |
+| 2026-04-14 | Qwen | Clean uninstall of all Google Sheets/Drive workflow: deleted `sync_crm.py`, `sync_gsheet_to_local_csv.py`, `compare_apis.py`, `enrich_visual.py`, `re_enrich.py`, `Shared/google_auth.py`. Removed google-* packages from requirements.txt. Updated README.md and qwen.md references. |
+| 2026-04-14 | Qwen | Deleted `pipeline/` (enrich_gdrive.py, process_folder.py) — obsolete Gemini enrichment workflow. Cleaned README.md and qwen.md references. |
+| 2026-04-14 | Qwen | Major qwen.md cleanup: removed Google/Cloud references, fixed script names (`search_index_master.py`), updated AI agent to Qwen Code, removed redundant memories section, added documentation hygiene rule. Updated header, hybrid strategy, and AI directives sections. |
 | 2026-03-31 | Manus | Added `rr find` command (`tools/rr/cmd_find.py`) — CLIP semantic search + EFU export to Everything Search. Supports text query, image query, `--top N`, `--stats`. Graceful fallback when index/packages not ready. |
 | 2026-03-31 | Manus | Replaced Section 7 (G: Drive Asset Library) with Semantic Architecture 2026 — CLIP vector search, Parquet index, Pair Rule, Coffee Shop Mode. Deprecated CSV tagging and numerical prefixes. |
 | 2026-03-31 | Manus | Improved all three TOML commands (safety gates, schema refs, path fixes, default args). Created `.gemini/commands/README.md` help reference. |
@@ -451,6 +451,9 @@ Chronological record of significant actions. Most recent first.
 | 2026-03-31 | Manus | Full repo audit. Created `tools/rr.py` dispatcher + `tools/setup_bash.sh`. Fixed `rr_log.py`. Updated `lookup.py` to use `Shared/config.py`. Added `Shared/frontmatter.py`. Updated `System_Commands_Reference.md`, `Common_Commands.md`, `VS_Code_Setup_Guide.md`. Created `requirements.txt`. Archived stale scripts and docs. |
 | 2026-03-30 | Gemini CLI | Cancelled `tasks` folder. Removed all multi-agent sync elements and task handoff protocols. |
 | 2026-03-30 | Gemini CLI | Cancelled 3-way sync, Dashboard, and Cloud Brain. Shifted to text-only VSCode-centric workflow. |
-| 2026-03-30 | Manus | Executed Master Directive: created `tools/audit_assets.py`, `tools/init_project.py`. |
+| 2026-03-30 | Manus | Created `tools/audit_assets.py`. Cancelled `init_project.py` and `new_project.py`. |
 | 2026-03-29 | Gemini CLI | Established and tested the `action_log.md` system. |
 | 2026-03-28 | Gemini CLI | Established Three-Agent Handoff Protocol. |
+
+## Qwen Added Memories
+- Everything Search Column Assignment: URL=Project Code, Director=Room/Zone, Composer=Asset Type, Conductor=Status, Scale=Spare. Reserved: company, Track, Version, Length, Genre, Director, Composer, Conductor, Scale. Free for future use: Subject, Comment, From, To, Description, Keywords, link, owner. Rating scale: 99=5 stars, 79=4 stars, 59=3 stars, 39=2 stars, 19=1 star.

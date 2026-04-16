@@ -1,5 +1,10 @@
-import unreal
+try:
+    import unreal
+except ImportError:
+    unreal = None
+    print("Warning: 'unreal' module not available. This script must run inside Unreal Editor's Python environment.")
 import os
+import sys
 
 """
 unreal_cleanup.py
@@ -51,6 +56,9 @@ def organize_folders():
     unreal.log("Standard folders ensured in /Game/Project/")
 
 if __name__ == "__main__":
-    # By default, we just ensure the structure. 
+    if unreal is None:
+        print("Error: This script must be run inside Unreal Editor's Python environment.")
+        sys.exit(1)
+    # By default, we just ensure the structure.
     # Renaming is best triggered manually per-selection.
     organize_folders()

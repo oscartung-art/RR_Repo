@@ -2,6 +2,27 @@
 
 Reference for all available metadata columns in `.metadata.efu`. Defines column names, data types, and semantic mappings for core fields, categorization, descriptive attributes, and custom properties.
 
+## Asset Type Column Usage Matrix
+
+    ┌─────────────┬─────────┬───────┬─────────┬───────┬────────┬────────┬──────────┬──────────┬──────┬─────────┬────────┬──────┐
+    │ Category    │ Subject │ Title │ Company │ Album │ Author │ Period │ Color    │ Location │ Form │ Chinese │ Latin  │ Size │
+    │             │         │       │         │       │        │        │ (cp_0)   │ (cp_1)   │(cp_2)│ (cp_3)  │(cp_4)  │(cp_5)│
+    ├─────────────┼─────────┼───────┼─────────┼───────┼────────┼────────┼──────────┼──────────┼──────┼─────────┼────────┼──────┤
+    │ Furniture   │    ✓    │   ✓   │    ✓    │   ✓   │   ✓    │   ✓    │    ✓     │    ✓     │  ✓   │    —    │   —    │  ✓   │
+    │ Fixture     │    ✓    │   ✓   │    ✓    │   ✓   │   ✓    │   ✓    │    ✓     │    ✓     │  ✓   │    —    │   —    │  ✓   │
+    │ Vegetation  │    ✓    │   ✓   │    ✓    │   —   │   —    │   —    │    ✓     │    —     │  ✓   │    ✓    │   ✓    │  ✓   │
+    │ Object      │    ✓    │   ✓   │    ✓    │   ✓   │   ✓    │   ✓    │    ✓     │    ✓     │  ✓   │    —    │   —    │  ✓   │
+    │ Material    │    ✓    │   ✓   │    ✓    │   —   │   —    │   ✓    │    ✓     │    —     │  ✓   │    —    │   —    │  ✓   │
+    │ Vehicle     │    ✓    │   ✓   │    ✓    │   —   │   —    │   ✓    │    ✓     │    —     │  —   │    —    │   —    │  ✓   │
+    │ Layouts     │    ✓    │   —   │    —    │   ✓   │   —    │   —    │    —     │    ✓     │  ✓   │    —    │   —    │  ✓   │
+    │ People      │    ✓    │   —   │    —    │   —   │   —    │   ✓    │    ✓     │    ✓     │  —   │    —    │   —    │  —   │
+    │ VFX         │    ✓    │   —   │    —    │   —   │   —    │   —    │    —     │    —     │  —   │    —    │   —    │  —   │
+    └─────────────┴─────────┴───────┴─────────┴───────┴────────┴────────┴──────────┴──────────┴──────┴─────────┴────────┴──────┘
+
+    Legend: ✓ = Used | — = Not used | cp = custom_property
+
+---
+
 ## Core Fields
 
 **Filename** : Asset filename (read-only, used for matching)  
@@ -75,7 +96,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 
 ## Descriptive (Vision)
 
-**Scale** : Size
+**Size** (custom_property_5) : Dimensions or scale classification
 - **Furniture**: Size. Examples: `300x300mm`, `1200x450x350mm`, `Large`
 - **Vegetation**: Size. Examples: `3m`, `Small`, `Medium`
 - **Fixture**: Size. Examples: `300x300mm`, `450x450mm`
@@ -145,7 +166,8 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - `custom_property_2` = **Form** — Shape/form/physical configuration
 - `custom_property_3` = **ChineseName** — Chinese/scientific name (vegetation)
 - `custom_property_4` = **LatinName** — Latin/scientific name (vegetation)
-- `custom_property_5-9` — Reserved/unused
+- `custom_property_5` = **Size** — Size or dimensions
+- `custom_property_6-9` — Reserved/unused
 
 **Note:** Everything Search treats property names as case-insensitive in CSV headers. One-meaning-per-column semantic rule enforced.
 

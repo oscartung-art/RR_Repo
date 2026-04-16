@@ -89,3 +89,20 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Windows reserved device name (not a real file)
+nul
+
+# Database assets: ignore image files, keep metadata tracked
+Database/*.jpg
+Database/*.jpeg
+Database/*.png
+Database/*.gif
+Database/*.webp
+Database/*.bmp
+Database/*.tif
+Database/*.tiff
+Database/*.avif
+Database/*.heic
+!Database/*.efu
+!Database/*.efu.*

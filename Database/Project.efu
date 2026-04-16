@@ -1,0 +1,23 @@
+Filename,Subject,Rating,Tags,URL,From,Author,Company,Album,custom_property_0,custom_property_1,custom_property_2,Period,custom_property_5,Title,Comment,ArchiveFile,SourceMetadata,Pose,Style,Content Status,custom_property_3,custom_property_4,CRC-32
+00002,Fixture/Kitchen/KitchenFaucet,-,-,KF-01,-,PLS,Hansgrohe,Talis M54,Brushed Bronze Color 140 PVD,Kitchen,Deck Mounted,-,AS Shown,72845 140,-,-,Schedule,-,-,-,-,-,E324F370
+00003,Fixture/Kitchen/KitchenSink,-,-,KF-02,-,PLS,-,-,"Satin, 304 S/S Finish",Kitchen,Under Counter,-,Clear 450 X 450 X 200 Mm,R10 HM3939,-,-,Schedule,-,-,-,-,-,E324F370
+00004,Fixture/Kitchen/KitchenAccessory,-,-,KF-03,-,PLS,Kumeis,-,Black Matt Powder Coating,Kitchen,-,-,As Shown,-,-,-,Schedule,-,-,-,-,-,E324F370
+00005,Fixture/Kitchen/KitchenAccessory,-,-,KF-04,-,PLS,Kumeis,-,As Shown,Kitchen,-,-,As Shown,-,-,-,Schedule,-,-,-,-,-,E324F370
+00006,Fixture/Kitchen/KitchenAccessory,-,-,-,-,PLS,-,-,"Silky Black Or Spray Black, Walnut Or Bamboo",Kitchen,-,-,455W * 100D * 59H Mm,KU205,-,-,Schedule,-,-,-,-,-,E324F370
+00007,Fixture/Kitchen/KitchenAccessory,-,-,-,-,PLS,-,-,"Silky Black Or Spray Black, Walnut Or Bamboo",Kitchen,-,-,60W * 35D * 65H Mm,KU206,-,-,Schedule,-,-,-,-,-,E324F370
+00008,Fixture/Kitchen/WasteBin,-,-,KF-05,-,PLS,Hailo,-,"Stainless Steel, Black",Kitchen,Sidewall Mounted,-,388 X 203 X 420MM,AS Uno 18,-,-,Schedule,-,-,-,-,-,E324F370
+00009,Fixture/Lighting/LightStrip,-,-,KF-07,-,PLS,Unico,-,Black W/ Motion Sensor Switch,Kitchen,-,-,Refer To Kitchen Drawing,Unia 2CXB S,-,-,Schedule,-,-,-,-,-,E324F370
+00010,Fixture/Lighting/LightStrip,-,-,KF-07A,-,PLS,-,-,9W/m 3000K 24V LED,Shoe Cabinet/ Storage Cabinet,-,-,Refer To Kitchen Drawing,ML SFR F23B HB HO,-,-,Schedule,-,-,-,-,-,E324F370
+00011,Fixture/Kitchen/KitchenAccessory,-,-,KF-08,-,PLS,-,-,Black Matt Powder Coating,Kitchen,-,-,As Shown,Damiano Latini Grid,-,-,Schedule,-,-,-,-,-,E324F370
+00012,Fixture/Storage/ShoeRack,-,-,KF-08A,-,PLS,Hafele,-,White,Storage Cabinet & Shoe Cabinet,-,-,As Shown,892 14 742,-,-,Schedule,-,-,-,-,-,E324F370
+00013,Fixture/Kitchen/CutleryTray,-,-,KF-09,-,PLS,-,-,As Shown,All Kitchen,-,-,As Shown,T54,-,-,Schedule,-,-,-,-,-,E324F370
+00014,Fixture/Kitchen/SlidingTray,-,-,KF-10,-,PLS,Vibo,-,Matt Dark Grey,All Kitchen,-,-,As Shown,T54,-,-,Schedule,-,-,-,-,-,E324F370
+00015,Fixture/Hardware/SlidingTrack,-,-,KF-11,-,PLS,-,-,As Shown,Studio Flat Kitchen,-,-,As Shown,Atim Cocktail,-,-,Schedule,-,-,-,-,-,E324F370
+00016,Fixture/Hardware/SlidingTrack,-,-,KF-12,-,PLS,EKU,-,As Shown,Kitchen Cabinet,-,-,As Shown,EKU Forte 170/340 HKS 2706A,-,-,Schedule,-,-,-,-,-,E324F370
+00017,Fixture/Appliance/InductionHob,-,-,AP-01,-,PLS,De Dietrich,-,-,Kitchen,-,-,290(W) × 520(D) × 70(H),DPI7361XH,-,-,Schedule,-,-,-,-,-,730445FE
+00018,Fixture/Appliance/InductionHob,-,-,-,-,PLS,De Dietrich,-,-,Special Unit Kitchen,-,-,380W X 515D X 68H Mm,DPI7469XS+DAI7003S,-,-,Schedule,-,-,-,-,-,730445FE
+00019,Fixture/Appliance/Cookerhood,-,-,-,-,PLS,De Dietrich,-,60cm Inox Colour,Kitchen,-,-,260H X 598W X 280D Mm,DHT6605X,-,-,Schedule,-,-,-,-,-,730445FE
+00020,Fixture/Appliance/SteamOven,-,-,-,-,PLS,De Dietrich,-,-,Kitchen,-,-,592W X 609D X 456H,DKR7580A,-,-,Schedule,-,-,-,-,-,730445FE
+00021,Fixture/Appliance/Refrigerator,-,-,-,-,PLS,De Dietrich,-,-,Kitchen,Built In,-,Refer To Diagram,DRP1906JE,-,-,Schedule,-,-,-,-,-,730445FE
+00022,Fixture/Appliance/Refrigerator,-,-,-,-,PLS,De Dietrich,-,-,Kitchen (Studio Unit),Built In,-,Refer To Diagram,DRS604MU1,-,-,Schedule,-,-,-,-,-,730445FE
+00023,Fixture/Appliance/WasherDryer,-,-,-,-,PLS,De Dietrich,-,-,"Kitchen, Balcony",-,-,Refer To Diagram,DLZ8485U,-,-,Schedule,-,-,-,-,-,730445FE
