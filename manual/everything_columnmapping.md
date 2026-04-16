@@ -45,20 +45,18 @@ Examples: `4E85EE94`, `EA78D53F`, `7F8E867A`
 
 ## Categorization
 
-**Subject** : Asset classification (primary categorization field)
-- **Furniture**: Subcategory path. Examples: `Furniture/Seating/Armchair`, `Furniture/Table/CoffeeTable`, `Fixture/ShowerMixer`
-- **Vegetation**: Plant type. Examples: `Tree`, `FlowerShrub`, `Cactus`, `Shrub`, `Grass`
-- **People**: Activity/pose context. Examples: `Standing`, `Sitting`, `Walking`
-- **Material**: Material name. Examples: `Wood`, `Leather`, `Glass`, `Ceramic`, `Metal`, `Fabric`
-- **Buildings**: Subcategory. Examples: `Door`, `Window`, `Railing`, `Facade`, `Roof`
-- **Layouts**: Layout type. Examples: `BarTable`, `BedSet`, `DiningTable`, `KitchenLayout`
-- **Fixture**: Subcategory. Examples: `TableLamp`, `FloorLamp`, `Pendant`, `ShowerHead`, `KitchenFaucet`
-- **Object**: Subcategory. Examples: `Vase`, `Cushion`, `Book`, `Clock`, `Tray`, `Tableware`, `Sculpture`
-- **Procedural**: Type. Examples: `Railing`, `CurtainWall`, `Roof`, `Planter`, `Staircase`
-- **Location**: Category. Examples: `Urban`, `Nature`, `Interior`, `Landscape`, `Environment`
-- **Vehicle**: Type. Examples: `Car`, `Aircraft`, `Boat`, `Ship`, `Space`, `Motorcycle`
-- **VFX**: Type. Examples: `Water`, `Fire`, `Smoke`, `Sky`, `Caustics`, `Pattern`, `Lightning`
-- **Schedule**: Item type. Examples: `KitchenFaucet`, `ShowerMixer`, `KitchenSink`, `WasteBin`, `LightStrip`, `Appliance`
+**Subject** : Asset classification (primary categorization field) — uses full hierarchical subcategory paths per `ingest_keywords.md`
+- **Furniture**: Full path. Examples: `Furniture/Seating/Armchair`, `Furniture/Table/CoffeeTable`, `Furniture/Storage/Bookcase`
+- **Fixture**: Full path. Examples: `Fixture/Lighting/TableLamp`, `Fixture/Lighting/PendantLight`, `Fixture/BathroomFixture`, `Fixture/KitchenFaucet`
+- **Vegetation**: Full path. Examples: `Vegetation/Tree/ConiferTree`, `Vegetation/FlowerShrub`, `Vegetation/Cactus`, `Vegetation/Groundcover`
+- **Building**: Full path. Examples: `Building/Door`, `Building/Window`, `Building/Railing`, `Building/Facade`, `Building/Roof`
+- **Layouts**: Full path. Examples: `Layouts/BarTable`, `Layouts/BedSet`, `Layouts/DiningTable`, `Layouts/Seating/SeatingLounge`
+- **Object**: Full path. Examples: `Object/Decor/Vase`, `Object/Decor/Cushion`, `Object/Tableware/Book`, `Object/Decor/Sculpture`
+- **Procedural**: Full path. Examples: `Procedural/Railing`, `Procedural/CurtainWall`, `Procedural/Roof`, `Procedural/Planter`
+- **Vehicle**: Full path. Examples: `Vehicle/Car`, `Vehicle/Aircraft`, `Vehicle/Boat`, `Vehicle/Ship`, `Vehicle/Space`
+- **VFX**: Full path. Examples: `VFX/Fire`, `VFX/Smoke`, `VFX/Water`, `VFX/Sky`, `VFX/Caustics`, `VFX/Pattern`
+- **People**: Activity/pose context (free-text). Examples: `Standing`, `Sitting`, `Walking`
+- **Location**: Category/context (free-text). Examples: `Urban`, `Nature`, `Interior`, `Landscape`, `Environment`
 
 **Author** : Primary descriptor or designer (varies by category)
 - **Furniture**: Model name. Examples: `Barcelona`, `Vernis Blend`, `Eames Lounge`
