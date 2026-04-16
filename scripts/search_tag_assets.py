@@ -1,35 +1,26 @@
 """
-CLIPBOARD TAGGER for Everything Search (Event-Driven)
+CLIPBOARD TAGGER for Everything Search Metadata File (Event-Driven)
 
 USAGE:
 1. Start this script in the background.
-2. Copy to clipboard: ratings:1-5 "path1" | "path2" | ...
-3. Script instantly detects clipboard change and executes.
+2. Copy to clipboard: columnname:value filename.jpg | filename2.jpg | ...
+3. Script instantly detects clipboard change and updates D:\DB\.metadata.efu
 
-Event-driven mode = instant response, zero polling overhead.
-The query part (after ratings:X) is automatically restored in Everything with F5 refresh.
+Supports single or multiple files (pipe-separated).
+The metadata file is updated directly.
 """
 
-import ctypes
 import csv
 import os
 import re
-import sys
 import time
 import winsound
-from ctypes import wintypes
 
-import pandas as pd
 import pyperclip
 
 
 # --- Configuration ---
-PARQUET_CANDIDATES = [
-    r"G:/_index.parquet",
-    r"G:/everything_metadata.parquet",
-]
-PARQUET_PATH = next((p for p in PARQUET_CANDIDATES if os.path.exists(p)), PARQUET_CANDIDATES[0])
-EVERYTHING_CSV = r"G:/everything_metadata.csv"
+METADATA_FILE = r"D:\DB\.metadata.efu"
 
 
 def to_everything_rating(val):
@@ -37,141 +28,10 @@ def to_everything_rating(val):
     try:
         v = int(float(val))
     except Exception:
-        return ""
+        return "-"
     mapping = {1: 1, 2: 25, 3: 50, 4: 75, 5: 99}
-    mapped = mapping.get(v, "")
-    return str(mapped) if mapped else ""
-
-
-def choose_best_match(df, mask, preferred_norm_path=None):
-    matches = df[mask]
-    if matches.empty:
-        return None
-    if preferred_norm_path is not None and '_norm_path' in matches.columns:
-        same_path = matches[matches['_norm_path'] == preferred_norm_path]
-        if not same_path.empty:
-            return same_path.index[0]
-    if 'path' in matches.columns:
-        existing = matches[matches['path'].astype(str).str.len() > 0]
-        if not existing.empty:
-            return existing.index[0]
-    return matches.index[0]
-
-
-def normalize_path(path):
-    return os.path.normcase(os.path.normpath(str(path)))
-
-
-def ensure_brain_columns(df):
-    defaults = {
-        'md5': '',
-        'ratings': 0,
-        'path': '',
-        '_norm_path': '',
-        'vendor': '',
-        'category': '',
-    }
-    for col, default in defaults.items():
-        if col not in df.columns:
-            df[col] = default
-    df['_norm_path'] = df['path'].fillna('').astype(str).apply(normalize_path)
-    return df
-
-
-def get_file_hash(path):
-    import hashlib
-    try:
-        hasher = hashlib.md5()
-        with open(path, 'rb') as f:
-            for chunk in iter(lambda: f.read(65536), b""):
-                hasher.update(chunk)
-        return hasher.hexdigest()
-    except Exception:
-        return None
-
-
-def update_display(df, modified_dirs, modified_md5s):
-    print("\n📡 Syncing central Everything CSV...")
-    export_df = pd.DataFrame({
-        'Filename': df['path'].fillna('').astype(str),
-        'Rating': df['ratings'].apply(to_everything_rating),
-        'Album': df['vendor'].fillna('').astype(str),
-        'Genre': df['category'].fillna('').astype(str),
-    })
-    export_df = export_df[export_df['Filename'] != '']
-    export_df.to_csv(EVERYTHING_CSV, index=False, encoding='utf-8-sig')
-    print(f"✨ Central Everything CSV updated: {EVERYTHING_CSV}")
-
-    print("\n📡 Exporting sidecar .metadata.efu files...")
-    touched = sorted(d for d in modified_dirs if d and os.path.isdir(d))
-    print(f"  Directories: {touched}")
-
-    if not touched:
-        print("  No valid directories to export sidecars.")
-        print("\n✨ Metadata sync complete.")
-        return
-
-    export_work = df.copy()
-    export_work['_dir'] = export_work['path'].fillna('').astype(str).apply(
-        lambda p: os.path.normpath(os.path.dirname(p)) if p else ''
-    )
-    scoped = export_work[export_work['_dir'].isin(touched)].copy()
-    print(f"  Found {len(scoped)} total rows")
-
-    sidecar_count = 0
-    total_entries = 0
-
-    for dir_path in touched:
-        folder_df = scoped[scoped['_dir'] == dir_path].copy()
-        if folder_df.empty:
-            continue
-
-        efu_path = os.path.join(dir_path, '.metadata.efu')
-        folder_df['Filename'] = folder_df['path'].fillna('').astype(str).apply(os.path.basename)
-        folder_df['Rating'] = folder_df['ratings'].apply(to_everything_rating)
-        folder_df['Album'] = folder_df['vendor'].fillna('').astype(str)
-        folder_df['Genre'] = folder_df['category'].fillna('').astype(str)
-
-        rows = folder_df[['Filename', 'Rating', 'Album', 'Genre']].values.tolist()
-
-        with open(efu_path, 'w', newline='', encoding='utf-8-sig') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Filename', 'Rating', 'Album', 'Genre'])
-            writer.writerows(rows)
-
-        sidecar_count += 1
-        total_entries += len(rows)
-        file_size = os.path.getsize(efu_path)
-        print(f"  ✅ .metadata.efu ({len(rows)} entries, {file_size} bytes) in {os.path.basename(dir_path)}/")
-
-    print(f"\n✨ Successfully wrote {sidecar_count} .metadata.efu files with {total_entries} total entries!")
-
-
-def parse_rating_command(text):
-    """Parse rating command and return (paths, rating, query_text)."""
-    if not text:
-        return [], None, None
-
-    rating_match = re.match(r'\s*ratings?\s*:\s*([1-5])\b', text, re.IGNORECASE)
-    if not rating_match:
-        return [], None, None
-    rating = int(rating_match.group(1))
-
-    text_after_rating = text[rating_match.end():].strip()
-    paths = [match.strip() for match in re.findall(r'"([^"]+)"', text_after_rating)]
-    deduped_paths = list(dict.fromkeys(path for path in paths if path))
-    return deduped_paths, rating, text_after_rating
-
-
-def resolve_target_path(path):
-    if str(path).lower().endswith('.zip'):
-        base_path = os.path.splitext(str(path))[0]
-        for ext in ['.jpg', '.jpeg', '.png']:
-            candidate = base_path + ext
-            if os.path.exists(candidate):
-                return candidate
-        return None
-    return path
+    mapped = mapping.get(v, "-")
+    return str(mapped) if mapped else "-"
 
 
 def play_status_sound(success):
@@ -184,136 +44,255 @@ def play_status_sound(success):
     winsound.MessageBeep(winsound.MB_ICONASTERISK if success else winsound.MB_ICONHAND)
 
 
-def apply_ratings(paths, rating):
-    if not os.path.exists(PARQUET_PATH):
-        print(f"[clipboard-tagger] Brain not found at {PARQUET_PATH}")
-        return 0
+def parse_delete_command(text):
+    """Parse delete command: delete: path1 | path2 | path3"""
+    if not text:
+        return []
+    
+    # Check if it starts with "delete:"
+    if not text.lower().startswith('delete:'):
+        return []
+    
+    # Extract paths after "delete:"
+    after_delete = text[7:].strip()  # Remove "delete:"
+    
+    # Split by pipe
+    paths = [p.strip() for p in after_delete.split('|')]
+    
+    # Extract filenames only
+    filenames = []
+    for path in paths:
+        if path:
+            fn = os.path.basename(path)
+            if fn:
+                filenames.append(fn)
+    
+    return filenames
 
-    df = ensure_brain_columns(pd.read_parquet(PARQUET_PATH))
+
+def delete_metadata_entries(filenames):
+    """Delete entries from metadata file, remove image files, and remove corresponding zip/rar files from g:/db"""
+    if not os.path.exists(METADATA_FILE):
+        print(f"[tagger] Metadata file not found: {METADATA_FILE}")
+        return 0
+    
+    # Read metadata
+    try:
+        with open(METADATA_FILE, 'r', encoding='utf-8-sig', newline='') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+    except Exception as e:
+        print(f"[tagger] Error reading metadata: {e}")
+        return 0
+    
+    if not rows:
+        print(f"[tagger] No rows in metadata file")
+        return 0
+    
+    deleted_count = 0
+    crc_values_to_delete = []
+    files_to_delete = []
+    
+    # Create lowercase mapping for comparison
+    filenames_lower = [fn.lower() for fn in filenames]
+    
+    # Find matching rows and collect CRC-32 values
+    rows_to_keep = []
+    for row in rows:
+        row_filename = row.get('Filename', '').lower()
+        if row_filename in filenames_lower:
+            crc_value = row.get('CRC-32', '').strip()
+            if crc_value:
+                crc_values_to_delete.append(crc_value)
+                files_to_delete.append(row.get('Filename', ''))
+            print(f"[tagger] ✓ Deleting entry: {row.get('Filename', '')}")
+            deleted_count += 1
+        else:
+            rows_to_keep.append(row)
+    
+    if deleted_count == 0:
+        print(f"[tagger] ✗ No matching files found in metadata")
+        return 0
+    
+    # Write back metadata without deleted entries
+    try:
+        fieldnames = list(rows[0].keys()) if rows else []
+        with open(METADATA_FILE, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows_to_keep)
+        print(f"[tagger] ✅ Metadata updated ({deleted_count} entries removed)")
+    except Exception as e:
+        print(f"[tagger] Error writing metadata: {e}")
+        return 0
+    
+    # Delete image files from D:\DB\
+    image_count = 0
+    for filename in files_to_delete:
+        filepath = os.path.join(r"D:\DB", filename)
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                print(f"[tagger] ✓ Deleted image: {filename}")
+                image_count += 1
+            except Exception as e:
+                print(f"[tagger] ✗ Error deleting {filename}: {e}")
+    
+    if image_count > 0:
+        print(f"[tagger] ✅ Deleted {image_count} image file(s)")
+    
+    # Delete corresponding zip/rar files from g:/db
+    zip_count = 0
+    db_path = r"g:\db"
+    
+    if os.path.exists(db_path):
+        for crc in crc_values_to_delete:
+            try:
+                # List all files in g:/db and find ones containing this CRC-32
+                for filename in os.listdir(db_path):
+                    if crc.upper() in filename.upper():
+                        filepath = os.path.join(db_path, filename)
+                        if os.path.isfile(filepath):
+                            try:
+                                os.remove(filepath)
+                                print(f"[tagger] ✓ Deleted archive: {filename}")
+                                zip_count += 1
+                            except Exception as e:
+                                print(f"[tagger] ✗ Error deleting {filename}: {e}")
+            except Exception as e:
+                print(f"[tagger] ✗ Error searching g:/db: {e}")
+    else:
+        print(f"[tagger] ⚠️ g:/db not found, skipping archive deletion")
+    
+    if zip_count > 0:
+        print(f"[tagger] ✅ Deleted {zip_count} archive file(s)")
+    
+    return deleted_count
+
+
+def parse_metadata_command(text):
+    """Parse command like: columnname:<value> file1 | file2 | file3"""
+    if not text:
+        return [], None, None
+    
+    # Split by pipe
+    parts = [p.strip() for p in text.split('|')]
+    if not parts:
+        return [], None, None
+    
+    # First part: columnname:<value> file1
+    first_part = parts[0]
+    
+    # Find the colon
+    colon_idx = first_part.find(':')
+    if colon_idx == -1:
+        return [], None, None
+    
+    column_name = first_part[:colon_idx].strip().lower()
+    rest = first_part[colon_idx+1:].strip()
+    
+    if not rest:
+        return [], None, None
+    
+    # Extract value (between < and >) and filenames
+    # Pattern: <value> file1
+    value_match = re.match(r'<([^>]*)>\s*(.*)', rest)
+    if value_match:
+        value =     value_match.group(1).strip()
+        files_part = value_match.group(2).strip()
+    else:
+        # Fallback: split last token as filename, rest as value
+        tokens = rest.split()
+        last_token = tokens[-1]
+        if '.' in last_token or '\\' in last_token or '/' in last_token:
+            value = ' '.join(tokens[:-1])
+            files_part = last_token
+        else:
+            return [], None, None
+    
+    filenames = []
+    if files_part:
+        fn = os.path.basename(files_part)
+        if fn:
+            filenames.append(fn)
+    
+    # Add remaining filenames from other parts
+    for remaining_part in parts[1:]:
+        remaining_part = remaining_part.strip()
+        if remaining_part:
+            fn = os.path.basename(remaining_part)
+            if fn:
+                filenames.append(fn)
+    
+    if not filenames:
+        return [], None, None
+    
+    return filenames, column_name, value
+
+
+def apply_metadata_update(filenames, column_name, value):
+    """Update any column in D:\DB\.metadata.efu for multiple files"""
+    if not os.path.exists(METADATA_FILE):
+        print(f"[tagger] Metadata file not found: {METADATA_FILE}")
+        return 0
+    
+    # Read with error handling for special characters
+    try:
+        with open(METADATA_FILE, 'r', encoding='utf-8-sig', newline='') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+    except Exception as e:
+        print(f"[tagger] Error reading metadata: {e}")
+        return 0
+    
+    if not rows:
+        print(f"[tagger] No rows in metadata file")
+        return 0
+    
+    # Check if column exists
+    available_columns = list(rows[0].keys()) if rows else []
+    # Try exact match first, then case-insensitive match
+    matching_column = None
+    for col in available_columns:
+        if col.lower() == column_name.lower():
+            matching_column = col
+            break
+    
+    if not matching_column:
+        print(f"[tagger] ✗ Column '{column_name}' not found. Available: {', '.join(available_columns[:5])}...")
+        return 0
+    
+    # Update all matching rows by filename
     matches = 0
-    modified_dirs = set()
-    modified_md5s = set()
-
-    for raw_path in paths:
-        target_path = resolve_target_path(raw_path)
-        if not target_path:
-            print(f"[clipboard-tagger] No companion image for {os.path.basename(str(raw_path))}")
-            continue
-
-        normalized_target = normalize_path(target_path)
-        dna = get_file_hash(target_path)
-        match_index = None
-        match_reason = None
-
-        if dna:
-            md5_mask = df['md5'].fillna('') == dna
-            match_index = choose_best_match(df, md5_mask, preferred_norm_path=normalized_target)
-            if match_index is not None:
-                match_reason = f"md5: {dna[:8]}..."
-
-        if match_index is None:
-            path_mask = df['_norm_path'] == normalized_target
-            match_index = choose_best_match(df, path_mask, preferred_norm_path=normalized_target)
-            if match_index is not None:
-                match_reason = "path fallback"
-                if dna and not df.at[match_index, 'md5']:
-                    df.at[match_index, 'md5'] = dna
-
-        if match_index is None:
-            print(f"[clipboard-tagger] No parquet match for {os.path.basename(str(target_path))}")
-            continue
-
-        old_rating = df.at[match_index, 'ratings']
-        df.at[match_index, 'ratings'] = rating
-        df.at[match_index, 'path'] = os.path.normpath(target_path)
-        df.at[match_index, '_norm_path'] = normalized_target
-
-        print(
-            f"[clipboard-tagger] {os.path.basename(str(target_path))}: "
-            f"{old_rating} -> {rating} ({match_reason})"
-        )
-
-        matches += 1
-        if dna:
-            modified_md5s.add(dna)
-        modified_dirs.add(os.path.normpath(os.path.dirname(str(target_path))))
-
+    for filename in filenames:
+        for row in rows:
+            if row.get('Filename', '').lower() == filename.lower():
+                old_value = row.get(matching_column, '-')
+                
+                # Just use the value as-is (user provides exact value)
+                new_value = value
+                
+                row[matching_column] = new_value
+                print(f"[tagger] ✓ {filename}[{matching_column}]: {old_value} -> {new_value}")
+                matches += 1
+                break
+    
     if matches == 0:
+        print(f"[tagger] ✗ No files found in metadata")
         return 0
-
-    clean_df = df.drop(columns=['_norm_path'], errors='ignore')
-    clean_df.to_parquet(PARQUET_PATH)
-    update_display(clean_df, modified_dirs, modified_md5s)
-    return matches
-
-
-# --- Windows API & Everything integration ---
-user32 = ctypes.windll.user32
-WM_GETTEXT = 0x000D
-WM_GETTEXTLENGTH = 0x000E
-WM_SETTEXT = 0x000C
-WM_CLIPBOARDUPDATE = 0x031D
-
-
-def _get_window_class(hwnd):
-    class_name = ctypes.create_unicode_buffer(256)
-    user32.GetClassNameW(hwnd, class_name, 256)
-    return class_name.value
-
-
-def _get_window_text(hwnd):
-    title = ctypes.create_unicode_buffer(512)
-    user32.GetWindowTextW(hwnd, title, 512)
-    return title.value
-
-
-def _find_everything_windows():
-    hwnds = []
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
-    def enum_callback(hwnd, _lparam):
-        if user32.IsWindowVisible(hwnd):
-            cls = _get_window_class(hwnd).upper()
-            title = _get_window_text(hwnd).upper()
-            if "EVERYTHING" in cls or "EVERYTHING" in title:
-                hwnds.append(hwnd)
-        return True
-    user32.EnumWindows(enum_callback, 0)
-    return hwnds
-
-
-def _find_search_edit_handle(everything_hwnd):
-    edit_hwnd = user32.FindWindowExW(everything_hwnd, None, "Edit", None)
-    if edit_hwnd:
-        return edit_hwnd
-    child = user32.FindWindowExW(everything_hwnd, None, None, None)
-    while child:
-        edit_hwnd = user32.FindWindowExW(child, None, "Edit", None)
-        if edit_hwnd:
-            return edit_hwnd
-        child = user32.FindWindowExW(everything_hwnd, child, None, None)
-    return None
-
-
-def restore_query_and_refresh(query_text):
-    """Restore the query to Everything search box and refresh."""
-    hwnds = _find_everything_windows()
-    if not hwnds:
-        return
-    hwnd = hwnds[0]
-    user32.SetForegroundWindow(hwnd)
-    time.sleep(0.05)
-
-    if query_text:
-        edit_hwnd = _find_search_edit_handle(hwnd)
-        if edit_hwnd:
-            user32.SendMessageW(edit_hwnd, WM_SETTEXT, 0, ctypes.c_wchar_p(query_text))
-            time.sleep(0.05)
-
-    VK_F5 = 0x74
-    KEYEVENTF_KEYUP = 0x0002
-    user32.keybd_event(VK_F5, 0, 0, 0)
-    user32.keybd_event(VK_F5, 0, KEYEVENTF_KEYUP, 0)
-    time.sleep(0.05)
+    
+    # Write back
+    try:
+        fieldnames = list(rows[0].keys()) if rows else []
+        with open(METADATA_FILE, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        print(f"[tagger] ✅ Metadata saved ({matches} files updated)")
+        return matches
+    except Exception as e:
+        print(f"[tagger] Error writing metadata: {e}")
+        return 0
 
 
 # Global state for clipboard listener
@@ -324,29 +303,17 @@ g_processed = set()
 def main():
     global g_last_clipboard, g_processed
     
-    print("[clipboard-tagger] 🚀 EVENT-DRIVEN mode: Listening for clipboard changes...")
-    print("[clipboard-tagger] Copy: ratings:1-5 \"path1\" | \"path2\" | ...")
+    print("[tagger] 🚀 Listening for clipboard changes...")
+    print("[tagger] Copy: columnname:<value> filename.jpg | filename2.jpg | ...")
+    print("[tagger] Examples:")
+    print("[tagger]   rating:<99> Armchair.jpg")
+    print("[tagger]   album:<MyAlbum> Armchair.jpg | Chair.jpg | Table.jpg")
+    print("[tagger]   period:<Modern> file1.jpg | file2.jpg")
+    print("[tagger]   delete: file1.jpg | file2.jpg | file3.jpg")
+    print("[tagger] Rating values: 1=1star, 25=2star, 50=3star, 75=4star, 99=5star")
+    print("[tagger] Delete removes entry from .efu and deletes corresponding zip/rar from g:/db")
     
-    # Attempt event-driven mode
-    try:
-        # Register for clipboard change notifications
-        hwnd = user32.GetConsoleWindow()
-        if hwnd:
-            result = user32.AddClipboardFormatListener(hwnd)
-            if result:
-                print("[clipboard-tagger] ✅ Clipboard listener registered (event-driven)")
-            else:
-                print("[clipboard-tagger] ⚠️ Clipboard listener failed, using polling fallback...")
-                polling_loop()
-                return
-
-        # Process clipboard updates via polling for simplicity
-        # (True event-driven would require a message loop, which is complex in Python)
-        polling_loop()
-        
-    except Exception as e:
-        print(f"[clipboard-tagger] Exception: {e}. Falling back to polling...")
-        polling_loop()
+    polling_loop()
 
 
 def polling_loop():
@@ -361,23 +328,40 @@ def polling_loop():
             time.sleep(CHECK_INTERVAL)
             continue
 
-        # Only process if clipboard changed AND matches rating pattern.
+        # Only process if clipboard changed AND contains colon pattern
         if current_clipboard and current_clipboard != g_last_clipboard:
-            paths, rating, query_text = parse_rating_command(current_clipboard)
-
-            if paths and rating is not None:
-                unique_id = (tuple(paths), rating)
-                if unique_id not in g_processed:
-                    print(f"[clipboard-tagger] 📋 Clipboard detected: rating {rating} for {len(paths)} assets")
-                    updated = apply_ratings(paths, rating)
-                    if updated:
-                        play_status_sound(True)
-                        restore_query_and_refresh(query_text)
-                        print(f"[clipboard-tagger] ✅ Done. Updated {updated} assets.")
-                    else:
-                        play_status_sound(False)
-                        print("[clipboard-tagger] ❌ No assets matched.")
-                    g_processed.add(unique_id)
+            # Quick check: only process if it contains the columnname: pattern
+            if ':' not in current_clipboard:
+                g_last_clipboard = current_clipboard
+                time.sleep(CHECK_INTERVAL)
+                continue
+            
+            # Check for delete command
+            if current_clipboard.lower().startswith('delete:'):
+                filenames = parse_delete_command(current_clipboard)
+                if filenames:
+                    unique_id = ('delete', tuple(filenames))
+                    if unique_id not in g_processed:
+                        print(f"[tagger] 📋 Delete command: {len(filenames)} file(s)")
+                        success = delete_metadata_entries(filenames)
+                        if success > 0:
+                            play_status_sound(True)
+                        else:
+                            play_status_sound(False)
+                        g_processed.add(unique_id)
+            else:
+                # Regular metadata update command
+                filenames, column_name, value = parse_metadata_command(current_clipboard)
+                if filenames and column_name and value is not None:
+                    unique_id = (tuple(filenames), column_name, value)
+                    if unique_id not in g_processed:
+                        print(f"[tagger] 📋 Detected: {column_name}='<{value}>' for {len(filenames)} file(s)")
+                        success = apply_metadata_update(filenames, column_name, value)
+                        if success > 0:
+                            play_status_sound(True)
+                        else:
+                            play_status_sound(False)
+                        g_processed.add(unique_id)
             
             g_last_clipboard = current_clipboard
 
