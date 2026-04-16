@@ -3,10 +3,214 @@ Single source of truth for all keyword tables used by `tools/ingest_asset.py`.
 Edit here — the script loads these tables at runtime. Run `tools/audit_keywords.py` to check for collisions, orphans, or duplicates.
 
 ## Overview
-Main taxonomy categories in this document: 12.
-Furniture, Fixture, Vegetation, Material, Object, Vehicle, VFX, Procedural, Layouts, Building, People, Location.
-Hierarchical category values should use `/` between levels (for example `Flooring/Carpet`) instead of flattened CamelCase.
-For EFU export, the `Mood` column stores the full hierarchy path derived from the allowlist group, for example `Furniture/Seating/LoungeChair`, `Furniture/Table/SideTable`, or `Furniture/Carpet`.
+Hierarchical category values use `/` between levels (e.g., `Furniture/Carpet`).
+For EFU export, the `Subject` column stores the full hierarchy path (e.g., `Furniture/Seating/LoungeChair`).
+
+**Semantic Column Mapping (EFU custom_property):**
+- `custom_property_0` = **Color** (primary color/material color)
+- `custom_property_1` = **Location** (usage context/location) 
+- `custom_property_2` = **Form** (shape/form/physical configuration)
+- `custom_property_3` = **ChineseName** (Chinese/scientific name for vegetation)
+- `custom_property_4` = **LatinName** (Latin/scientific name for vegetation)
+
+## Subcategories
+The single source for all valid subcategory names. Add here **and** add a matching `Prefix Code` entry.
+`ingest_asset.py` validates output against this and derives the EFU `Subject` path from it.
+
+Furniture/Bed/Bed
+Furniture/Bed/BunkBed
+Furniture/Bed/Daybed
+Furniture/Bed/Futon
+Furniture/Carpet/Carpet
+Furniture/Curtain/Curtain
+Furniture/Curtain/CurtainBlind
+Furniture/Curtain/RoomDivider
+Furniture/Parasol/Parasol
+Furniture/Seating/Armchair
+Furniture/Seating/ArmchairOutdoor
+Furniture/Seating/Barstool
+Furniture/Seating/BarstoolOutdoor
+Furniture/Seating/Bench
+Furniture/Seating/BenchOutdoor
+Furniture/Seating/Chair
+Furniture/Seating/ChairOutdoor
+Furniture/Seating/DiningChair
+Furniture/Seating/Divan
+Furniture/Seating/HangingChair
+Furniture/Seating/KidsChair
+Furniture/Seating/LoungeChair
+Furniture/Seating/Lounger
+Furniture/Seating/MassageChair
+Furniture/Seating/OfficeChair
+Furniture/Seating/Ottoman
+Furniture/Seating/Pouf
+Furniture/Seating/RattanChair
+Furniture/Seating/Recliner
+Furniture/Seating/RecliningChair
+Furniture/Seating/SideChair
+Furniture/Seating/Stool
+Furniture/Seating/SunLounger
+Furniture/Sofa/Loveseat
+Furniture/Sofa/OfficeSofa
+Furniture/Sofa/SectionalSofa
+Furniture/Sofa/Sofa
+Furniture/Sofa/SofaOutdoor
+Furniture/Storage/BathroomCabinet
+Furniture/Storage/Bookcase
+Furniture/Storage/Cabinet
+Furniture/Storage/CabinetSet
+Furniture/Storage/ClosetDecor
+Furniture/Storage/Credenza
+Furniture/Storage/DisplayCabinet
+Furniture/Storage/DrawerChest
+Furniture/Storage/Dresser
+Furniture/Storage/EntertainmentCenter
+Furniture/Storage/OfficeStorage
+Furniture/Storage/ShelvingUnit
+Furniture/Storage/Sideboard
+Furniture/Storage/Storage
+Furniture/Storage/TVStand
+Furniture/Storage/TvCabinet
+Furniture/Storage/Wardrobe
+Furniture/Table/BarTable
+Furniture/Table/BedsideTable
+Furniture/Table/Billiard
+Furniture/Table/CoffeeTable
+Furniture/Table/CoffeeTableSet
+Furniture/Table/ConsoleTable
+Furniture/Table/Desk
+Furniture/Table/DiningSet
+Furniture/Table/DiningTable
+Furniture/Table/Nightstand
+Furniture/Table/OfficeTable
+Furniture/Table/SideTable
+Furniture/Table/Table
+Furniture/Table/TableCenterpiece
+Furniture/Table/TableOutdoor
+Furniture/Table/TableSet
+Fixture/Lighting/ArchitecturalLight
+Fixture/Lighting/CeilingLight
+Fixture/Lighting/Chandelier
+Fixture/Lighting/DeskLamp
+Fixture/Lighting/FillLight
+Fixture/Lighting/FloorLamp
+Fixture/Lighting/Lantern
+Fixture/Lighting/Pendant
+Fixture/Lighting/PendantBranched
+Fixture/Lighting/PendantCaged
+Fixture/Lighting/PendantCrystal
+Fixture/Lighting/PendantCylinder
+Fixture/Lighting/PendantDrum
+Fixture/Lighting/PendantGlobe
+Fixture/Lighting/PendantIrregular
+Fixture/Lighting/PendantLight
+Fixture/Lighting/PendantLinear
+Fixture/Lighting/PendantOrb
+Fixture/Lighting/PendantRattan
+Fixture/Lighting/PendantRectangular
+Fixture/Lighting/PendantSet
+Fixture/Lighting/PendantShaded
+Fixture/Lighting/PendantSpiral
+Fixture/Lighting/PendantStar
+Fixture/Lighting/PendantTiered
+Fixture/Lighting/PendantWaterfall
+Fixture/Lighting/ReadingLamp
+Fixture/Lighting/SkyLight
+Fixture/Lighting/SpotlightAccent
+Fixture/Lighting/StreetLight
+Fixture/Lighting/StripLight
+Fixture/Lighting/TableLamp
+Fixture/Lighting/TroughLight
+Fixture/Lighting/WallLamp
+Fixture/Lighting/WallLight
+Fixture/Appliance
+Fixture/BathroomAppliance
+Fixture/BathroomFabric
+Fixture/BathroomFixture
+Fixture/BathroomPlumbing
+Fixture/Bathtub
+Fixture/KitchenAppliance
+Fixture/KitchenFabric
+Fixture/KitchenFaucet
+Fixture/KitchenFixture
+Fixture/KitchenPlumbing
+Fixture/KitchenSink
+Fixture/OfficeAppliance
+Fixture/RainShower
+Fixture/ShowerHead
+Fixture/ShowerMixer
+Fixture/Sink
+Fixture/Toilet
+Object/Decor/Art
+Object/Decor/Basket
+Object/Tableware/Book
+Object/Tableware/BookStack
+Object/Tableware/Bowl
+Object/Decor/Candle
+Object/Decor/Clock
+Object/Tableware/Cookware
+Object/Decor/Cushion
+Object/Decor/DecorDisplay
+Object/Decor/DigitalDecor
+Object/Tableware/DiningFood
+Object/Tableware/DiningTableware
+Object/Tableware/DisplayTableware
+Object/Tableware/DrinksSet
+Object/Tableware/DrinksTray
+Object/Plant/FloorPlanter
+Object/Tableware/FoodCart
+Object/Tableware/FoodDisplay
+Object/Tableware/FoodDrinks
+Object/Tableware/FoodTray
+Object/Decor/Frame
+Object/Tableware/FruitBowl
+Object/Plant/GreenWall
+Object/Other/Hobby
+Object/Decor/Mirror
+Object/Decor/MusicDecor
+Object/Decor/OfficeDecor
+Object/Plant/PlanterBox
+Object/Plant/PottedPlantSet
+Object/Plant/PottedPlantTable
+Object/Decor/Sculpture
+Object/Tableware/ServingPlatter
+Object/Decor/ShelvingDecor
+Object/Tableware/Tableware
+Object/Other/Toy
+Object/Tableware/Tray
+Object/Decor/Vase
+Object/Decor/WallDecor
+Object/Tableware/WineRelated
+Vegetation/AquaticPlant
+Vegetation/BambooTree
+Vegetation/Cactus
+Vegetation/ConiferTree
+Vegetation/CreeperPlant
+Vegetation/CropPlant
+Vegetation/DryPlant
+Vegetation/FlowerGrass
+Vegetation/FlowerPlant
+Vegetation/FlowerShrub
+Vegetation/FlowerTree
+Vegetation/Gravel
+Vegetation/GreenWallForest
+Vegetation/Groundcover
+Vegetation/Hedge
+Vegetation/LargeTree
+Vegetation/PalmTree
+Vegetation/Plant
+Vegetation/Rock
+Vegetation/Shrub
+Vegetation/SmallTree
+Vegetation/Succulent
+Vegetation/Tree
+Vegetation/TreeStump
+Vegetation/WildGrass
+Vegetation/WildPlant
+Vegetation/WinterTree
+
+---
+
 
 ## Table of Contents
 
@@ -18,11 +222,9 @@ For EFU export, the `Mood` column stores the full hierarchy path derived from th
 - Object
 - Vehicle
 - VFX
-- Procedural
+- Texture
 - Layouts
-- Building
 - People
-- Location
 
 - Runtime & Support Tables
 	- Prefix Codes
@@ -33,106 +235,57 @@ For EFU export, the `Mood` column stores the full hierarchy path derived from th
 ---
 
 ## Furniture
-Columns in `Datavalidation.tsv`: `FurnitureName | Category | Color | Brand | Material | Size | Form | Location`.
-`Color`, `Brand`, `Material`, `Size` are free-text. `Location` = `Bedroom` (when specified).
-Prefix codes `10-xx` map individual Furniture pieces; `15-xx` maps Lighting variants.
-In exported EFU rows, `Mood` stores the full hierarchy path, for example `Furniture/Seating/LoungeChair`, `Furniture/Table/SideTable`, or `Furniture/Carpet`.
+Prefix codes `10-xx` map individual Furniture pieces; `15-xx` maps Lighting variants (now under Fixture).
+In exported EFU rows, `Subject` stores the full hierarchy path, for example `Furniture/Seating/LoungeChair`, `Furniture/Table/SideTable`, or `Furniture/Carpet`.
 
 ---
 
 ## Fixture
-Columns in `Datavalidation.tsv`: `Category | Primary Description | Brand | Material | Form | Location`.
-`Brand`, `Material`, `Form` are free-text. `Location` = Bathroom / Bedroom / Kitchen (where applicable).
+Building systems (11-xx): doors, windows, railings, roofs, etc.
+Lighting (15-xx): pendant lights, ceiling lights, floor lamps, etc.
+Appliances and utilities: bathroom fixtures, kitchen appliances, etc.
 
 ---
 
 ## Vegetation
-Columns in `Datavalidation.tsv`: `Category | SubCategory | BotanicalName | ChineseName | Height/Size | Location | Form | Color/Feature | Code | CommonName`.
-`BotanicalName`, `ChineseName`, `CommonName`, `Height/Size` are free-text.
-
-Location (Habitat): Aquatic, Crop, Floor, GreenWall, Home, Lawn, Ornamental, Outdoor, PlantPot, PlanterBox, Table, Wetland, Wild
-Form: Columnar, Conical, Fan, Feather, GrassLike, Globe, MutiStem, Oval, Pear, Rosette, Spherical, Spreading, TreeForm, Upright
-Feature: Deciduous, Dry, Evergreen, Flowering
+Plants and natural elements (14-xx). Includes trees, shrubs, flowers, grasses, etc.
+use `custom_property_3` (ChineseName) and `custom_property_4` (LatinName) for botanical names where applicable.
 
 ---
 
 ## Material
-Columns in `Datavalidation.tsv`: `MaterialName | Category | Color | Finish | Size | Pattern | Location`.
-`MaterialName`, `Color`, `Finish`, `Size` are free-text.
-
-Pattern (tile/flooring layout size): Diamond, Jumbo, Mosaic, Ocon, Square
+Material samples and finishes. Use `custom_property_0` (Color), `custom_property_2` (Form) for material attributes.
 
 ---
 
 ## Object
-Columns in `Datavalidation.tsv`: `SubCategory | Brand | Material | Form | Location`.
-`Brand`, `Material`, `Form` are free-text.
+Decor, tableware, plants, and miscellaneous items (12-xx).
 
 ---
 
 ## Vehicle
-Columns in `Datavalidation.tsv`: `Vehicle`.
-
-Vehicle/Aircraft
-Vehicle/Boat
-Vehicle/Car
-Vehicle/Ship
-Vehicle/Space
+Vehicles and transportation (13-xx): Aircraft, Boat, Car, Ship, Space.
 
 ---
 
 ## VFX
-Columns in `Datavalidation.tsv`: `VFX`.
-
-VFX/Caustics
-VFX/Emissive
-VFX/Fire
-VFX/Pattern
-VFX/Sky
-VFX/Smoke
-VFX/Water
+Visual effects and procedural elements: Caustics, Emissive, Fire, Pattern, Sky, Smoke, Water.
 
 ---
 
-## Procedural
-Columns in `Datavalidation.tsv`: `Procedural`.
-
-Procedural/CurtainWall
-Procedural/Planter
-Procedural/Railing
-Procedural/Roof
+## Texture
+Texture maps and surface details. Use `custom_property_0` (Color), `custom_property_2` (Form) for texture attributes.
 
 ---
 
 ## Layouts
-Columns in `Datavalidation.tsv`: `Category | SubCategory | Location | Form`.
-
-Layouts/BarTable
-Layouts/BedSet
-Layouts/Closet
-Layouts/DiningTable
-Layouts/Seating/SeatingLounge
-Layouts/Seating/SeatingPoolSide
-
-Form: Circle, Galley, Lshape, Oval, Ushape
-
----
-
-## Building
-Columns in `Datavalidation.tsv`: `Category | SubCategory | Width | Length | Height`.
-`Width`, `Length`, `Height` are free-text dimensions.
+Scene layouts and arrangement presets: BarTable, BedSet, Closet, DiningTable, Seating, etc.
+Use `custom_property_2` (Form) for layout shape: Circle, Galley, Lshape, Oval, Ushape.
 
 ---
 
 ## People
-Columns in `Datavalidation.tsv`: `Number of people | Age | Ethnicity | Season | Gender | Accessories | Activity | Clothing`.
-All values are free-text — no fixed allowlist.
-
----
-
-## Location
-Columns in `Datavalidation.tsv`: `Category | SubCategory | Width | Length | Height | Location | Custom7 | Custom8`.
-All values are free-text — no fixed allowlist.
+Human figures and avatars. All metadata (age, ethnicity, season, clothing, etc.) is free-text via custom properties.
 
 ---
 
@@ -327,222 +480,6 @@ Both `10-01` and compact `1001` forms are accepted at ingest time.
 
 ---
  
-## Subcategories
-The single source for all valid subcategory names. Add here **and** add a matching `Prefix Code` entry.
-`ingest_asset.py` validates output against this and derives the EFU `Mood` path from it.
-
-Furniture/Bed/Bed
-Furniture/Bed/BunkBed
-Furniture/Bed/Daybed
-Furniture/Bed/Futon
-Furniture/Carpet/Carpet
-Furniture/Curtain/Curtain
-Furniture/Curtain/CurtainBlind
-Furniture/Curtain/RoomDivider
-Furniture/Parasol/Parasol
-Furniture/Seating/Armchair
-Furniture/Seating/ArmchairOutdoor
-Furniture/Seating/Barstool
-Furniture/Seating/BarstoolOutdoor
-Furniture/Seating/Bench
-Furniture/Seating/BenchOutdoor
-Furniture/Seating/Chair
-Furniture/Seating/ChairOutdoor
-Furniture/Seating/DiningChair
-Furniture/Seating/Divan
-Furniture/Seating/HangingChair
-Furniture/Seating/KidsChair
-Furniture/Seating/LoungeChair
-Furniture/Seating/Lounger
-Furniture/Seating/MassageChair
-Furniture/Seating/OfficeChair
-Furniture/Seating/Ottoman
-Furniture/Seating/Pouf
-Furniture/Seating/RattanChair
-Furniture/Seating/Recliner
-Furniture/Seating/RecliningChair
-Furniture/Seating/SideChair
-Furniture/Seating/Stool
-Furniture/Seating/SunLounger
-Furniture/Sofa/Loveseat
-Furniture/Sofa/OfficeSofa
-Furniture/Sofa/SectionalSofa
-Furniture/Sofa/Sofa
-Furniture/Sofa/SofaOutdoor
-Furniture/Storage/BathroomCabinet
-Furniture/Storage/Bookcase
-Furniture/Storage/Cabinet
-Furniture/Storage/CabinetSet
-Furniture/Storage/ClosetDecor
-Furniture/Storage/Credenza
-Furniture/Storage/DisplayCabinet
-Furniture/Storage/DrawerChest
-Furniture/Storage/Dresser
-Furniture/Storage/EntertainmentCenter
-Furniture/Storage/OfficeStorage
-Furniture/Storage/ShelvingUnit
-Furniture/Storage/Sideboard
-Furniture/Storage/Storage
-Furniture/Storage/TVStand
-Furniture/Storage/TvCabinet
-Furniture/Storage/Wardrobe
-Furniture/Table/BarTable
-Furniture/Table/BedsideTable
-Furniture/Table/Billiard
-Furniture/Table/CoffeeTable
-Furniture/Table/CoffeeTableSet
-Furniture/Table/ConsoleTable
-Furniture/Table/Desk
-Furniture/Table/DiningSet
-Furniture/Table/DiningTable
-Furniture/Table/Nightstand
-Furniture/Table/OfficeTable
-Furniture/Table/SideTable
-Furniture/Table/Table
-Furniture/Table/TableCenterpiece
-Furniture/Table/TableOutdoor
-Furniture/Table/TableSet
-Building/AssemblyEquipment
-Building/Canopy
-Building/Ceiling
-Building/Door
-Building/Facade
-Building/Fence
-Building/FloorElement
-Building/Gate
-Building/Ironmongery
-Building/Louvre
-Building/MEP
-Building/Profile
-Building/Railing
-Building/Roof
-Building/Screen
-Building/Spandrel
-Building/Wall
-Building/Window
-Fixture/Lighting/ArchitecturalLight
-Fixture/Lighting/CeilingLight
-Fixture/Lighting/Chandelier
-Fixture/Lighting/DeskLamp
-Fixture/Lighting/FillLight
-Fixture/Lighting/FloorLamp
-Fixture/Lighting/Lantern
-Fixture/Lighting/Pendant
-Fixture/Lighting/PendantBranched
-Fixture/Lighting/PendantCaged
-Fixture/Lighting/PendantCrystal
-Fixture/Lighting/PendantCylinder
-Fixture/Lighting/PendantDrum
-Fixture/Lighting/PendantGlobe
-Fixture/Lighting/PendantIrregular
-Fixture/Lighting/PendantLight
-Fixture/Lighting/PendantLinear
-Fixture/Lighting/PendantOrb
-Fixture/Lighting/PendantRattan
-Fixture/Lighting/PendantRectangular
-Fixture/Lighting/PendantSet
-Fixture/Lighting/PendantShaded
-Fixture/Lighting/PendantSpiral
-Fixture/Lighting/PendantStar
-Fixture/Lighting/PendantTiered
-Fixture/Lighting/PendantWaterfall
-Fixture/Lighting/ReadingLamp
-Fixture/Lighting/SkyLight
-Fixture/Lighting/SpotlightAccent
-Fixture/Lighting/StreetLight
-Fixture/Lighting/StripLight
-Fixture/Lighting/TableLamp
-Fixture/Lighting/TroughLight
-Fixture/Lighting/WallLamp
-Fixture/Lighting/WallLight
-Fixture/Appliance
-Fixture/BathroomAppliance
-Fixture/BathroomFabric
-Fixture/BathroomFixture
-Fixture/BathroomPlumbing
-Fixture/Bathtub
-Fixture/KitchenAppliance
-Fixture/KitchenFabric
-Fixture/KitchenFaucet
-Fixture/KitchenFixture
-Fixture/KitchenPlumbing
-Fixture/KitchenSink
-Fixture/OfficeAppliance
-Fixture/RainShower
-Fixture/ShowerHead
-Fixture/ShowerMixer
-Fixture/Sink
-Fixture/Toilet
-Object/Decor/Art
-Object/Decor/Basket
-Object/Tableware/Book
-Object/Tableware/BookStack
-Object/Tableware/Bowl
-Object/Decor/Candle
-Object/Decor/Clock
-Object/Tableware/Cookware
-Object/Decor/Cushion
-Object/Decor/DecorDisplay
-Object/Decor/DigitalDecor
-Object/Tableware/DiningFood
-Object/Tableware/DiningTableware
-Object/Tableware/DisplayTableware
-Object/Tableware/DrinksSet
-Object/Tableware/DrinksTray
-Object/Plant/FloorPlanter
-Object/Tableware/FoodCart
-Object/Tableware/FoodDisplay
-Object/Tableware/FoodDrinks
-Object/Tableware/FoodTray
-Object/Decor/Frame
-Object/Tableware/FruitBowl
-Object/Plant/GreenWall
-Object/Other/Hobby
-Object/Decor/Mirror
-Object/Decor/MusicDecor
-Object/Decor/OfficeDecor
-Object/Plant/PlanterBox
-Object/Plant/PottedPlantSet
-Object/Plant/PottedPlantTable
-Object/Decor/Sculpture
-Object/Tableware/ServingPlatter
-Object/Decor/ShelvingDecor
-Object/Tableware/Tableware
-Object/Other/Toy
-Object/Tableware/Tray
-Object/Decor/Vase
-Object/Decor/WallDecor
-Object/Tableware/WineRelated
-Vegetation/AquaticPlant
-Vegetation/BambooTree
-Vegetation/Cactus
-Vegetation/ConiferTree
-Vegetation/CreeperPlant
-Vegetation/CropPlant
-Vegetation/DryPlant
-Vegetation/FlowerGrass
-Vegetation/FlowerPlant
-Vegetation/FlowerShrub
-Vegetation/FlowerTree
-Vegetation/Gravel
-Vegetation/GreenWallForest
-Vegetation/Groundcover
-Vegetation/Hedge
-Vegetation/LargeTree
-Vegetation/PalmTree
-Vegetation/Plant
-Vegetation/Rock
-Vegetation/Shrub
-Vegetation/SmallTree
-Vegetation/Succulent
-Vegetation/Tree
-Vegetation/TreeStump
-Vegetation/WildGrass
-Vegetation/WildPlant
-Vegetation/WinterTree
-
----
-
 ## Usage Locations
 Allowed values for the `People` (Usage Location) column.
 

@@ -103,7 +103,7 @@ import textwrap
 #                           `--> append_metadata_row(.metadata.efu)
 #
 
-THUMBNAIL_BASE = Path(r"D:\DB")
+THUMBNAIL_BASE = Path(r"D:\RR_Repo\Database")
 ARCHIVE_BASE = Path(r"G:\DB")
 # Use a hidden index file to avoid collisions with user files.
 METADATA_EFU_PATH = THUMBNAIL_BASE / ".metadata.efu"
@@ -448,24 +448,28 @@ def _resolve_db_prefix_code(db_mood: str) -> str:
 
 EFU_HEADERS = [
     "Filename",
+    "Subject",
     "Rating",
     "Tags",
     "URL",
     "From",
-    "Mood",
-    "Author",
-    "Writer",
-    "Album",
-    "Genre",
-    "People",
     "Company",
+    "Author",
+    "Album",
+    "custom_property_0",
+    "custom_property_1",
+    "custom_property_2",
     "Period",
     "Scale",
     "Title",
     "Comment",
-    "To",
-    "Manager",
-    "Subject",
+    "ArchiveFile",
+    "SourceMetadata",
+    "Pose",
+    "Style",
+    "Content Status",
+    "custom_property_3",
+    "custom_property_4",
     "CRC-32",
 ]
 
@@ -609,37 +613,32 @@ ASSET_TYPES = {
     "furniture",
     "vegetation",
     "people",
-    "material",
     "texture",
-    "material/texture",
-    "buildings",
+    "material",
     "layouts",
     "fixture",
     "object",
-    "procedural",
-    "location",
     "vehicle",
     "vfx",
 }
 PREVIEW_LABELS = {
     "furniture": {
-        "Mood": "Subcategory Path",
+        "Subject": "Subcategory Path",
         "Title": "Model Name",
-        "Writer": "Brand",
+        "Author": "Vendor Name",
         "Album": "Collection",
         "Genre": "Primary Color/Material",
         "People": "Usage Location",
-        "Company": "Shape Form",
         "Period": "Period",
         "Scale": "Size",
-        "Author": "Vendor Name",
+        "Company": "Brand",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "vegetation": {
-        "Mood": "Plant Type",
+        "Subject": "Plant Type",
         "Title": "Approx. Height",
-        "Writer": "Latin Name",
+        "Author": "Vendor Name",
         "Album": "Common Name",
         "Genre": "Foliage Color",
         "People": "Growth Location",
@@ -647,104 +646,86 @@ PREVIEW_LABELS = {
         "Period": "Seasonal Appearance",
         "Scale": "Size",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "people": {
-        "Mood": "Original Code Hint",
+        "Subject": "Original Code Hint",
         "Title": "Gender",
-        "Writer": "Ethnicity",
+        "Author": "Vendor Name",
         "Album": "Age Group",
         "Genre": "Clothing Color",
         "People": "Scene Context",
         "Period": "Clothing Style",
         "Scale": "Pose / Activity",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "material": {
-        "Mood": "Material Name",
+        "Subject": "Material Name",
         "Genre": "Dominant Color",
         "Company": "Texture Pattern",
         "Period": "Material Category",
         "Scale": "Surface Finish",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "buildings": {
-        "Mood": "Subcategory",
+        "Subject": "Subcategory",
         "Company": "Physical Form",
         "Period": "Primary Material",
         "Scale": "Size",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "layouts": {
-        "Mood": "Layout Type",
-        "Writer": "Approx. Size",
+        "Subject": "Layout Type",
+        "Author": "Vendor Name",
         "People": "Room Type",
         "Period": "Layout Shape",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "fixture": {
-        "Mood": "Category",
+        "Subject": "Category",
         "Title": "Primary Description",
-        "Writer": "Brand",
+        "Author": "Vendor Name",
         "Album": "Material",
         "Genre": "Form",
         "People": "Usage Location",
         "Scale": "Size",
-        "Author": "Vendor Name",
+        "Company": "Brand",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "object": {
-        "Mood": "Subcategory Path",
+        "Subject": "Subcategory Path",
         "Title": "SubCategory",
-        "Writer": "Brand",
+        "Author": "Vendor Name",
         "Album": "Collection",
         "Genre": "Primary Color/Material",
         "People": "Usage Location",
-        "Company": "Shape Form",
         "Period": "Style/Period",
         "Scale": "Size",
-        "Author": "Vendor Name",
+        "Company": "Brand",
         "From": "From",
-        "Manager": "Category",
-    },
-    "procedural": {
-        "Mood": "Type",
-        "Title": "Description",
-        "Company": "Software/Plugin",
-        "From": "From",
-        "Manager": "Category",
-    },
-    "location": {
-        "Mood": "Category",
-        "Title": "SubCategory",
-        "Writer": "Width",
-        "Album": "Length",
-        "Genre": "Height",
-        "People": "Location",
-        "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "vehicle": {
-        "Mood": "Type",
+        "Subject": "Type",
         "Title": "Model",
-        "Writer": "Brand",
+        "Author": "Vendor Name",
         "Genre": "Color",
         "Period": "Year",
         "Scale": "Size",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
     "vfx": {
-        "Mood": "Type",
+        "Subject": "Type",
         "Title": "Description",
         "Genre": "Style/Variant",
         "From": "From",
-        "Manager": "Category",
+        "SourceMetadata": "Category",
     },
 }
 USER_LABELS: list[str] = []
@@ -946,8 +927,6 @@ def compute_crc32(file_path: Path) -> str:
 
 def normalize_asset_type(raw: str) -> str:
     value = raw.strip().lower()
-    if value == "material/texture":
-        return "material"
     if value == "texture":
         return "material"
     return value
@@ -1017,14 +996,12 @@ def detect_asset_category(stem: str) -> tuple[str, str]:
         "fixture",     # lighting (lamps, pendants, chandeliers), bathroom, kitchen, appliances
         "vegetation",  # trees, plants, shrubs, flowers, grass
         "object",      # decorative props, books, vases, art, accessories
-        "material",    # textures, surfaces, finishes, fabrics
         "vehicle",     # cars, bikes, trucks, boats
         "people",      # human figures, characters
-        "buildings",   # architecture, structures, facades
         "layouts",     # room layouts, floor plans
+        "texture",     # textures, surfaces, finishes, fabrics
+        "material",    # materials, textures, surfaces, finishes, fabrics
         "vfx",         # visual effects, particles, smoke, fire
-        "procedural",  # procedural/parametric assets
-        "location",    # environments, landscapes, cityscapes
     ]
     cat_list = ", ".join(categories)
     prompt = (
@@ -1039,7 +1016,8 @@ def detect_asset_category(stem: str) -> tuple[str, str]:
         "  bathroom fittings, kitchen appliances, gym equipment, HVAC. "
         "- vegetation = trees, plants, shrubs, flowers, grass, cacti, moss. "
         "- object = decorative props, vases, books, art, accessories, small items. "
-        "- material = textures, surfaces, finishes, fabrics, flooring. "
+        "- texture = textures, surfaces, finishes, fabrics, flooring. "
+        "- material = materials and textures, combined asset types. "
         "Use 'low' confidence when the filename is ambiguous or too abbreviated to be sure. "
         "No explanation. No extra keys. "
         f"Filename stem: {stem}"
@@ -1144,7 +1122,7 @@ def prompt_asset_type() -> str:
         ("furniture", "Furniture", "F"),
         ("vegetation", "Vegetation", "V"),
         ("people", "People", "P"),
-        ("material", "Material/Texture", "M"),
+        ("material", "Material", "M"),
         ("buildings", "Buildings", "B"),
         ("layouts", "Layouts", "L"),
         ("fixture", "Fixture", "T"),
@@ -1726,7 +1704,7 @@ def enrich_row_with_models(
     row: dict[str, str],
     session_context: str = "",
     session_hints: dict[str, str] | None = None,
-    enrich_mode: str = "text",
+    enrich_mode: str = "both",
 ) -> dict[str, str]:
     """Metadata enrichment pipeline to fill metadata columns from web search.
 
@@ -1868,7 +1846,7 @@ def enrich_row_with_models(
     # 3. AI model output — used only when both deterministic sources miss.
     # Use the type-scoped allowed_subcats (already built above) so that object/sculpture,
     # vegetation/tree, etc. are matched correctly — not just furniture subcategories.
-    _ai_candidate = pick("subcategory", row.get("Mood", "-"))
+    _ai_candidate = pick("subcategory", row.get("Subject", "-"))
     _ai_candidate_clean = sanitize_name_token(_ai_candidate)
     if _ai_candidate_clean in allowed_subcats:
         _ai_subcategory = _ai_candidate_clean
@@ -2050,7 +2028,7 @@ def enrich_row_with_models(
         if v == m or m.startswith(v + " ") or m.startswith(v + "-"):
             vendor_name = "-"
 
-    # Final safety net: if post-processing blanked model_name, keep Author populated.
+    # Final safety net: if post-processing blanked model_name, keep Title populated.
     if not model_name or model_name == "-":
         for candidate in (
             stem_model_raw,
@@ -2079,27 +2057,27 @@ def enrich_row_with_models(
         manager_label: str,
     ) -> None:
         """Write standardized metadata to the EFU row dict."""
-        row["Mood"] = build_mood_hierarchy(subcategory_val) if subcategory_val else "-"
-        row["Author"] = model_val if model_val else "-"
-        row["Writer"] = brand_val if brand_val else "-"
+        row["Subject"] = build_mood_hierarchy(subcategory_val) if subcategory_val else "-"
+        row["Title"] = model_val if model_val else "-"
+        row["Company"] = brand_val if brand_val else "-"
         row["Album"] = collection_val if collection_val else "-"
-        row["Genre"] = material_val if material_val else "-"
-        row["People"] = location_val if location_val else "-"
-        row["Company"] = form_val if form_val else "-"
+        row["custom_property_0"] = material_val if material_val else "-"  # Color/Material
+        row["custom_property_1"] = location_val if location_val else "-"  # Location
+        row["custom_property_2"] = form_val if form_val else "-"  # Form
         row["Period"] = period_val if period_val else "-"
-        row["Artist"] = size_val if size_val else "-"
-        row["Title"] = vendor_val if vendor_val and vendor_val != "-" else (brand_val or "-")
-        cur_manager = row.get("Manager", "-")
-        if not cur_manager or cur_manager == "-":
-            row["Manager"] = manager_label
-        elif manager_label not in cur_manager:
-            row["Manager"] = f"{manager_label};{cur_manager}"
+        row["Scale"] = size_val if size_val else "-"
+        row["Author"] = vendor_val if vendor_val and vendor_val != "-" else (brand_val or "-")
+        cur_sourcemetadata = row.get("SourceMetadata", "-")
+        if not cur_sourcemetadata or cur_sourcemetadata == "-":
+            row["SourceMetadata"] = manager_label
+        elif manager_label not in cur_sourcemetadata:
+            row["SourceMetadata"] = f"{manager_label};{cur_sourcemetadata}"
 
     if asset_type == "object":
         # Object mapping (from column spec):
-        # Mood=Subcategory Path, Author=Model Name, Writer=Brand, Album=Collection,
+        # Subject=Subcategory Path, Title=Model Name, Writer=Brand, Album=Collection,
         # Genre=Primary Color/Material, People=UsageLocation, Company=Shape Form,
-        # Period=Style/Period, Artist=Size, Title=VendorName
+        # Period=Style/Period, Scale=Size, Author=VendorName
         #
         # Subcategory resolution order for object type:
         #   1. Filename prefix code (e.g. 12-11 -> Sculpture) — fully deterministic.
@@ -2245,11 +2223,11 @@ def sanitize_name_token(value: str) -> str:
 
 
 def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str, str], fallback: str) -> str:
-    mood_value = mood_hierarchy_leaf(row.get("Mood", "")) or row.get("Mood", "")
+    mood_value = mood_hierarchy_leaf(row.get("Subject", "")) or row.get("Subject", "")
     if asset_type == "furniture":
         # Filename format: SubcategoryLeaf_ModelName_CRC32
-        # Author (Model Name) is included so files are human-readable without opening the index.
-        model_name_token = sanitize_name_token(row.get("Author", "") or "")
+        # Title (Model Name) is included so files are human-readable without opening the index.
+        model_name_token = sanitize_name_token(row.get("Title", "") or "")
         preferred = [mood_value, model_name_token] if model_name_token and model_name_token != "-" else [mood_value]
     elif asset_type == "vegetation":
         preferred = [mood_value, row.get("Writer", "")]
@@ -2275,7 +2253,7 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
         qwen_name = clean_name_with_qwen(
             asset_type=asset_type,
             source_stem=fallback,
-            mapped_subcategory=row.get("Mood", ""),
+            mapped_subcategory=row.get("Subject", ""),
             mapped_brand=row.get("Writer", ""),
         )
         qwen_clean = sanitize_name_token(qwen_name.replace("_", " "))
@@ -2303,17 +2281,9 @@ def ensure_unique_targets(
     while True:
         image_target = img_dir / f"{candidate}{image_suffix}"
         archive_target = arc_dir / f"{candidate}{archive_suffix}"
-        # Check existence first (fast path).
+        # Keep this pure: only return available names, do not create placeholders.
         if not image_target.exists() and not archive_target.exists():
-            # Use exclusive creation to prevent race conditions.
-            try:
-                for p in (image_target, archive_target):
-                    fd = os.open(str(p), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                    os.close(fd)
-                return image_target, archive_target, candidate
-            except FileExistsError:
-                # Another process created the file between our check and ours.
-                pass
+            return image_target, archive_target, candidate
         candidate = f"{base_name}_{counter}"
         counter += 1
 
@@ -2332,67 +2302,66 @@ def build_metadata_row(
     # Keep tags empty by default to avoid duplicating information already mapped
     # into dedicated columns (requested behavior).
     row["Tags"] = "-"
-    row["Subject"] = archive_path.name
     row["CRC-32"] = crc32_value
 
     if asset_type == "furniture":
         # Furniture mapping from everything_columnmapping.md:
-        # Mood=Subcategory, Author=Model Name, Writer=Brand, Album=Collection,
-        # People=Usage Location, Artist=Size.
-        row["Mood"] = sanitize_name_token(hints["model"] or hints["lead_desc"])
-        row["Author"] = "-"
-        row["Writer"] = clean_display_case(hints["brand"] or hints["brand_raw"])
+        # Subject=Subcategory, Title=Model Name, Writer=Brand, Album=Collection,
+        # People=Usage Location, Scale=Size.
+        row["Subject"] = sanitize_name_token(hints["model"] or hints["lead_desc"])
+        row["Title"] = clean_display_case(hints["model"] or hints["lead_desc"])
+        row["Company"] = "-"
+        row["Author"] = clean_display_case(hints["brand"] or hints["brand_raw"])
         row["Album"] = clean_display_case(hints["collection"])
         row["People"] = clean_display_case(hints["lead_desc"])
-        row["Artist"] = hints["size"]
-        row["Title"] = clean_display_case(hints["brand"] or hints["brand_raw"])
+        row["Scale"] = hints["size"]
         row["From"] = "-"
-        row["Manager"] = "Furniture"
+        row["SourceMetadata"] = "Furniture"
     elif asset_type == "vegetation":
-        row["Mood"] = clean_display_case(hints["lead_desc"] or hints["model"])
-        row["Author"] = hints["size"]
-        row["Writer"] = clean_display_case(hints["model"])
-        row["Album"] = clean_display_case(hints["collection"] or hints["lead_desc"])
-        row["Artist"] = hints["size"]
-        row["From"] = "-"
-        row["Manager"] = "Vegetation"
-    elif asset_type == "people":
-        row["Mood"] = clean_display_case(hints["lead_desc"])
+        row["Subject"] = clean_display_case(hints["lead_desc"] or hints["model"])
+        row["Company"] = hints["size"]
         row["Author"] = clean_display_case(hints["model"])
-        row["Writer"] = clean_display_case(hints["collection"])
-        row["Artist"] = hints["size"]
+        row["Album"] = clean_display_case(hints["collection"] or hints["lead_desc"])
+        row["Scale"] = hints["size"]
         row["From"] = "-"
-        row["Manager"] = "People"
+        row["SourceMetadata"] = "Vegetation"
+    elif asset_type == "people":
+        row["Subject"] = clean_display_case(hints["lead_desc"])
+        row["Company"] = clean_display_case(hints["model"])
+        row["Author"] = clean_display_case(hints["collection"])
+        row["Scale"] = hints["size"]
+        row["From"] = "-"
+        row["SourceMetadata"] = "People"
     elif asset_type == "material":
-        row["Mood"] = clean_display_case(hints["lead_desc"] or hints["model"])
+        row["Subject"] = clean_display_case(hints["lead_desc"] or hints["model"])
         row["Genre"] = clean_display_case(hints["collection"])
         row["Company"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case("Material Category")
-        row["Artist"] = hints["size"]
+        row["Scale"] = hints["size"]
         row["From"] = "-"
-        row["Manager"] = "Material"
+        row["SourceMetadata"] = "Material"
     elif asset_type == "buildings":
-        row["Mood"] = clean_display_case(hints["lead_desc"])
+        row["Subject"] = clean_display_case(hints["lead_desc"])
         row["Company"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case(hints["collection"])
-        row["Artist"] = hints["size"]
+        row["Scale"] = hints["size"]
         row["From"] = "-"
-        row["Manager"] = "Buildings"
+        row["SourceMetadata"] = "Buildings"
     elif asset_type == "layouts":
-        row["Mood"] = clean_display_case(hints["lead_desc"])
-        row["Writer"] = hints["size"]
+        row["Subject"] = clean_display_case(hints["lead_desc"])
+        row["Author"] = hints["size"]
         row["People"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case(hints["collection"])
         row["From"] = "-"
-        row["Manager"] = "Layouts"
+        row["SourceMetadata"] = "Layouts"
     elif asset_type == "object":
-        # Object initial row: pre-populate Mood from prefix code if present,
+        # Object initial row: pre-populate Subject from prefix code if present,
         # otherwise leave as '-' for enrich_row_with_models to fill in.
         _init_uid = hints.get("uid", "")
         _init_subcat = PREFIX_TO_SUBCATEGORY.get(_init_uid, "") if _init_uid else ""
-        row["Mood"] = build_mood_hierarchy(_init_subcat) if _init_subcat else "-"
-        row["Author"] = "-"
-        row["Writer"] = clean_display_case(hints.get("brand", "") or hints.get("brand_raw", ""))
+        row["Subject"] = build_mood_hierarchy(_init_subcat) if _init_subcat else "-"
+        row["Company"] = "-"
+        row["Author"] = clean_display_case(hints.get("brand", "") or hints.get("brand_raw", ""))
         row["Album"] = "-"
         row["From"] = "-"
         row["Manager"] = "Object"
@@ -2469,10 +2438,20 @@ def ensure_metadata_file(path: Path) -> None:
         return
 
     # Load existing rows and migrate any `Comment` src= traces into `Manager`.
-    with path.open("r", newline="", encoding="utf-8") as handle:
+    # Use utf-8-sig so BOM-prefixed headers (\ufeffFilename) are normalized.
+    with path.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
-        existing_headers = reader.fieldnames or []
-        rows = list(reader)
+        existing_headers = [((h or "").lstrip("\ufeff").strip()) for h in (reader.fieldnames or [])]
+        raw_rows = list(reader)
+
+    # Normalize row keys to match stripped header names.
+    rows: list[dict[str, str]] = []
+    for raw in raw_rows:
+        normalized: dict[str, str] = {}
+        for k, v in raw.items():
+            nk = (k or "").lstrip("\ufeff").strip()
+            normalized[nk] = v
+        rows.append(normalized)
 
     migrated = False
     new_rows: list[dict[str, str]] = []
@@ -2481,6 +2460,7 @@ def ensure_metadata_file(path: Path) -> None:
         comment_val = (row.get("Comment") or "").strip()
         manager_val = (row.get("Manager") or "").strip()
         mood_val = (row.get("Mood") or "").strip()
+        subject_val = (row.get("Subject") or "").strip()
         # If comment contains a src trace and manager doesn't, move it.
         if comment_val and comment_val != "-" and "src=" in comment_val and "src=" not in manager_val:
             if not manager_val or manager_val == "-":
@@ -2489,14 +2469,18 @@ def ensure_metadata_file(path: Path) -> None:
                 row["Manager"] = f"{manager_val};{comment_val}"
             row["Comment"] = "-"
             migrated = True
-        mood_path = build_mood_hierarchy(mood_val)
-        if mood_path != mood_val and mood_path != "-":
-            row["Mood"] = mood_path
+        # Migrate legacy Mood → Subject if Subject is empty/default.
+        if mood_val and mood_val not in ("-",) and (not subject_val or subject_val in ("-", "")):
+            mood_path = build_mood_hierarchy(mood_val)
+            row["Subject"] = mood_path if mood_path and mood_path != "-" else mood_val
             migrated = True
         row = normalize_efu_row(row)
         new_rows.append(row)
 
     # If headers mismatch or migration happened, rewrite file with canonical headers.
+    # Some historical files use an alternate schema with an `Archive` column where
+    # subcategory is stored in `Subject`. Preserve data when converting back.
+    is_alt_schema = "Archive" in existing_headers and "CRC-32" in existing_headers
     if existing_headers != EFU_HEADERS or migrated:
         with path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=EFU_HEADERS)
@@ -2506,12 +2490,67 @@ def ensure_metadata_file(path: Path) -> None:
                 for key, value in old.items():
                     if key in merged:
                         merged[key] = value if value not in (None, "") else "-"
+                if is_alt_schema:
+                    # Alternate schema: Subject=subcategory path, Archive=archive filename.
+                    # Legacy schema expected by this script: Author=subcategory, Subject=archive.
+                    if (not merged["Author"] or merged["Author"] == "-") and old.get("Subject"):
+                        merged["Author"] = old["Subject"]
+                    if (not merged["Subject"] or merged["Subject"] == "-") and old.get("Archive"):
+                        merged["Subject"] = old["Archive"]
                 writer.writerow(merged)
 
 
-def append_metadata_row(path: Path, row: dict[str, str]) -> None:
+def _read_metadata_rows(path: Path) -> tuple[list[str], list[dict[str, str]]]:
+    with path.open("r", newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        headers = [((h or "").lstrip("\ufeff").strip()) for h in (reader.fieldnames or [])]
+        rows = []
+        for raw in reader:
+            normalized: dict[str, str] = {}
+            for k, v in raw.items():
+                nk = (k or "").lstrip("\ufeff").strip()
+                normalized[nk] = v if v not in (None, "") else "-"
+            rows.append(normalized)
+    return headers, rows
+
+
+def _archive_name_from_row(row: dict[str, str]) -> str:
+    # Support legacy and current layouts for archive filename storage.
+    for key in ("Archive", "To", "Subject"):
+        value = (row.get(key) or "").strip()
+        if value and value != "-" and re.search(r"\.[A-Za-z0-9]{2,5}$", value):
+            return value
+    return ""
+
+
+def find_existing_index_entry(path: Path, crc32_value: str) -> dict[str, str] | None:
+    if not path.exists() or not crc32_value or crc32_value == "-":
+        return None
+    _, rows = _read_metadata_rows(path)
+    for row in rows:
+        if (row.get("CRC-32") or "").strip().upper() == crc32_value.upper():
+            return row
+    return None
+
+
+def append_metadata_row(path: Path, row: dict[str, str], overwrite_existing: bool = False) -> None:
     ensure_metadata_file(path)
     row = normalize_efu_row(row)
+    if overwrite_existing and (row.get("CRC-32") or "").strip() not in ("", "-"):
+        headers, rows = _read_metadata_rows(path)
+        updated = False
+        for i, old in enumerate(rows):
+            if (old.get("CRC-32") or "").strip().upper() == (row.get("CRC-32") or "").strip().upper():
+                rows[i] = {key: row.get(key, "-") if row.get(key, "") != "" else "-" for key in EFU_HEADERS}
+                updated = True
+                break
+        if updated:
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=EFU_HEADERS)
+                writer.writeheader()
+                for old in rows:
+                    writer.writerow({key: old.get(key, "-") if old.get(key, "") != "" else "-" for key in EFU_HEADERS})
+            return
     with path.open("a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=EFU_HEADERS)
         writer.writerow({key: row.get(key, "-") if row.get(key, "") != "" else "-" for key in EFU_HEADERS})
@@ -2526,16 +2565,40 @@ def preview_metadata_row(row: dict[str, str]) -> None:
 
 
 def preview_mapped_metadata(asset_type: str, row: dict[str, str]) -> None:
-    print("Mapped preview:")
-    label_map = PREVIEW_LABELS.get(asset_type, {})
-    preview_rows: list[tuple[str, str]] = [("Thumbnail Filename", row.get("Filename", "-") or "-")]
-    preview_rows.append(("Tags", row.get("Tags", "-") or "-"))
-    for field, semantic in label_map.items():
-        value = row.get(field, "-") or "-"
-        preview_rows.append((semantic, value))
-    preview_rows.append(("Related Asset File", row.get("Subject", "-") or "-"))
-    preview_rows.append(("CRC-32", row.get("CRC-32", "-") or "-"))
-    preview_rows.append(("Trace", row.get("Comment", "-") or "-"))
+    """Preview metadata with semantic display names for custom properties."""
+    # Map technical column names to semantic display names
+    display_names = {
+        "Filename": "Filename",
+        "Subject": "Subject",
+        "Rating": "Rating",
+        "Tags": "Tags",
+        "URL": "URL",
+        "From": "From",
+        "Company": "Company",
+        "Author": "Author",
+        "Album": "Album",
+        "custom_property_0": "Color/Material",
+        "custom_property_1": "Location",
+        "custom_property_2": "Form",
+        "Period": "Period",
+        "Scale": "Scale",
+        "Title": "Title",
+        "Comment": "Comment",
+        "ArchiveFile": "ArchiveFile",
+        "SourceMetadata": "SourceMetadata",
+        "Pose": "Pose",
+        "Style": "Style",
+        "Content Status": "Content Status",
+        "custom_property_3": "ChineseName",
+        "custom_property_4": "LatinName",
+        "CRC-32": "CRC-32",
+    }
+    
+    print("Header preview:")
+    preview_rows: list[tuple[str, str]] = []
+    for header in EFU_HEADERS:
+        display_name = display_names.get(header, header)
+        preview_rows.append((display_name, row.get(header, "-") or "-"))
 
     name_w = max(len(name) for name, _ in preview_rows)
     val_w = max(len(value) for _, value in preview_rows)
@@ -2619,18 +2682,35 @@ def move_pair(
     image_path: Path,
     archive_path: Path,
     new_base_name: str,
+    image_target: Path | None = None,
+    archive_target: Path | None = None,
+    overwrite: bool = False,
     image_dir: Path | None = None,
     archive_dir: Path | None = None,
 ) -> tuple[Path, Path]:
-    image_target, archive_target, _ = ensure_unique_targets(
-        new_base_name,
-        image_path.suffix.lower(),
-        archive_path.suffix.lower(),
-        image_dir=image_dir,
-        archive_dir=archive_dir,
-    )
-    moved_image = _move_with_timeout(str(image_path), str(image_target))
-    moved_archive = _move_with_timeout(str(archive_path), str(archive_target))
+    if image_target is None or archive_target is None:
+        image_target, archive_target, _ = ensure_unique_targets(
+            new_base_name,
+            image_path.suffix.lower(),
+            archive_path.suffix.lower(),
+            image_dir=image_dir,
+            archive_dir=archive_dir,
+        )
+    if overwrite:
+        # Only delete target if it is a different file from the source.
+        if image_target.resolve() != image_path.resolve() and image_target.exists():
+            image_target.unlink()
+        if archive_target.resolve() != archive_path.resolve() and archive_target.exists():
+            archive_target.unlink()
+    # Skip move when source and destination are already the same file.
+    if image_path.resolve() != image_target.resolve():
+        moved_image = _move_with_timeout(str(image_path), str(image_target))
+    else:
+        moved_image = image_target
+    if archive_path.resolve() != archive_target.resolve():
+        moved_archive = _move_with_timeout(str(archive_path), str(archive_target))
+    else:
+        moved_archive = archive_target
     return moved_image, moved_archive
 
 
@@ -2720,9 +2800,39 @@ def main() -> None:
                     image_dir=image_dir,
                     archive_dir=archive_dir,
                 )
+                overwrite_existing = False
+                existing_entry = find_existing_index_entry(METADATA_EFU_PATH, crc32_value)
+                if existing_entry is not None:
+                    existing_img = (existing_entry.get("Filename") or "").strip()
+                    existing_arc = _archive_name_from_row(existing_entry).strip()
+                    if existing_img and existing_img != "-":
+                        image_target = image_dir / existing_img
+                    if existing_arc:
+                        archive_target = archive_dir / existing_arc
+                    print("WARNING: Existing index entry found for this CRC-32.")
+                    print(f"  CRC-32: {crc32_value}")
+                    if existing_img and existing_img != "-":
+                        print(f"  Existing image: {existing_img}")
+                    if existing_arc:
+                        print(f"  Existing archive: {existing_arc}")
+                    if auto_yes:
+                        overwrite_existing = True
+                        print("  --yes enabled: overwriting existing files and metadata row.")
+                    else:
+                        choice = input("Overwrite existing files + metadata row? [y/N]: ").strip().lower()
+                        overwrite_existing = choice in {"y", "yes"}
+                        if not overwrite_existing:
+                            image_target, archive_target, new_base_name = ensure_unique_targets(
+                                short_base_with_crc,
+                                image_path.suffix.lower(),
+                                archive_path.suffix.lower(),
+                                image_dir=image_dir,
+                                archive_dir=archive_dir,
+                            )
                 metadata_row = dict(temp_row)
                 metadata_row["Filename"] = image_target.name
-                metadata_row["Subject"] = archive_target.name
+                # Keep Subject as taxonomy path; track archive filename in ArchiveFile.
+                metadata_row["ArchiveFile"] = archive_target.name
 
                 # Infer vendor from the source path by walking ancestors and skipping
                 # common container folders (e.g. tmp, rar_without_zip). Use the first
@@ -2748,7 +2858,7 @@ def main() -> None:
                 if vendor_candidate and vendor_candidate not in (".", ""):
                     vendor_clean = clean_display_case(vendor_candidate.replace("_", " ").replace("-", " "))
                     if vendor_clean:
-                        metadata_row["Title"] = vendor_clean
+                        metadata_row["Author"] = vendor_clean
 
                 # Always preview (dry-run style) first.
                 print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
@@ -2768,15 +2878,21 @@ def main() -> None:
 
                 moved_image, moved_archive = move_pair(
                     image_path, archive_path, new_base_name,
+                    image_target=image_target,
+                    archive_target=archive_target,
+                    overwrite=overwrite_existing,
                     image_dir=image_dir,
                     archive_dir=archive_dir,
                 )
-                append_metadata_row(METADATA_EFU_PATH, metadata_row)
+                append_metadata_row(METADATA_EFU_PATH, metadata_row, overwrite_existing=overwrite_existing)
                 print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
                 print(f"CRC-32: {crc32_value}")
                 print(f"Image moved to: {moved_image}")
                 print(f"Archive moved to: {moved_archive}")
-                print(f"Metadata appended to: {METADATA_EFU_PATH}")
+                if overwrite_existing:
+                    print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
+                else:
+                    print(f"Metadata appended to: {METADATA_EFU_PATH}")
             except OSError as exc:
                 import errno as _errno
                 if exc.errno == _errno.EINVAL:
@@ -2805,7 +2921,7 @@ def main() -> None:
             print()
         flags = ["--dry-run"]
         clean_args: list[str] = []
-        enrich_mode = "text"   # "text" | "vision" | "both"
+        enrich_mode = "both"   # "text" | "vision" | "both"
         enrich_mode_explicit = False
         quick_alias_used = False
         unknown_options: list[str] = []
@@ -2846,7 +2962,7 @@ def main() -> None:
             print("Note: --quick is treated as a legacy alias for --dry-run.")
 
         if backend is None:
-            if sys.stdout.isatty():
+            if sys.stdout.isatty() and not auto_yes:
                 backend = prompt_backend(default_backend=ACTIVE_BACKEND)
             else:
                 backend = ACTIVE_BACKEND
