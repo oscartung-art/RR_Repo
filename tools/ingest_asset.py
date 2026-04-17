@@ -41,6 +41,10 @@ if _ARCHIVE_BASE_ENV:
     ARCHIVE_BASE = Path(_ARCHIVE_BASE_ENV)
     # METADATA_EFU_PATH intentionally NOT recomputed — EFU always lives in D:\RR_Repo\Database
 
+# Legacy move behavior is now opt-in only.
+_MOVE_FILES_ENV = os.environ.get("INGEST_MOVE_FILES", "0").strip().lower()
+MOVE_FILES = _MOVE_FILES_ENV in {"1", "true", "yes", "on"}
+
 
 # ---------------------------------------------------------------------------
 # Column filling is documented in manual/everything_columnmapping.md.
@@ -53,6 +57,9 @@ def _validate_base_paths() -> None:
 
     Exits with a clear error message if a drive is missing or unreachable.
     """
+    if not MOVE_FILES:
+        return
+
     missing = []
     for label, path in [("THUMBNAIL_BASE (D: drive)", THUMBNAIL_BASE),
                         ("ARCHIVE_BASE (G: drive)", ARCHIVE_BASE)]:
@@ -208,24 +215,6 @@ _KW_SUBCATEGORY_PATHS: tuple[str, ...] = (
     "Fixture/Lighting/FloorLamp",
     "Fixture/Lighting/Lantern",
     "Fixture/Lighting/Pendant",
-    "Fixture/Lighting/PendantBranched",
-    "Fixture/Lighting/PendantCaged",
-    "Fixture/Lighting/PendantCrystal",
-    "Fixture/Lighting/PendantCylinder",
-    "Fixture/Lighting/PendantDrum",
-    "Fixture/Lighting/PendantGlobe",
-    "Fixture/Lighting/PendantIrregular",
-    "Fixture/Lighting/PendantLight",
-    "Fixture/Lighting/PendantLinear",
-    "Fixture/Lighting/PendantOrb",
-    "Fixture/Lighting/PendantRattan",
-    "Fixture/Lighting/PendantRectangular",
-    "Fixture/Lighting/PendantSet",
-    "Fixture/Lighting/PendantShaded",
-    "Fixture/Lighting/PendantSpiral",
-    "Fixture/Lighting/PendantStar",
-    "Fixture/Lighting/PendantTiered",
-    "Fixture/Lighting/PendantWaterfall",
     "Fixture/Lighting/ReadingLamp",
     "Fixture/Lighting/SkyLight",
     "Fixture/Lighting/SpotlightAccent",
@@ -233,6 +222,8 @@ _KW_SUBCATEGORY_PATHS: tuple[str, ...] = (
     "Fixture/Lighting/StripLight",
     "Fixture/Lighting/TableLamp",
     "Fixture/Lighting/TroughLight",
+    "Fixture/Lighting/PendantLinear",
+    "Fixture/Lighting/PendantSet",
     "Fixture/Lighting/WallLamp",
     "Fixture/Lighting/WallLight",
     "Fixture/Appliance",
@@ -253,6 +244,47 @@ _KW_SUBCATEGORY_PATHS: tuple[str, ...] = (
     "Fixture/ShowerMixer",
     "Fixture/Sink",
     "Fixture/Toilet",
+    "Fixture/Bathroom/Bathtubmixer",
+    "Fixture/Bathroom/Dispenser",
+    "Fixture/Bathroom/Flushplate",
+    "Fixture/Bathroom/HandDryer",
+    "Fixture/Bathroom/Hook",
+    "Fixture/Bathroom/HotWaterHeater",
+    "Fixture/Bathroom/PaperHolder",
+    "Fixture/Bathroom/Showertray",
+    "Fixture/Bathroom/StallPartition",
+    "Fixture/Bathroom/TowelBar",
+    "Fixture/Bathroom/TowelRing",
+    "Fixture/Bathroom/Vanity",
+    "Fixture/Bathroom/Washbasin",
+    "Fixture/Bathroom/WashbasinFaucet",
+    "Fixture/Bedroom/Closet",
+    "Fixture/Bedroom/ClosetStorage",
+    "Fixture/Gym/AdjustableBench",
+    "Fixture/Gym/DualLegCurl",
+    "Fixture/Gym/Dumbell",
+    "Fixture/Gym/MultiGym",
+    "Fixture/Gym/Treadmill",
+    "Fixture/HVMC/AirConditioner",
+    "Fixture/HVMC/DishWasher",
+    "Fixture/HVMC/Fan",
+    "Fixture/HVMC/FirePit",
+    "Fixture/HVMC/Radiator",
+    "Fixture/Kitchen/Cabinet",
+    "Fixture/Kitchen/CombiOven",
+    "Fixture/Kitchen/Freezer",
+    "Fixture/Kitchen/Fridge",
+    "Fixture/Kitchen/Hob",
+    "Fixture/Kitchen/Microwave",
+    "Fixture/Kitchen/Oven",
+    "Fixture/Kitchen/Range",
+    "Fixture/Laundry/Coatrack",
+    "Fixture/Laundry/Dryer",
+    "Fixture/Laundry/Purifier",
+    "Fixture/Laundry/Washingmachine",
+    "Fixture/Outdoor/BbqGrill",
+    "Fixture/Outdoor/BicycleRack",
+    "Fixture/ScreenDivider",
     "Object/Decor/Art",
     "Object/Decor/Basket",
     "Object/Tableware/Book",
@@ -322,7 +354,50 @@ _KW_SUBCATEGORY_PATHS: tuple[str, ...] = (
     "Vegetation/WinterTree",
 )
 
-# Filename prefix code → canonical CamelCase subcategory name.
+# Subcategory → Form value derived from the shape suffix embedded in the name.
+# Pendant variants encode their shape as the suffix (e.g. PendantDrum → "Drum").
+# Other compound subcategories with a meaningful shape suffix are also included.
+# This is used to auto-fill custom_property_2 (Form) when the AI leaves it blank.
+# Prefix codes for pendant variants — maps to the shape form directly.
+# These codes resolve to subcategory="Pendant" but carry shape info here.
+_KW_PREFIX_TO_FORM: dict[str, str] = {
+    "15-20": "Drum",
+    "15-21": "Linear",
+    "15-22": "Tiered",
+    "15-23": "Star",
+    "15-24": "Shaded",
+    "15-25": "Waterfall",
+    "15-26": "Irregular",
+    "15-27": "Orb",
+    "15-28": "Caged",
+    "15-30": "Crystal",
+    "15-31": "Cylinder",
+    "15-32": "Branched",
+    "15-33": "Spiral",
+    "15-34": "Rattan",
+    "15-35": "Globe",
+    "15-36": "Rectangular",
+}
+
+# Subcategory leaf → Form value for non-pendant lighting types.
+_SUBCATEGORY_TO_FORM: dict[str, str] = {
+    "Chandelier":         "Chandelier",
+    "CeilingLight":       "Ceiling",
+    "WallLamp":           "Wall",
+    "WallLight":          "Wall",
+    "FloorLamp":          "Floor",
+    "TableLamp":          "Table",
+    "DeskLamp":           "Desk",
+    "ReadingLamp":        "Reading",
+    "Lantern":            "Lantern",
+    "StreetLight":        "Street",
+    "SkyLight":           "SkyLight",
+    "StripLight":         "Strip",
+    "TroughLight":        "Trough",
+    "SpotlightAccent":    "Spotlight",
+    "ArchitecturalLight": "Architectural",
+}
+
 # Accepts both "10-01" and compact "1001" forms (normalisation handled in _resolve_db_prefix_code).
 _KW_PREFIX_TO_SUBCATEGORY: dict[str, str] = {
     "10-01": "Bench",
@@ -477,7 +552,7 @@ _KW_PREFIX_TO_SUBCATEGORY: dict[str, str] = {
     "15-02": "CeilingLight",
     "15-03": "Chandelier",
     "15-04": "FloorLamp",
-    "15-05": "PendantLight",
+    "15-05": "Pendant",
     "15-06": "TableLamp",
     "15-07": "WallLamp",
     "15-08": "StreetLight",
@@ -485,30 +560,32 @@ _KW_PREFIX_TO_SUBCATEGORY: dict[str, str] = {
     "15-10": "FillLight",
     "15-11": "SpotlightAccent",
     "15-12": "SkyLight",
-    "15-20": "PendantDrum",
-    "15-21": "PendantLinear",
-    "15-22": "PendantTiered",
-    "15-23": "PendantStar",
-    "15-24": "PendantShaded",
-    "15-25": "PendantWaterfall",
-    "15-26": "PendantIrregular",
-    "15-27": "PendantOrb",
-    "15-28": "PendantCaged",
+    "15-20": "Pendant",
+    "15-21": "Pendant",
+    "15-22": "Pendant",
+    "15-23": "Pendant",
+    "15-24": "Pendant",
+    "15-25": "Pendant",
+    "15-26": "Pendant",
+    "15-27": "Pendant",
+    "15-28": "Pendant",
     "15-29": "TroughLight",
-    "15-30": "PendantCrystal",
-    "15-31": "PendantCylinder",
-    "15-32": "PendantBranched",
-    "15-33": "PendantSpiral",
-    "15-34": "PendantRattan",
-    "15-35": "PendantGlobe",
-    "15-36": "PendantRectangular",
+    "15-30": "Pendant",
+    "15-31": "Pendant",
+    "15-32": "Pendant",
+    "15-33": "Pendant",
+    "15-34": "Pendant",
+    "15-35": "Pendant",
+    "15-36": "Pendant",
 }
 
 # Allowed usage-location room names.
 _KW_USAGE_LOCATIONS: tuple[str, ...] = (
+    "Bar",
     "Bathroom",
     "Bedroom",
     "Balcony",
+    "Café",
     "Commercial",
     "Dining Room",
     "Entryway",
@@ -519,6 +596,7 @@ _KW_USAGE_LOCATIONS: tuple[str, ...] = (
     "Hotel",
     "Kids Room",
     "Kitchen",
+    "Laundry",
     "Library",
     "Living Room",
     "Lobby",
@@ -527,6 +605,7 @@ _KW_USAGE_LOCATIONS: tuple[str, ...] = (
     "Patio",
     "Restaurant",
     "Spa",
+    "Street",
     "Study",
     "Terrace",
 )
@@ -591,10 +670,10 @@ PRETRAINED = "openai"
 CUSTOM_LABEL_MIN_CONFIDENCE = 0.30
 # Optional online backend via OpenRouter.
 _load_local_env_vars()
-# Default model for this script — Gemini 2.5 Flash Lite is the best balance of
-# speed, accuracy and cost for furniture brand/metadata extraction via OpenRouter.
+# Default text model for this script — Qwen 3.5 Flash is used for metadata
+# extraction via OpenRouter.
 # Override with OPENROUTER_MODEL env var or --model=<id> flag.
-OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "google/gemini-2.5-flash-lite")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen3.5-flash")
 OPENROUTER_VISION_MODEL = os.environ.get("OPENROUTER_VISION_MODEL", "qwen/qwen2.5-vl-72b-instruct")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
@@ -603,7 +682,7 @@ OPENROUTER_TITLE = os.environ.get("OPENROUTER_X_TITLE", "ingest-asset")
 OPENROUTER_FALLBACK_MODELS = [
     m.strip() for m in os.environ.get(
         "OPENROUTER_FALLBACK_MODELS",
-        "openai/gpt-4o-mini,google/gemini-2.5-flash,deepseek/deepseek-v3.2",
+        "openai/gpt-4o-mini,qwen/qwen3.5-flash,deepseek/deepseek-v3.2",
     ).split(",") if m.strip()
 ]
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
@@ -767,24 +846,30 @@ def _print_help_table() -> None:
     print(textwrap.dedent("""
         ingest_asset  —  Add 3D assets to the local database
         =====================================================
-        Reads image + asset-file pairs, fetches metadata (brand, model, category)
-        from the web and filename, moves the files into the DB folder, and
-        appends a row to .metadata.efu for Everything Search.
+        Reads image + asset-file pairs, enriches metadata (brand, model, category)
+        via AI vision + web search, moves files into G:\\DB, and appends a row
+        to .metadata.efu for Everything Search.
 
-                Usage:
-                    python tools/ingest_asset.py --asset-type=TYPE [OPTIONS] IMAGE ARCHIVE [IMAGE ARCHIVE ...]
+        Usage:
+            python tools/ingest_asset.py [OPTIONS] IMAGE ARCHIVE [IMAGE ARCHIVE ...]
+            python tools/ingest_asset.py [OPTIONS] IMAGE              (re-enrich mode)
 
           IMAGE    — path to the .jpg / .png render of the asset
           ARCHIVE  — matching archive or 3D model file (same stem as IMAGE)
-          TYPE     — one of: furniture | fixture | vegetation | people |
-                            material | layouts | object | vehicle | vfx
 
         Options:
-          --asset-type=TYPE   (required) Asset category — see TYPE values above
-          --dry-run           Preview result; no files moved, nothing written to index
-                    --quick             Legacy alias for --dry-run (accepted for compatibility)
+          --asset-type=TYPE   Asset category (auto-detected if omitted)
+                              one of: furniture | fixture | vegetation | people |
+                                      material | layouts | object | vehicle | vfx
+          --dry-run           Preview result; no files moved, nothing written
+          --quick             Alias for --dry-run
           --yes, -y           Skip confirmation prompt and apply immediately
           -h, --help          Show this help and exit
+
+        AI models (configured in .env):
+          Text   — qwen/qwen3.5-flash        (metadata extraction, web enrichment)
+          Vision — qwen/qwen2.5-vl-72b-instruct  (image analysis)
+          Fallbacks — none
     """).strip())
     print()
     _print_examples()
@@ -794,33 +879,29 @@ def _print_examples() -> None:
     print(textwrap.dedent("""
         Examples:
 
-          # Preview a single furniture asset — nothing is moved or written
-          python tools/ingest_asset.py --dry-run --asset-type=furniture
-              "G:/3D/designconnected/10-03 mychair.jpg"
-              "G:/3D/designconnected/10-03 mychair.rar"
+          # Dry-run a single furniture pair (auto-detects asset type)
+          python tools/ingest_asset.py --dry-run
+              "G:\\DB\\10-03 mychair.jpg"
+              "G:\\DB\\10-03 mychair.rar"
 
-          # Preview a native 3D file pair
+          # Dry-run with explicit asset type
           python tools/ingest_asset.py --dry-run --asset-type=furniture
-              "G:/3D/designconnected/10-03 mychair.jpg"
-              "G:/3D/designconnected/10-03 mychair.glb"
+              "G:\\DB\\10-03 mychair.jpg"
+              "G:\\DB\\10-03 mychair.glb"
 
-          # Ingest and auto-confirm (no prompt asked)
+          # Ingest and auto-confirm (no prompt)
           python tools/ingest_asset.py --yes --asset-type=furniture
-              "G:/3D/designconnected/10-03 mychair.jpg"
-              "G:/3D/designconnected/10-03 mychair.rar"
+              "G:\\DB\\10-03 mychair.jpg"
+              "G:\\DB\\10-03 mychair.rar"
 
           # Ingest multiple pairs at once
-          python tools/ingest_asset.py --yes --asset-type=furniture
-              "G:/3D/designconnected/10-03 mychair.jpg"  "G:/3D/designconnected/10-03 mychair.rar"
-              "G:/3D/designconnected/10-03 mytable.jpg"  "G:/3D/designconnected/10-03 mytable.rar"
+          python tools/ingest_asset.py --yes
+              "G:\\DB\\10-03 mychair.jpg"  "G:\\DB\\10-03 mychair.rar"
+              "G:\\DB\\10-03 mytable.jpg"  "G:\\DB\\10-03 mytable.rar"
 
-          # Re-enrich existing thumbnails (image-only input)
-          python tools/ingest_asset.py --dry-run --asset-type=furniture
-              "D:/RR_Repo/Database/Armchair_Example_4E85EE94.jpg"
-
-          # Weird filename + image-only input (re-enrich path)
-          python tools/ingest_asset.py --dry-run --asset-type=furniture
-              "D:/RR_Repo/Database/123.239sfabb.jpg"
+          # Re-enrich existing thumbnails (image-only, no archive)
+          python tools/ingest_asset.py --dry-run
+              "G:\\DB\\Armchair_Example_4E85EE94.jpg"
     """).strip())
     print()
 
@@ -909,6 +990,71 @@ def build_mood_hierarchy(subcategory: str) -> str:
     return f"{group}/{value}"
 
 
+def _subject_norm_key(value: str) -> str:
+    """Normalize subject strings for tolerant matching (case/punctuation-insensitive)."""
+    return re.sub(r"[^a-z0-9]+", "", (value or "").strip().lower())
+
+
+@lru_cache(maxsize=1)
+def _load_existing_subject_index() -> tuple[dict[str, str], dict[str, str]]:
+    """Load canonical Subject values from .metadata.efu for wording consistency.
+
+    Returns:
+      - full_map: normalized full-path key -> canonical full subject
+      - leaf_map: normalized leaf key -> canonical full subject (unique leaves only)
+    """
+    full_map: dict[str, str] = {}
+    leaf_candidates: dict[str, set[str]] = {}
+    if not METADATA_EFU_PATH.exists():
+        return full_map, {}
+    try:
+        with METADATA_EFU_PATH.open(encoding="utf-8", errors="replace", newline="") as fh:
+            for row in csv.DictReader(fh):
+                subject = (row.get("Subject") or "").strip()
+                if not subject or subject == "-":
+                    continue
+                full_key = _subject_norm_key(subject)
+                if full_key and full_key not in full_map:
+                    full_map[full_key] = subject
+
+                leaf = mood_hierarchy_leaf(subject)
+                leaf_key = _subject_norm_key(leaf)
+                if leaf_key:
+                    leaf_candidates.setdefault(leaf_key, set()).add(subject)
+    except Exception:
+        return {}, {}
+
+    leaf_map: dict[str, str] = {}
+    for key, values in leaf_candidates.items():
+        if len(values) == 1:
+            leaf_map[key] = next(iter(values))
+    return full_map, leaf_map
+
+
+def canonicalize_subject_with_metadata(candidate: str) -> str:
+    """Align inferred subject wording with existing .metadata.efu Subject values."""
+    value = (candidate or "").strip().strip("/")
+    if not value or value == "-":
+        return "-"
+
+    full_map, leaf_map = _load_existing_subject_index()
+    if not full_map and not leaf_map:
+        return value
+
+    # 1) Full-path tolerant match first.
+    full_hit = full_map.get(_subject_norm_key(value), "")
+    if full_hit:
+        return full_hit
+
+    # 2) Leaf match when unique in current metadata vocabulary.
+    leaf = mood_hierarchy_leaf(value)
+    leaf_hit = leaf_map.get(_subject_norm_key(leaf), "")
+    if leaf_hit:
+        return leaf_hit
+
+    return value
+
+
 def mood_hierarchy_leaf(value: str) -> str:
     """Return the terminal segment from a Mood hierarchy path."""
     if not value or value == "-":
@@ -935,6 +1081,24 @@ def normalize_furniture_subcategory(candidate: str, source_stem: str, hints: dic
     if candidate_clean in _SECTION_HEADERS:
         candidate_clean = ""  # force keyword fallback below
 
+    # Keyword scan: run BEFORE accepting model candidate.
+    # If the stem contains an exact subcategory name, it beats a generic model guess
+    # (e.g. stem "MORA LANTERN" should produce "Lantern", not "TableLamp").
+    # We collect the longest keyword match; if it is more specific than the model
+    # candidate (i.e. longer), prefer it.
+    stem_keyword_match = ""
+    for subcat in sorted(allowed, key=len, reverse=True):
+        needle = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", subcat).lower()
+        if re.search(r"\b" + re.escape(needle) + r"\b", stem_lower):
+            stem_keyword_match = subcat
+            break
+
+    if stem_keyword_match:
+        # A subcategory name found verbatim in the stem is ground-truth — always
+        # prefer it over a model guess. The model only wins when the stem contains
+        # no recognisable subcategory word (e.g. a random CRC filename).
+        return stem_keyword_match
+
     if candidate_clean and candidate_clean in allowed:
         return candidate_clean
 
@@ -942,12 +1106,9 @@ def normalize_furniture_subcategory(candidate: str, source_stem: str, hints: dic
     if hint_model in allowed:
         return hint_model
 
-    # Fallback: scan subcategory names directly in the stem (longest match first).
-    # CamelCase names are expanded to words: "CoffeeTable" → "coffee table".
-    for subcat in sorted(allowed, key=len, reverse=True):
-        needle = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", subcat).lower()
-        if re.search(r"\b" + re.escape(needle) + r"\b", stem_lower):
-            return subcat
+    # Fallback: return keyword match if we have one but it lost the length check above.
+    if stem_keyword_match:
+        return stem_keyword_match
 
     if candidate_clean in {"OutdoorFurniture", "Furniture", "Seating"}:
         return "Sofa" if "Sofa" in allowed else ""
@@ -1110,7 +1271,7 @@ def detect_asset_category(stem: str) -> tuple[str, str]:
             image_path=None,
             timeout=45,
             model=OPENROUTER_MODEL,
-            spinner_label=None,
+            spinner_label="Detecting asset category...",
         )
         data = extract_json_payload(raw)
         cat = (data.get("category") or "").strip().lower()
@@ -1176,26 +1337,58 @@ def enrich_vision_pass(
     asset_type: str,
     subcats_list: str,
     location_list: str,
+    sidecar_text: str | None = None,
 ) -> dict[str, str]:
     """Use the vision model to extract EFU metadata fields from a render image.
+
+    When *sidecar_text* is supplied the model receives both the image and the
+    catalogue text in a single call, which is more accurate and saves one
+    round-trip compared to calling extract_sidecar_text_hints separately.
 
     Returns a dict with the same keys used by web_search_enrich (e.g. subcategory,
     model_name, brand, primary_material_or_color, shape_form, etc).
     """
-    prompt = (
-        f"You are a 3D asset metadata expert for {asset_type} items. "
-        "Look at this rendered image and return ONLY a compact JSON object with these exact keys: "
-        '"subcategory", "model_name", "brand", "collection", '
-        '"primary_material_or_color", "usage_location", "shape_form", "period", "size", "vendor_name". '
-        "STRICT rules: "
-        f"(1) subcategory must be a CamelCase hierarchy path describing what you see, "
-        f"formatted as 'AssetType/Group/Leaf' (e.g. 'Furniture/Seating/Armchair', "
-        f"'Fixture/Lighting/WallLamp', 'Object/Decor/Vase'). Use your best judgment. "
-        f"(2) usage_location MUST be exactly one value from this list: {location_list}. "
-        "(3) Use '-' for any field you cannot confidently determine from the image. "
-        "(4) Output ONLY the JSON object. No markdown, no explanation, no extra keys."
-    )
-    raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label="Extracting metadata from image...")
+    if sidecar_text:
+        clean_text = re.sub(r'^\d+[\.)\s]\s*', '', sidecar_text.strip()).strip()
+        # Build an asset-type-aware subcategory constraint for the combined prompt.
+        if asset_type == "fixture":
+            _sc = [p for p in _KW_SUBCATEGORY_PATHS if p.startswith("Fixture/Lighting/")]
+            _subcats_hint = ", ".join(_sc) if _sc else "e.g. Fixture/Lighting/Pendant"
+        else:
+            _subcats_hint = subcats_list or f"e.g. {asset_type.capitalize()}/Group/Leaf"
+        prompt = (
+            f"You are a 3D asset metadata expert for {asset_type} items. "
+            "You have two sources of information about this product: "
+            f'(1) Catalogue text: "{clean_text}" — use this for model_name, brand, subcategory, collection. '
+            "(2) The attached image — use this for primary_material_or_color, shape_form, period, usage_location. "
+            "Return ONLY a compact JSON object with these exact keys: "
+            '"subcategory", "model_name", "brand", "collection", '
+            '"primary_material_or_color", "usage_location", "shape_form", "period", "size", "vendor_name". '
+            "STRICT rules: "
+            f"(1) subcategory must be exactly one of: {_subcats_hint}. "
+            f"(2) usage_location MUST be exactly one value from: {location_list}. "
+            "(3) brand = manufacturer name only (e.g. 'Louis Poulsen'). "
+            "    model_name = product title/model only (e.g. 'PH Snowball'). "
+            "(4) Use '-' for any field you cannot confidently determine. "
+            "(5) Output ONLY the JSON. No markdown, no explanation, no extra keys."
+        )
+        spinner_label = "Enriching from image + catalogue text..."
+    else:
+        prompt = (
+            f"You are a 3D asset metadata expert for {asset_type} items. "
+            "Look at this rendered image and return ONLY a compact JSON object with these exact keys: "
+            '"subcategory", "model_name", "brand", "collection", '
+            '"primary_material_or_color", "usage_location", "shape_form", "period", "size", "vendor_name". '
+            "STRICT rules: "
+            f"(1) subcategory must be a CamelCase hierarchy path describing what you see, "
+            f"formatted as 'AssetType/Group/Leaf' (e.g. 'Furniture/Seating/Armchair', "
+            f"'Fixture/Lighting/WallLamp', 'Object/Decor/Vase'). Use your best judgment. "
+            f"(2) usage_location MUST be exactly one value from this list: {location_list}. "
+            "(3) Use '-' for any field you cannot confidently determine from the image. "
+            "(4) Output ONLY the JSON object. No markdown, no explanation, no extra keys."
+        )
+        spinner_label = "Extracting metadata from image..."
+    raw = ollama_generate(prompt, image_path=image_path, timeout=120, spinner_label=spinner_label)
     return extract_json_payload(raw)
 
 
@@ -1216,16 +1409,366 @@ def parse_filename_hints(stem: str) -> dict[str, str]:
     all_text = humanize(stem).lower()
     size_match = re.search(r"\b\d+\s*[xX]\s*\d+\b", stem)
 
+    # If the lead word is NOT a numeric prefix code (e.g. "15-09") and there is
+    # no dot-separated brand field, treat the lead word as a brand hint.
+    # e.g. "MORA LANTERN" → brand_hint="MORA", lead_desc="LANTERN"
+    _is_prefix_code = bool(re.match(r"^\d{2}-\d{2}[A-Z]?$", lead_code))
+    brand_hint = humanize(brand_clean) or (humanize(lead_code) if not _is_prefix_code and lead_code else "")
+
     return {
         "uid": lead_code,
         "lead_desc": humanize(lead_desc),
         "model": humanize(model_raw),
         "collection": humanize(collection_raw),
-        "brand": humanize(brand_clean),
+        "brand": brand_hint,
         "brand_raw": humanize(brand_raw),
         "size": size_match.group(0).replace(" ", "") if size_match else "",
         "all_text": all_text,
     }
+
+
+def extract_page_key_from_stem(stem: str) -> str:
+    """Extract page suffix key like p01/p102 from an image stem."""
+    if not stem:
+        return ""
+    # Use the last pNNN token so stems like "1_mpm_vol.02_p01" resolve to p01.
+    matches = re.findall(r"[pP](\d{1,3})", stem)
+    if not matches:
+        return ""
+    match = matches[-1]
+    try:
+        num = int(match)
+    except ValueError:
+        return ""
+    if num < 0:
+        return ""
+    return f"p{num:02d}" if num < 100 else f"p{num:03d}"
+
+
+def _sidecar_text_line_to_page_key(line: str) -> tuple[str, str]:
+    """Parse one TXT/MD sidecar line into (pXX_key, payload_text)."""
+    text = (line or "").strip()
+    if not text:
+        return "", ""
+
+    # Examples handled:
+    #   01. Magis Chair One
+    #   - 02) Magis Chair
+    #   p03: Kartell chair
+    m_num = re.match(r"^[\-\*\s]*([0-9]{1,3})\s*[\.:\)\-]\s*(.+)$", text)
+    if m_num:
+        n = int(m_num.group(1))
+        key = f"p{n:02d}" if n < 100 else f"p{n:03d}"
+        return key, m_num.group(2).strip()
+
+    m_page = re.match(r"^[\-\*\s]*[pP]([0-9]{1,3})\s*[\.:\)\-]\s*(.+)$", text)
+    if m_page:
+        n = int(m_page.group(1))
+        key = f"p{n:02d}" if n < 100 else f"p{n:03d}"
+        return key, m_page.group(2).strip()
+
+    return "", ""
+
+
+def _sidecar_store_entry(entries: dict[str, str], key: str, payload: str) -> None:
+    """Store a sidecar entry using a normalized, case-insensitive key."""
+    k = (key or "").strip().lower()
+    v = (payload or "").strip()
+    if k and v:
+        entries[k] = v
+
+
+def _sidecar_keys_from_filename(value: str) -> set[str]:
+    """Build sidecar lookup keys from a filename/path token.
+
+    Returns case-insensitive keys like:
+      - basename with extension (e.g. "07.jpg")
+      - basename stem (e.g. "07")
+      - derived page key (e.g. "p07") when numeric/patterned
+    """
+    raw = (value or "").strip().strip('"').strip("'")
+    if not raw:
+        return set()
+
+    # Accept absolute paths, relative paths, or plain names.
+    try:
+        name = Path(raw).name.strip()
+    except Exception:
+        name = raw.replace("\\", "/").split("/")[-1].strip()
+
+    keys: set[str] = set()
+    if not name:
+        return keys
+    keys.add(name.lower())
+
+    stem = Path(name).stem.strip()
+    if stem:
+        keys.add(stem.lower())
+
+        # Numeric stems like 7 / 07 / 007 should also map to p07 / p007.
+        m_num = re.fullmatch(r"0*([0-9]{1,3})", stem)
+        if m_num:
+            n = int(m_num.group(1))
+            keys.add(f"p{n:02d}" if n < 100 else f"p{n:03d}")
+
+        # Also support stems already containing pNN pattern.
+        page_key = extract_page_key_from_stem(stem)
+        if page_key:
+            keys.add(page_key.lower())
+
+    return keys
+
+
+def resolve_sidecar_text_for_image(
+    entries: dict[str, str],
+    image_path: Path,
+    page_key: str,
+) -> tuple[str, str]:
+    """Resolve sidecar text for one image using filename-first matching.
+
+    Returns (payload_text, matched_key).
+    """
+    if not entries:
+        return "", ""
+
+    candidates: list[str] = []
+    if image_path:
+        candidates.append(image_path.name.lower())
+        candidates.append(image_path.stem.lower())
+        # Normalize purely numeric stems so 07.jpg can match key "7" and vice versa.
+        m_num = re.fullmatch(r"0*([0-9]{1,3})", image_path.stem)
+        if m_num:
+            candidates.append(str(int(m_num.group(1))))
+
+    if page_key:
+        candidates.append(page_key.lower())
+
+    seen: set[str] = set()
+    for key in candidates:
+        k = (key or "").strip().lower()
+        if not k or k in seen:
+            continue
+        seen.add(k)
+        text = entries.get(k, "")
+        if text:
+            return text, k
+    # No per-entry match — fall back to full file text so the AI can figure it out.
+    full = entries.get("__full__", "")
+    if full:
+        return full, "__full__"
+    return "", ""
+
+
+def parse_sidecar_entries(sidecar_path: Path) -> dict[str, str]:
+    """Parse .txt/.md/.csv sidecar file into a flexible key->text map.
+
+    Supported keys include page keys (pXX), filename (e.g. 07.jpg), and stems (e.g. 07).
+    """
+    entries: dict[str, str] = {}
+    suffix = sidecar_path.suffix.lower()
+
+    if suffix in {".txt", ".md"}:
+        # utf-8-sig strips BOM so line "01. ..." maps correctly to p01.
+        full_text = sidecar_path.read_text(encoding="utf-8-sig", errors="replace")
+        for raw in full_text.splitlines():
+            key, payload = _sidecar_text_line_to_page_key(raw)
+            if key and payload:
+                _sidecar_store_entry(entries, key, payload)
+        # Always store the full text as a fallback so the AI can interpret it
+        # when no per-entry key matches (e.g. messy PDF-extracted markdown).
+        entries["__full__"] = full_text.strip()
+        return entries
+
+    if suffix == ".csv":
+        # 1) DictReader path (headered CSV)
+        try:
+            with sidecar_path.open("r", encoding="utf-8-sig", errors="replace", newline="") as fh:
+                reader = csv.DictReader(fh)
+                headered_rows = list(reader)
+        except Exception:
+            headered_rows = []
+
+        if headered_rows:
+            for row in headered_rows:
+                lowered = {str(k).strip().lower(): (v or "").strip() for k, v in row.items()}
+                filename_raw = ""
+                for f_key in ("filename", "file", "path", "image", "image_path"):
+                    filename_raw = lowered.get(f_key, "")
+                    if filename_raw:
+                        break
+
+                idx_raw = ""
+                for idx_key in ("index", "no", "num", "number", "page", "p"):
+                    idx_raw = lowered.get(idx_key, "")
+                    if idx_raw:
+                        break
+
+                page_key = ""
+                if idx_raw:
+                    m = re.search(r"([0-9]{1,3})", idx_raw)
+                    if m:
+                        n = int(m.group(1))
+                        page_key = f"p{n:02d}" if n < 100 else f"p{n:03d}"
+
+                # Prefer common description columns; fallback to joined row content.
+                payload = ""
+                for txt_key in ("lookup", "text", "description", "title", "name", "item", "line"):
+                    payload = lowered.get(txt_key, "")
+                    if payload:
+                        break
+                if not payload:
+                    payload = " ; ".join(v for v in lowered.values() if v)
+
+                if not payload:
+                    continue
+
+                filename_keys = _sidecar_keys_from_filename(filename_raw)
+                if filename_keys:
+                    for k in filename_keys:
+                        _sidecar_store_entry(entries, k, payload)
+                if page_key:
+                    _sidecar_store_entry(entries, page_key, payload)
+
+            if entries:
+                return entries
+
+        # 2) Fallback for non-header CSV rows like: 01, Chair text ...
+        try:
+            with sidecar_path.open("r", encoding="utf-8-sig", errors="replace", newline="") as fh:
+                reader2 = csv.reader(fh)
+                for row in reader2:
+                    if not row:
+                        continue
+                    first = (row[0] or "").strip()
+                    payload = " ; ".join((c or "").strip() for c in row[1:] if (c or "").strip())
+                    if not payload:
+                        continue
+
+                    key_added = False
+                    for k in _sidecar_keys_from_filename(first):
+                        _sidecar_store_entry(entries, k, payload)
+                        key_added = True
+
+                    # Numeric first column fallback (e.g. "01, Chair ...").
+                    m = re.search(r"([0-9]{1,3})", first)
+                    if m:
+                        n = int(m.group(1))
+                        page_key = f"p{n:02d}" if n < 100 else f"p{n:03d}"
+                        _sidecar_store_entry(entries, page_key, payload)
+                        key_added = True
+
+                    if not key_added:
+                        continue
+        except Exception:
+            pass
+
+        return entries
+
+    return entries
+
+
+_SIDECAR_HINT_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _autodetect_archive_from_sidecar_folder(sidecar_path: Path) -> list[Path]:
+    """Return archive candidates found next to sidecar file."""
+    try:
+        base_dir = sidecar_path.parent
+        if not base_dir.exists():
+            return []
+        candidates = [
+            p for p in base_dir.iterdir()
+            if p.is_file() and p.suffix.lower() in ASSET_FILE_EXTENSIONS
+        ]
+        candidates.sort(key=lambda p: p.name.lower())
+        return candidates
+    except Exception:
+        return []
+
+
+def _extract_sidecar_fallback_hints(raw_text: str) -> dict[str, str]:
+    """Deterministically derive basic hints from catalogue-like sidecar lines."""
+    text = (raw_text or "").strip()
+    if not text:
+        return {}
+
+    # Strip leading numbered list prefix: "22. ", "01. ", "1) ", etc.
+    text = re.sub(r'^\d+[\.)\s]\s*', '', text).strip()
+
+    # Drop trailing design attribution segments to isolate the product naming chunk.
+    product_part = re.split(r"\bdesign\b", text, maxsplit=1, flags=re.IGNORECASE)[0]
+    product_part = product_part.strip(" .;:-")
+    product_part = re.sub(r"[_\-]+", " ", product_part)
+    product_part = re.sub(r"\s+", " ", product_part).strip()
+    if not product_part:
+        return {}
+
+    parts = product_part.split(" ", 1)
+    brand_guess = clean_display_case(parts[0]) if parts and parts[0] else ""
+    model_guess = clean_display_case(parts[1]) if len(parts) > 1 else clean_display_case(product_part)
+
+    hints: dict[str, str] = {}
+    if brand_guess and brand_guess != "-":
+        hints["brand"] = brand_guess
+    if model_guess and model_guess != "-":
+        hints["model_name"] = model_guess
+    if "vendor_name" not in hints and hints.get("brand"):
+        hints["vendor_name"] = hints["brand"]
+    return hints
+
+
+def extract_sidecar_text_hints(sidecar_text: str, location_list: str) -> dict[str, str]:
+    """Convert a sidecar text snippet into normalized enrichment hints via LLM."""
+    raw = (sidecar_text or "").strip()
+    if not raw:
+        return {}
+    if raw in _SIDECAR_HINT_CACHE:
+        return dict(_SIDECAR_HINT_CACHE[raw])
+
+    # Strip leading numbered list prefix ("22. ", "01. ") before sending to AI.
+    clean_raw = re.sub(r'^\d+[\.)\s]\s*', '', raw).strip()
+
+    _lighting_subcats = [p for p in _KW_SUBCATEGORY_PATHS if p.startswith("Fixture/Lighting/")]
+    _subcats_str = ", ".join(_lighting_subcats)
+
+    prompt = (
+        "You are a product metadata expert for interior design assets. "
+        "Extract metadata from this product catalogue text snippet. "
+        "Return ONLY compact JSON with these exact keys: "
+        '"subcategory", "model_name", "brand", "collection", '
+        '"usage_location", "period", "vendor_name", "primary_material_or_color", "shape_form", "size". '
+        "Rules: use '-' when unknown; no explanation; no extra keys. "
+        "brand must be the manufacturer name only (e.g. 'Foscarini', 'Louis Poulsen'). "
+        "model_name must be the product name/model title only (e.g. 'Le Soleil', 'PH Snowball'). "
+        f"subcategory must be exactly one of: {_subcats_str}. "
+        f"usage_location must be one of: {location_list}. "
+        f"Text: {clean_raw}"
+    )
+
+    try:
+        result = extract_json_payload(
+            ollama_generate(
+                prompt=prompt,
+                timeout=45,
+                model=OPENROUTER_VISION_MODEL,
+                spinner_label="Parsing sidecar text...",
+            )
+        )
+    except Exception:
+        result = {}
+
+    # Guarantee a useful text baseline even when model extraction is partial.
+    fallback_hints = _extract_sidecar_fallback_hints(raw)
+    for k, v in fallback_hints.items():
+        cur = (result.get(k, "") or "").strip()
+        if not cur or cur == "-":
+            result[k] = v
+
+    if result.get("usage_location"):
+        result["usage_location"] = validate_usage_location(clean_display_case(result.get("usage_location", "")))
+
+    _SIDECAR_HINT_CACHE[raw] = dict(result)
+    return result
 
 
 def is_descriptive_filename_stem(stem: str) -> bool:
@@ -1740,6 +2283,10 @@ def enrich_row_with_models(
     row: dict[str, str],
     session_context: str = "",
     session_hints: dict[str, str] | None = None,
+    vision_only: bool = False,
+    text_hint_override: dict[str, str] | None = None,
+    disable_web_search: bool = False,
+    raw_sidecar_text: str | None = None,
 ) -> dict[str, str]:
     """Metadata enrichment pipeline.
 
@@ -1766,7 +2313,8 @@ def enrich_row_with_models(
         session_hint_str = f"Session context from user: '{session_context}'. "
     sh = session_hints or {}
 
-    filename_usable = is_descriptive_filename_stem(source_stem)
+    sidecar_mode = bool(text_hint_override or raw_sidecar_text) and disable_web_search
+    filename_usable = is_descriptive_filename_stem(source_stem) and not vision_only and not sidecar_mode
 
     # Text-first hints are only trusted when filename looks descriptive.
     if filename_usable:
@@ -1782,6 +2330,13 @@ def enrich_row_with_models(
             text_data["collection"] = hint_collection
         if hint_size and hint_size != "-":
             text_data["size"] = hint_size
+
+    # Optional sidecar text override (text+vision mode). This overrides filename-derived hints.
+    if text_hint_override:
+        for key, value in text_hint_override.items():
+            v = (value or "").strip()
+            if v and v != "-":
+                text_data[key] = v
 
     # Pass 2 — Web search.
     web_data: dict[str, str] = {}
@@ -1802,7 +2357,7 @@ def enrich_row_with_models(
         "primary_material_or_color", "usage_location", "shape_form",
         "period", "size", "vendor_name",
     ]
-    if filename_usable:
+    if filename_usable and not disable_web_search:
         print(f"  Searching web for: {_web_query}", flush=True)
         web_data = web_search_enrich(
             product_query=_web_query,
@@ -1827,10 +2382,15 @@ def enrich_row_with_models(
         text_error = ""
 
     # Pass 3 — Vision extraction always runs when an image exists.
+    # When raw_sidecar_text is available it is sent together with the image in
+    # a single call (combined text+vision pass), saving one API round-trip.
     if image_path.exists():
         print(f"  Reading image: {image_path.name}", flush=True)
         try:
-            vision_data = enrich_vision_pass(image_path, asset_type, subcats_list, location_list)
+            vision_data = enrich_vision_pass(
+                image_path, asset_type, subcats_list, location_list,
+                sidecar_text=raw_sidecar_text,
+            )
         except Exception as _ve:
             vision_error = str(_ve)
             if "429" in vision_error:
@@ -1897,6 +2457,7 @@ def enrich_row_with_models(
         subcategory = _db_subcategory
     else:
         subcategory = _ai_subcategory
+    subcategory = canonicalize_subject_with_metadata(subcategory)
 
     brand = clean_display_case(pick_with_db("brand", "Writer", "-"))
     if (not brand or brand == "-") and by_brand:
@@ -1906,11 +2467,28 @@ def enrich_row_with_models(
     usage_location = validate_usage_location(clean_display_case(pick_with_db("usage_location", "People", "-")))
     model_name = clean_display_case(pick_with_db("model_name", "Title", "-"))
     stem_title_fallback = build_filename_title_fallback(source_stem, hints)
+    vision_label_fallback = clean_display_case(hints.get("vision_label", ""))
 
     # For coded / non-descriptive stems, do not trust AI or DB title guesses.
-    # Use the simple UID-trimmed filename token directly.
-    if not filename_usable and stem_title_fallback:
+    # Sidecar mode is exempt because sidecar text is the trusted text source.
+    if not filename_usable and stem_title_fallback and not vision_only and not sidecar_mode:
         model_name = stem_title_fallback
+
+    # Vision-only mode should prefer the image label over filename-derived title tokens.
+    if vision_only:
+        _model_is_stem_like = bool(
+            stem_title_fallback
+            and model_name
+            and model_name != "-"
+            and model_name.strip().lower() == stem_title_fallback.strip().lower()
+        )
+        _model_looks_catalog_code = bool(
+            model_name
+            and model_name != "-"
+            and re.search(r"\b(?:mpm[_\-\s]?vol|vol[_\-\s]?\d|p\d{2,})\b", model_name, flags=re.IGNORECASE)
+        )
+        if ((not model_name or model_name == "-") or _model_is_stem_like or _model_looks_catalog_code) and vision_label_fallback and vision_label_fallback != "-":
+            model_name = vision_label_fallback
 
     # Stem fallback is only allowed when filename looks descriptive.
     if (not model_name or model_name == "-") and filename_usable:
@@ -1996,6 +2574,16 @@ def enrich_row_with_models(
         model_name = re.sub(r'\s+\d{3,}[-\u2013]\d{3,}(?:[-\u2013]\d+)*$', '', model_name).strip()
         if not model_name:
             model_name = "-"
+
+    # Vision-only cleanup: drop generic "Model" prefix placeholders
+    # (e.g. "ModelMirror" -> "Mirror", "Model Antler Sculpture" -> "Antler Sculpture").
+    if vision_only and model_name and model_name != "-":
+        _model_prefix_match = re.match(r"^model(?:[\s_\-]+)?(.+)$", model_name, flags=re.IGNORECASE)
+        if _model_prefix_match:
+            _model_remainder = clean_display_case(_model_prefix_match.group(1).strip())
+            _letters = re.sub(r"[^A-Za-z]", "", _model_remainder)
+            if _model_remainder and _model_remainder != "-" and len(_letters) >= 3:
+                model_name = _model_remainder
 
     # Primary color/material: reject if it is a substring of the brand or collection name.
     if primary_material and primary_material != "-":
@@ -2086,8 +2674,24 @@ def enrich_row_with_models(
 
     # Final safety net: if post-processing blanked model_name, keep Title populated.
     if not model_name or model_name == "-":
-        if stem_title_fallback:
+        if vision_only and vision_label_fallback and vision_label_fallback != "-":
+            model_name = vision_label_fallback
+        elif stem_title_fallback:
             model_name = stem_title_fallback
+
+    # Derive Form from prefix code or subcategory when the AI left it blank.
+    # Pendant prefix codes (15-20..15-36) carry shape in _KW_PREFIX_TO_FORM.
+    # Other lighting subcategories fall back to _SUBCATEGORY_TO_FORM.
+    if (not shape_form or shape_form == "-") and subcategory and subcategory != "-":
+        _uid = hints.get("uid", "")
+        _form_from_prefix = _KW_PREFIX_TO_FORM.get(_uid, "")
+        if _form_from_prefix:
+            shape_form = _form_from_prefix
+        else:
+            _subcat_leaf = subcategory.split("/")[-1]
+            _derived = _SUBCATEGORY_TO_FORM.get(_subcat_leaf, "")
+            if _derived and _derived != "-":
+                shape_form = _derived
 
     # ── Column writes — vary by asset_type ──────────────────────────────────
     # Extract common EFU field mapping to avoid 10+ repetitions
@@ -2102,7 +2706,6 @@ def enrich_row_with_models(
         period_val: str,
         size_val: str,
         vendor_val: str,
-        manager_label: str,
     ) -> None:
         """Write standardized metadata to the EFU row dict."""
         row["Subject"] = build_mood_hierarchy(subcategory_val) if subcategory_val else "-"
@@ -2115,11 +2718,6 @@ def enrich_row_with_models(
         row["Period"] = period_val if period_val else "-"
         row["custom_property_5"] = size_val if size_val else "-"
         row["Author"] = vendor_val if vendor_val and vendor_val != "-" else (brand_val or "-")
-        cur_sourcemetadata = row.get("SourceMetadata", "-")
-        if not cur_sourcemetadata or cur_sourcemetadata == "-":
-            row["SourceMetadata"] = manager_label
-        elif manager_label not in cur_sourcemetadata:
-            row["SourceMetadata"] = f"{manager_label};{cur_sourcemetadata}"
 
     if asset_type == "object":
         _obj_uid_subcat = PREFIX_TO_SUBCATEGORY.get(hints.get("uid", ""), "") if hints.get("uid") else ""
@@ -2153,31 +2751,13 @@ def enrich_row_with_models(
             period_val=_obj_period,
             size_val=_obj_size,
             vendor_val=_obj_vendor,
-            manager_label="Object",
         )
     # Standardized EFU field values shared by most asset types.
     _vendor_final = vendor_name if vendor_name and vendor_name != "-" else (brand or "-")
 
-    # Data-driven dispatch for all non-object asset types.
-    # The "object" type has custom subcategory resolution logic above — kept separate.
-    _MANAGER_MAP = {
-        "fixture":      "Fixture",
-        "vegetation":   "Vegetation",
-        "people":       "People",
-        "material":     "Material",
-        "buildings":    "Buildings",
-        "layouts":      "Layouts",
-        "vehicle":      "Vehicle",
-        "vfx":          "VFX",
-        "procedural":   "Procedural",
-        "location":     "Location",
-    }
-
-    if asset_type == "object":
+    if asset_type != "object":
         # Object mapping is handled above with dedicated subcategory resolution.
-        # _write_efu_fields already called in the object block — skip re-dispatch.
-        pass
-    elif asset_type in _MANAGER_MAP:
+        # All other asset types share the same field layout.
         _write_efu_fields(
             subcategory_val=subcategory,
             model_val=model_name,
@@ -2189,23 +2769,6 @@ def enrich_row_with_models(
             period_val=period,
             size_val=size,
             vendor_val=_vendor_final,
-            manager_label=_MANAGER_MAP[asset_type],
-        )
-    else:
-        # Generic fallback for furniture and any future asset types not yet enumerated.
-        _cat_label = asset_type.capitalize() if asset_type else "Furniture"
-        _write_efu_fields(
-            subcategory_val=subcategory,
-            model_val=model_name,
-            brand_val=brand,
-            collection_val=collection,
-            material_val=primary_material,
-            location_val=usage_location,
-            form_val=shape_form,
-            period_val=period,
-            size_val=size,
-            vendor_val=_vendor_final,
-            manager_label=_cat_label,
         )
 
     return row
@@ -2225,6 +2788,10 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
         # Title is included so files are human-readable without opening the index.
         model_name_token = sanitize_name_token(row.get("Title", "") or "")
         preferred = [mood_value, model_name_token] if model_name_token and model_name_token != "-" else [mood_value]
+    elif asset_type == "fixture":
+        # Filename format: SubcategoryLeaf_ModelName_CRC32
+        model_name_token = sanitize_name_token(row.get("Title", "") or "")
+        preferred = [p for p in [mood_value, model_name_token] if p and p != "-"]
     elif asset_type == "vegetation":
         preferred = [mood_value, row.get("Author", "")]
     elif asset_type == "people":
@@ -2240,8 +2807,8 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
     tokens = [t for t in tokens if t]
     deterministic = "_".join(tokens) if tokens else (sanitize_name_token(fallback) or "Asset")
 
-    # For furniture, return deterministic name directly (no Qwen cleanup needed).
-    if asset_type == "furniture":
+    # For furniture and fixture, return deterministic name directly (no Qwen cleanup needed).
+    if asset_type in ("furniture", "fixture"):
         return deterministic
 
     # Try Qwen cleanup first for noisy names; fallback to deterministic semantic naming.
@@ -2307,39 +2874,33 @@ def build_metadata_row(
         row["Author"] = clean_display_case(hints["brand"] or hints["brand_raw"])
         row["Album"] = clean_display_case(hints["collection"])
         row["custom_property_5"] = hints["size"]
-        row["SourceMetadata"] = "Furniture"
     elif asset_type == "vegetation":
         row["Subject"] = clean_display_case(hints["lead_desc"] or hints["model"])
         row["Company"] = hints["size"]
         row["Author"] = clean_display_case(hints["model"])
         row["Album"] = clean_display_case(hints["collection"] or hints["lead_desc"])
         row["custom_property_5"] = hints["size"]
-        row["SourceMetadata"] = "Vegetation"
     elif asset_type == "people":
         row["Subject"] = clean_display_case(hints["lead_desc"])
         row["Company"] = clean_display_case(hints["model"])
         row["Author"] = clean_display_case(hints["collection"])
         row["custom_property_5"] = hints["size"]
-        row["SourceMetadata"] = "People"
     elif asset_type == "material":
         row["Subject"] = clean_display_case(hints["lead_desc"] or hints["model"])
         row["Album"] = clean_display_case(hints["collection"])
         row["Company"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case("Material Category")
         row["custom_property_5"] = hints["size"]
-        row["SourceMetadata"] = "Material"
     elif asset_type == "buildings":
         row["Subject"] = clean_display_case(hints["lead_desc"])
         row["Company"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case(hints["collection"])
         row["custom_property_5"] = hints["size"]
-        row["SourceMetadata"] = "Buildings"
     elif asset_type == "layouts":
         row["Subject"] = clean_display_case(hints["lead_desc"])
         row["Title"] = clean_display_case(hints["model"])
         row["Period"] = clean_display_case(hints["collection"])
         row["custom_property_5"] = hints["size"]
-        row["SourceMetadata"] = "Layouts"
     elif asset_type == "object":
         # Object initial row: pre-populate Subject from prefix code if present,
         # otherwise leave as '-' for enrich_row_with_models to fill in.
@@ -2349,16 +2910,6 @@ def build_metadata_row(
         row["Company"] = "-"
         row["Author"] = clean_display_case(hints.get("brand", "") or hints.get("brand_raw", ""))
         row["Album"] = "-"
-        row["SourceMetadata"] = "Object"
-
-    # Keep source trace in SourceMetadata for auditability.
-    comment_str = f"src={source_stem};crc32={crc32_value}"
-    cur_source = row.get("SourceMetadata", "-")
-    if not cur_source or cur_source == "-":
-        row["SourceMetadata"] = comment_str
-    else:
-        if comment_str not in cur_source:
-            row["SourceMetadata"] = f"{cur_source};{comment_str}"
     row["Comment"] = "-"
 
     return row
@@ -2554,9 +3105,28 @@ def find_existing_index_entry_by_filename(path: Path, filename: str) -> dict[str
     return None
 
 
-def append_metadata_row(path: Path, row: dict[str, str], overwrite_existing: bool = False) -> None:
+def append_metadata_row(path: Path, row: dict[str, str], overwrite_existing: bool = False, overwrite_by_filename: str = "") -> None:
     ensure_metadata_file(path)
     row = normalize_efu_row(row)
+    # Collection mode: match the old entry by its original filename, not CRC,
+    # because all images in a collection share the same archive CRC.
+    if overwrite_by_filename:
+        query_name = Path(overwrite_by_filename).name.strip().lower()
+        headers, rows = _read_metadata_rows(path)
+        updated = False
+        for i, old in enumerate(rows):
+            stored = (old.get("Filename") or "").strip()
+            if Path(stored).name.lower() == query_name:
+                rows[i] = {key: row.get(key, "-") if row.get(key, "") != "" else "-" for key in EFU_HEADERS}
+                updated = True
+                break
+        if updated:
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=EFU_HEADERS)
+                writer.writeheader()
+                for old in rows:
+                    writer.writerow({key: old.get(key, "-") if old.get(key, "") != "" else "-" for key in EFU_HEADERS})
+            return
     if overwrite_existing and (row.get("CRC-32") or "").strip() not in ("", "-"):
         headers, rows = _read_metadata_rows(path)
         updated = False
@@ -2612,6 +3182,11 @@ def preview_mapped_metadata(asset_type: str, row: dict[str, str]) -> None:
 
 def confirm_apply() -> bool:
     choice = input("Proceed with rename + metadata write? [y/N]: ").strip().lower()
+    return choice in {"y", "yes"}
+
+
+def confirm_apply_all(total: int, label: str = "item(s)") -> bool:
+    choice = input(f"Proceed with rename + metadata write for all {total} {label}? [y/N]: ").strip().lower()
     return choice in {"y", "yes"}
 
 
@@ -2724,6 +3299,7 @@ def process_reenrich(
     auto_yes: bool = False,
     session_context: str = "",
     session_hints: dict[str, str] | None = None,
+    vision_only: bool = False,
 ) -> None:
     """Re-enrich an existing thumbnail: lookup metadata entry by filename and update it.
     
@@ -2777,6 +3353,7 @@ def process_reenrich(
             row=metadata_row,
             session_context=session_context,
             session_hints=session_hints,
+            vision_only=vision_only,
         )
         
         # Preview the updated metadata
@@ -2802,6 +3379,464 @@ def process_reenrich(
         print(f"Error re-enriching {image_path}: {exc}")
 
 
+def _classify_image_with_fallback(
+    image_path: Path,
+    hints: dict[str, str],
+) -> tuple[str, float, str]:
+    """Classify an image and store a stable fallback label hint."""
+    try:
+        label, confidence, label_source = classify_image(image_path)
+        hints["vision_label"] = label
+    except Exception:
+        label = to_camel_case(image_path.stem)
+        confidence = 1.0
+        label_source = "stem"
+    return label, confidence, label_source
+
+
+def _build_enriched_image_row(
+    image_path: Path,
+    asset_type: str,
+    crc32_value: str,
+    archive_file_name: str,
+    hints: dict[str, str],
+    session_context: str,
+    session_hints: dict[str, str] | None,
+    author_input: str,
+    vision_only: bool = False,
+    text_hint_override: dict[str, str] | None = None,
+    disable_web_search: bool = False,
+    raw_sidecar_text: str | None = None,
+) -> dict[str, str]:
+    """Build and enrich one image metadata row with shared ingestion behavior."""
+    temp_row = build_metadata_row(
+        thumbnail_filename="",
+        archive_path=Path("-"),
+        asset_type=asset_type,
+        source_stem=image_path.stem,
+        crc32_value=crc32_value,
+    )
+    if author_input:
+        temp_row["Author"] = author_input
+    temp_row = enrich_row_with_models(
+        image_path=image_path,
+        source_stem=image_path.stem,
+        asset_type=asset_type,
+        hints=hints,
+        row=temp_row,
+        session_context=session_context,
+        session_hints=session_hints,
+        vision_only=vision_only,
+        text_hint_override=text_hint_override,
+        disable_web_search=disable_web_search,
+        raw_sidecar_text=raw_sidecar_text,
+    )
+    if author_input:
+        temp_row["Author"] = author_input
+    temp_row["ArchiveFile"] = archive_file_name
+    return temp_row
+
+
+def _make_unique_image_target(
+    image_path: Path,
+    short_base_with_crc: str,
+    image_dir: Path,
+) -> Path:
+    """Return a unique image target path, preserving current-file identity."""
+    suffix = image_path.suffix.lower()
+    image_target = image_dir / f"{short_base_with_crc}{suffix}"
+    counter = 1
+    while image_target.exists() and image_target.resolve() != image_path.resolve():
+        image_target = image_dir / f"{short_base_with_crc}_{counter:02d}{suffix}"
+        counter += 1
+    return image_target
+
+
+def process_image_only(
+    image_path: Path,
+    asset_type: str,
+    dry_run: bool = False,
+    auto_yes: bool = False,
+    session_context: str = "",
+    session_hints: dict[str, str] | None = None,
+    author_input: str = "",
+    vision_only: bool = False,
+) -> None:
+    """Ingest a standalone image with no archive.
+
+    CRC-32 is computed from the image itself.  A new EFU row is created with
+    ArchiveFile set to '-'.  The image is moved to THUMBNAIL_BASE.
+    """
+    try:
+        if not image_path.exists():
+            print(f"  Image not found: {image_path}")
+            return
+        if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            print(f"  Not an image file: {image_path.name}")
+            return
+
+        print(f"Processing image-only: {image_path}")
+        hints = parse_filename_hints(image_path.stem)
+        label, confidence, label_source = _classify_image_with_fallback(image_path, hints)
+
+        if dry_run:
+            crc32_value = f"DRY_{image_path.stem[:8].upper()}"
+        else:
+            crc32_value = compute_crc32(image_path)
+
+        temp_row = _build_enriched_image_row(
+            image_path=image_path,
+            asset_type=asset_type,
+            crc32_value=crc32_value,
+            archive_file_name="-",
+            hints=hints,
+            session_context=session_context,
+            session_hints=session_hints,
+            author_input=author_input,
+            vision_only=vision_only,
+        )
+
+        # Build image target path inside THUMBNAIL_BASE.
+        image_dir = image_path.parent
+        short_base = build_short_base_name(asset_type, temp_row, hints, fallback=image_path.stem)
+        short_base_with_crc = f"{short_base}_{crc32_value}"
+        image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
+
+        overwrite_existing = False
+        existing_entry = find_existing_index_entry(METADATA_EFU_PATH, crc32_value)
+        if existing_entry is not None:
+            existing_img = (existing_entry.get("Filename") or "").strip()
+            if existing_img and existing_img != "-":
+                _existing_p = Path(existing_img)
+                image_target = _existing_p if _existing_p.is_absolute() else image_dir / existing_img
+            print("WARNING: Existing index entry found for this CRC-32.")
+            print(f"  CRC-32: {crc32_value}")
+            if existing_img and existing_img != "-":
+                print(f"  Existing image: {existing_img}")
+            if auto_yes:
+                overwrite_existing = True
+                print("  --yes enabled: overwriting existing files and metadata row.")
+            else:
+                choice = input("Overwrite existing entry? [y/N]: ").strip().lower()
+                overwrite_existing = choice in {"y", "yes"}
+                if not overwrite_existing:
+                    image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
+
+        metadata_row = dict(temp_row)
+        metadata_row["Filename"] = str(image_target)
+        metadata_row["ArchiveFile"] = "-"
+
+        print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+        print(f"(preview) CRC-32: {crc32_value}")
+        print(f"(preview) Image target: {image_target}")
+        print(f"(preview) Metadata file: {METADATA_EFU_PATH}")
+        preview_mapped_metadata(asset_type, metadata_row)
+
+        if dry_run:
+            print("(dry-run) No files were moved and no metadata was written.")
+            return
+
+        if not auto_yes and not confirm_apply():
+            print("Skipped by user.")
+            return
+
+        if overwrite_existing and image_target.exists() and image_target.resolve() != image_path.resolve():
+            image_target.unlink()
+        if image_path.resolve() != image_target.resolve():
+            moved_image = _move_with_timeout(str(image_path), str(image_target))
+        else:
+            moved_image = image_target
+
+        append_metadata_row(METADATA_EFU_PATH, metadata_row, overwrite_existing=overwrite_existing)
+        print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+        print(f"CRC-32: {crc32_value}")
+        print(f"Image renamed to: {moved_image}")
+        if overwrite_existing:
+            print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
+        else:
+            print(f"Metadata appended to: {METADATA_EFU_PATH}")
+
+    except OSError as exc:
+        import errno as _errno
+        if exc.errno == _errno.EINVAL:
+            print(f"Skipping — filename contains illegal characters: {image_path.name}")
+        else:
+            print(f"Error processing image-only {image_path}: {exc}")
+    except Exception as exc:
+        print(f"Error processing image-only {image_path}: {exc}")
+
+
+def _show_sidecar_collection_preview(
+    images: list,
+    sidecar_entries: dict,
+    archive_crc32: str,
+    archive_file_name: str,
+    asset_type: str,
+    session_context: str = "",
+    session_hints: dict[str, str] | None = None,
+    author_input: str = "",
+    vision_only: bool = False,
+    dry_run: bool = False,
+    auto_yes: bool = False,
+) -> "dict[str, tuple] | None":
+    """Run combined vision+text enrichment for every image, print a preview table,
+    and ask the user to confirm before the write loop begins.
+
+    Returns a dict mapping str(image_path) -> (temp_row, label, confidence, label_source)
+    so the write loop can reuse the results without a second API call.
+    Returns None if the user aborts (or dry_run).
+    """
+    SEP = "  "
+    cache: dict[str, tuple] = {}
+
+    print()
+    print(f"Running enrichment preview for {len(images)} image(s)…")
+    for i, img_path in enumerate(images, 1):
+        page_key = extract_page_key_from_stem(img_path.stem)
+        sidecar_text, matched_key = resolve_sidecar_text_for_image(sidecar_entries, img_path, page_key)
+        if sidecar_text:
+            print(f"  [{i}/{len(images)}] {img_path.name} → sidecar: {matched_key}")
+        else:
+            print(f"  [{i}/{len(images)}] {img_path.name} → no sidecar match (vision only)")
+
+        hints = parse_filename_hints(img_path.stem)
+        label, confidence, label_source = _classify_image_with_fallback(img_path, hints)
+        temp_row = _build_enriched_image_row(
+            image_path=img_path,
+            asset_type=asset_type,
+            crc32_value=archive_crc32,
+            archive_file_name=archive_file_name,
+            hints=hints,
+            session_context=session_context,
+            session_hints=session_hints,
+            author_input=author_input,
+            vision_only=vision_only,
+            text_hint_override=None,
+            disable_web_search=True,
+            raw_sidecar_text=sidecar_text if sidecar_text else None,
+        )
+        collection_album = img_path.parent.name.strip()
+        if collection_album:
+            temp_row["Album"] = collection_album
+        short_base = build_short_base_name(asset_type, temp_row, hints, fallback=img_path.stem)
+        predicted_name = f"{short_base}_{archive_crc32}{img_path.suffix.lower()}"
+        cache[str(img_path)] = (temp_row, label, confidence, label_source, predicted_name)
+
+    # Build table rows
+    table_rows = []
+    for i, img_path in enumerate(images, 1):
+        entry = cache[str(img_path)]
+        temp_row, label, confidence, label_source, predicted_name = entry
+        table_rows.append((
+            str(i),
+            img_path.name,
+            temp_row.get("Subject", "-") or "-",
+            temp_row.get("Title", "-") or "-",
+            temp_row.get("Company", "-") or "-",
+            temp_row.get("custom_property_0", "-") or "-",
+            temp_row.get("custom_property_1", "-") or "-",
+            predicted_name,
+        ))
+
+    headers = ("#", "Original File", "Subcategory", "Title", "Brand", "Color", "Location", "Predicted New Name")
+    widths = [
+        max(len(headers[j]), *(len(r[j]) for r in table_rows))
+        for j in range(len(headers))
+    ]
+    total_width = sum(widths) + len(SEP) * (len(widths) - 1)
+
+    header_line = SEP.join(h.ljust(w) for h, w in zip(headers, widths))
+    divider = SEP.join("-" * w for w in widths)
+
+    print()
+    print("━" * total_width)
+    print("  SIDECAR COLLECTION PREVIEW")
+    print("━" * total_width)
+    print(header_line)
+    print(divider)
+    for row in table_rows:
+        print(SEP.join(v.ljust(w) for v, w in zip(row, widths)))
+    print()
+
+    if dry_run:
+        print("(dry-run) Preview complete — no files moved, no metadata written.")
+        return None
+
+    if auto_yes:
+        return cache
+
+    answer = input(f"Proceed with rename + metadata write for all {len(images)} image(s)? [y/N]: ").strip().lower()
+    if answer not in ("y", "yes"):
+        print("Aborted by user.")
+        return None
+    return cache
+
+
+def process_collection_image(
+    image_path: Path,
+    archive_crc32: str,
+    archive_file_name: str,
+    asset_type: str,
+    dry_run: bool = False,
+    auto_yes: bool = False,
+    session_context: str = "",
+    session_hints: dict[str, str] | None = None,
+    author_input: str = "",
+    vision_only: bool = False,
+    sidecar_text: str = "",
+    disable_web_search: bool = False,
+    precomputed: "tuple | None" = None,
+) -> None:
+    """Ingest one image from a collection that shares a single archive.
+
+    The archive has already been moved to ARCHIVE_BASE and its CRC-32 is
+    pre-computed.  This function handles only the image side: enrichment,
+    image move, and EFU row creation.
+    If `precomputed` is provided as (temp_row, label, confidence, label_source, predicted_name)
+    from the preview phase, the enrichment API call is skipped entirely.
+    """
+    try:
+        if not image_path.exists():
+            print(f"  Image not found: {image_path}")
+            return
+        if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            print(f"  Not an image file: {image_path.name}")
+            return
+
+        print(f"Processing collection image: {image_path.name}")
+        hints = parse_filename_hints(image_path.stem)
+
+        if precomputed is not None:
+            temp_row, label, confidence, label_source, _predicted_name = precomputed
+        else:
+            label, confidence, label_source = _classify_image_with_fallback(image_path, hints)
+            # Pass raw sidecar text directly so enrich_vision_pass can combine it
+            # with the image in a single API call instead of two separate calls.
+            temp_row = _build_enriched_image_row(
+                image_path=image_path,
+                asset_type=asset_type,
+                crc32_value=archive_crc32,
+                archive_file_name=archive_file_name,
+                hints=hints,
+                session_context=session_context,
+                session_hints=session_hints,
+                author_input=author_input,
+                vision_only=vision_only,
+                text_hint_override=None,
+                disable_web_search=disable_web_search,
+                raw_sidecar_text=sidecar_text if sidecar_text else None,
+            )
+            # Collection mode policy: album tracks the source folder name.
+            collection_album = image_path.parent.name.strip()
+            if collection_album:
+                temp_row["Album"] = collection_album
+
+        # Collection mode: rename in the source folder, not in THUMBNAIL_BASE.
+        # This keeps the files where they are but gives them the canonical name.
+        image_dir = image_path.parent
+        short_base = build_short_base_name(asset_type, temp_row, hints, fallback=image_path.stem)
+        short_base_with_crc = f"{short_base}_{archive_crc32}"
+        image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
+
+        # If an old entry exists, delete the old (stale) file if it was already renamed,
+        # then re-enrich with the fresh computed name and overwrite the EFU row.
+        existing_entry = find_existing_index_entry_by_filename(METADATA_EFU_PATH, image_path.name)
+        if existing_entry is not None:
+            existing_img = (existing_entry.get("Filename") or "").strip()
+            if existing_img and existing_img != "-":
+                _ep_abs = Path(existing_img) if Path(existing_img).is_absolute() else image_dir / existing_img
+                if _ep_abs.resolve() != image_path.resolve() and _ep_abs.exists():
+                    _ep_abs.unlink()
+                    print(f"  Deleted stale file: {_ep_abs.name}")
+            print(f"  Re-ingesting: {image_path.name} (old entry replaced)")
+        overwrite_existing = existing_entry is not None
+
+        metadata_row = dict(temp_row)
+        metadata_row["Filename"] = str(image_target)
+        metadata_row["ArchiveFile"] = archive_file_name
+        metadata_row["CRC-32"] = archive_crc32
+
+        print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+        print(f"(preview) CRC-32: {archive_crc32}  (archive)")
+        print(f"(preview) Image target: {image_target}")
+        preview_mapped_metadata(asset_type, metadata_row)
+
+        if dry_run:
+            print("(dry-run) No files were moved and no metadata was written.")
+            return
+
+        if not auto_yes and not confirm_apply():
+            print("Skipped by user.")
+            return
+
+        if image_path.resolve() != image_target.resolve():
+            moved_image = _move_with_timeout(str(image_path), str(image_target))
+        else:
+            moved_image = image_target
+
+        append_metadata_row(
+            METADATA_EFU_PATH, metadata_row,
+            overwrite_existing=overwrite_existing,
+            overwrite_by_filename=str(image_path) if overwrite_existing else "",
+        )
+        print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+        print(f"CRC-32: {archive_crc32}")
+        print(f"Image renamed to: {moved_image}")
+        if overwrite_existing:
+            print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
+        else:
+            print(f"Metadata appended to: {METADATA_EFU_PATH}")
+
+    except OSError as exc:
+        import errno as _errno
+        if exc.errno == _errno.EINVAL:
+            print(f"Skipping — filename contains illegal characters: {image_path.name}")
+        else:
+            print(f"Error processing collection image {image_path}: {exc}")
+    except Exception as exc:
+        print(f"Error processing collection image {image_path}: {exc}")
+
+
+def _prepare_collection_archive(
+    archive_path: Path,
+    dry_run: bool = False,
+) -> tuple[str, str]:
+    """Compute archive CRC-32, move it to ARCHIVE_BASE (once), return (crc32, final_name)."""
+    # Dry-run should still preview the real archive CRC for accurate metadata/filename output.
+    crc32 = compute_crc32(archive_path)
+
+    # In no-move mode, keep archive filename/path as-is and only compute CRC.
+    if not MOVE_FILES:
+        if dry_run:
+            print(f"(dry-run) Archive source kept: {archive_path}")
+        else:
+            print(f"Archive source kept: {archive_path}")
+        return crc32, archive_path.name
+
+    stem_clean = re.sub(r'[<>":?*|/\\]', "_", archive_path.stem)
+    # Avoid repeated suffixes like "name_<CRC>_<CRC>.rar" on re-runs.
+    stem_base = stem_clean
+    if re.fullmatch(r"[0-9A-F]{8}", crc32):
+        crc_token = crc32.upper()
+        while re.search(rf"_{crc_token}$", stem_base, flags=re.IGNORECASE):
+            stem_base = re.sub(rf"_{crc_token}$", "", stem_base, flags=re.IGNORECASE)
+    final_name = f"{stem_base}_{crc32}{archive_path.suffix.lower()}"
+    final_path = ARCHIVE_BASE / final_name
+
+    if not dry_run:
+        if final_path.exists() and final_path.resolve() == archive_path.resolve():
+            pass  # already in place
+        elif final_path.exists():
+            print(f"Archive already at target: {final_path}")
+        else:
+            _move_with_timeout(str(archive_path), str(final_path))
+            print(f"Archive moved to: {final_path}")
+    else:
+        print(f"(dry-run) Archive target would be: {final_path}")
+
+    return crc32, final_name
+
+
 def main() -> None:
     try:
         # Validate all base paths before any file operations.
@@ -2810,6 +3845,10 @@ def main() -> None:
         dry_run = False
         auto_yes = False
         asset_type: str | None = None
+        ingest_mode: str = ""  # "pairs" | "collection" | "image-only" | "sidecar-collection"
+        enrich_source: str = ""  # "hybrid" | "vision-only"
+        vision_only_enrichment = False
+        sidecar_path: Path | None = None
         # Allow non-interactive invocation with multiple file arguments (pairs)
         def process_pair(
             image_path: Path,
@@ -2869,13 +3908,13 @@ def main() -> None:
                     row=temp_row,
                     session_context=session_context,
                     session_hints=session_hints,
+                    vision_only=vision_only_enrichment,
                 )
                 # Restore user-provided Author — prevent AI enrichment from overwriting it.
                 if author_input:
                     temp_row["Author"] = author_input
-                # Flat output structure: put everything directly into the DB roots.
-                # Do not organize by vendor for now — keep a simple flat layout.
-                image_dir = THUMBNAIL_BASE
+                # Image renames in place; archive moves to ARCHIVE_BASE when MOVE_FILES=1.
+                image_dir = image_path.parent
                 archive_dir = ARCHIVE_BASE
                 temp_archive_target = archive_dir / f"TEMP_{crc32_value}{archive_path.suffix.lower()}"
 
@@ -2918,6 +3957,9 @@ def main() -> None:
                                 image_dir=image_dir,
                                 archive_dir=archive_dir,
                             )
+
+                if not MOVE_FILES:
+                    archive_target = archive_path
                 metadata_row = dict(temp_row)
                 metadata_row["Filename"] = str(image_target)
                 # Keep Subject as taxonomy path; track archive filename in ArchiveFile.
@@ -2939,19 +3981,33 @@ def main() -> None:
                     print("Skipped by user.")
                     return
 
-                moved_image, moved_archive = move_pair(
-                    image_path, archive_path, new_base_name,
-                    image_target=image_target,
-                    archive_target=archive_target,
-                    overwrite=overwrite_existing,
-                    image_dir=image_dir,
-                    archive_dir=archive_dir,
-                )
+                # Always rename image in place; archive moves to ARCHIVE_BASE only when MOVE_FILES=1.
+                if overwrite_existing and image_target.exists() and image_target.resolve() != image_path.resolve():
+                    image_target.unlink()
+                if image_path.resolve() != image_target.resolve():
+                    moved_image = _move_with_timeout(str(image_path), str(image_target))
+                else:
+                    moved_image = image_target
+
+                if MOVE_FILES:
+                    _, moved_archive = move_pair(
+                        image_path, archive_path, new_base_name,
+                        image_target=moved_image,
+                        archive_target=archive_target,
+                        overwrite=overwrite_existing,
+                        image_dir=image_dir,
+                        archive_dir=archive_dir,
+                    )
+                else:
+                    moved_archive = archive_path
                 append_metadata_row(METADATA_EFU_PATH, metadata_row, overwrite_existing=overwrite_existing)
                 print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
                 print(f"CRC-32: {crc32_value}")
-                print(f"Image moved to: {moved_image}")
-                print(f"Archive moved to: {moved_archive}")
+                print(f"Image renamed to: {moved_image}")
+                if MOVE_FILES:
+                    print(f"Archive moved to: {moved_archive}")
+                else:
+                    print(f"Archive source kept: {moved_archive}")
                 if overwrite_existing:
                     print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
                 else:
@@ -2974,19 +4030,25 @@ def main() -> None:
         # Print a compact usage reminder and a short loading screen when running interactively.
         if sys.stdout.isatty():
             show_startup_loading(duration=0.9, width=30)
-            print("Usage:  python tools/ingest_asset.py --asset-type=TYPE [--dry-run|--quick] [--yes] IMAGE ARCHIVE [IMAGE ARCHIVE ...]")
+            print("Usage:  python tools/ingest_asset.py [--asset-type=TYPE] [--dry-run|--quick] [--yes] IMAGE ARCHIVE [IMAGE ARCHIVE ...]")
             print()
-            print("  IMAGE   — path to the .jpg render  |  ARCHIVE — matching archive or 3D model file")
-            print("  TYPE    — furniture | fixture | vegetation | people | material | layouts | object | vehicle | vfx")
-            print("  Options — --dry-run/--quick  |  --yes")
+            print("  IMAGE   — .jpg / .png render  |  ARCHIVE — matching archive or 3D model (same stem)")
+            print("  TYPE    — furniture | fixture | vegetation | people | material | layouts | object | vehicle | vfx  (auto-detected if omitted)")
+            print("  Options — --dry-run / --quick  |  --yes / -y")
             print()
             print("  Run with -h for full reference and examples.")
             print()
-        flags = ["--dry-run"]
         clean_args: list[str] = []
         quick_alias_used = False
         unknown_options: list[str] = []
+        expect_sidecar_path = False
         for a in argv:
+            if expect_sidecar_path:
+                if a.startswith("-"):
+                    raise ValueError("--sidecar requires a file path value.")
+                sidecar_path = Path(a.strip().strip('"').strip("'"))
+                expect_sidecar_path = False
+                continue
             if a in {"--dry-run", "--quick"}:
                 dry_run = True
                 if a == "--quick":
@@ -2995,6 +4057,16 @@ def main() -> None:
                 auto_yes = True
             elif a.startswith("--asset-type="):
                 asset_type = normalize_asset_type(a.split("=", 1)[1])
+            elif a.startswith("--ingest-mode="):
+                ingest_mode = a.split("=", 1)[1].strip().lower()
+            elif a.startswith("--enrich-source="):
+                enrich_source = a.split("=", 1)[1].strip().lower()
+            elif a == "--vision-only":
+                enrich_source = "vision-only"
+            elif a.startswith("--sidecar="):
+                sidecar_path = Path(a.split("=", 1)[1].strip().strip('"'))
+            elif a == "--sidecar":
+                expect_sidecar_path = True
             elif a.startswith("--backend=") or a in {
                 "--online", "--local", "--vision-detect",
                 "--enrich-mode=vision", "--enrich-mode=both", "--enrich-mode=text",
@@ -3006,9 +4078,22 @@ def main() -> None:
             else:
                 clean_args.append(a)
 
+        if expect_sidecar_path:
+            raise ValueError("--sidecar requires a file path value.")
+
         if unknown_options:
             raise ValueError(
                 "Unknown option(s): " + ", ".join(unknown_options) + ". Run with -h for supported flags."
+            )
+        _valid_modes = {"pairs", "collection", "image-only", "sidecar-collection"}
+        if ingest_mode and ingest_mode not in _valid_modes:
+            raise ValueError(
+                f"Unknown --ingest-mode: '{ingest_mode}'. Valid values: " + ", ".join(sorted(_valid_modes))
+            )
+        _valid_enrich_sources = {"hybrid", "vision-only"}
+        if enrich_source and enrich_source not in _valid_enrich_sources:
+            raise ValueError(
+                f"Unknown --enrich-source: '{enrich_source}'. Valid values: " + ", ".join(sorted(_valid_enrich_sources))
             )
         if quick_alias_used and sys.stdout.isatty():
             print("Note: --quick is treated as a legacy alias for --dry-run.")
@@ -3021,80 +4106,417 @@ def main() -> None:
         if not asset_type:
             if clean_args:
                 _first_stem = Path(clean_args[0]).stem
-                _auto_cat, _auto_conf = detect_asset_category(_first_stem)
-                asset_type = _auto_cat
-                print(f"(auto-detected) asset type: {asset_type}")
+                # In sidecar-collection mode with a non-descriptive (e.g. numeric)
+                # filename, the lookup text is a much better type-detection source.
+                if (
+                    ingest_mode == "sidecar-collection"
+                    and sidecar_path is not None
+                    and not is_descriptive_filename_stem(_first_stem)
+                ):
+                    try:
+                        _sc_entries = parse_sidecar_entries(sidecar_path)
+                        _sc_first_text = re.sub(r'^\d+[\.)\s]\s*', '', next(iter(_sc_entries.values()), "")).strip()
+                        if _sc_first_text:
+                            # Fast keyword check — reliable for catalogue text.
+                            _sc_lower = _sc_first_text.lower()
+                            _kw_fixture = any(w in _sc_lower for w in (
+                                "lamp", "light", "chandelier", "pendant", "suspension",
+                                "lantern", "lumiere", "artichoke", "sconce", "fixture",
+                            ))
+                            _kw_furniture = any(w in _sc_lower for w in (
+                                "chair", "sofa", "table", "desk", "bed", "shelf",
+                                "wardrobe", "stool", "cabinet", "bookcase",
+                            ))
+                            if _kw_fixture and not _kw_furniture:
+                                asset_type = "fixture"
+                            elif _kw_furniture and not _kw_fixture:
+                                asset_type = "furniture"
+                            else:
+                                _auto_cat, _ = detect_asset_category(_sc_first_text[:120])
+                                asset_type = _auto_cat
+                            print(f"(auto-detected from sidecar) asset type: {asset_type}")
+                        else:
+                            _auto_cat, _auto_conf = detect_asset_category(_first_stem)
+                            asset_type = _auto_cat
+                            print(f"(auto-detected) asset type: {asset_type}")
+                    except Exception:
+                        _auto_cat, _auto_conf = detect_asset_category(_first_stem)
+                        asset_type = _auto_cat
+                        print(f"(auto-detected) asset type: {asset_type}")
+                else:
+                    _auto_cat, _auto_conf = detect_asset_category(_first_stem)
+                    asset_type = _auto_cat
+                    print(f"(auto-detected) asset type: {asset_type}")
 
         # Interactive session context prompt removed to reduce friction.
         # Default to no session context; parse_session_context handles empty.
         session_context = ""
         session_hints: dict[str, str] = {}
 
+        # ── Mode selection ─────────────────────────────────────────────────
+        if not ingest_mode:
+            if sys.stdout.isatty():
+                print("Select ingest mode:")
+                print("  1. pairs       — 1 image + 1 archive, same filename stem (CRC-32 = archive)")
+                print("  2. collection  — many images + 1 archive (CRC-32 = shared archive)")
+                print("  3. image-only  — images with no archive  (CRC-32 = image itself)")
+                print("  4. sidecar-collection — collection with sidecar text + vision (web disabled)")
+                _mode_raw = input("Mode [1/2/3/4, default=1]: ").strip()
+                ingest_mode = {
+                    "1": "pairs",
+                    "2": "collection",
+                    "3": "image-only",
+                    "4": "sidecar-collection",
+                }.get(_mode_raw, "pairs")
+            else:
+                ingest_mode = "pairs"
+        if sys.stdout.isatty():
+            print(f"Ingest mode: {ingest_mode}")
+            print()
+
+        # ── Enrichment source selection ────────────────────────────────────
+        # sidecar-collection always uses vision-only (sidecar provides the text;
+        # web search is disabled regardless, so hybrid adds no benefit).
+        if ingest_mode == "sidecar-collection":
+            enrich_source = "vision-only"
+        elif not enrich_source:
+            if sys.stdout.isatty():
+                print("Select enrichment source:")
+                print("  1. hybrid      — filename + web + vision")
+                print("  2. vision-only — skip filename text and web")
+                _src_raw = input("Source [1/2, default=1]: ").strip()
+                enrich_source = {"1": "hybrid", "2": "vision-only"}.get(_src_raw, "hybrid")
+            else:
+                enrich_source = "hybrid"
+        vision_only_enrichment = enrich_source == "vision-only"
+        if sys.stdout.isatty():
+            print(f"Enrichment source: {enrich_source}")
+            print()
+
         author_input = input("Author (vendor/source, e.g. Dimensiva, DesignConnected): ").strip()
 
         if len(clean_args) >= 2:
-            # Treat all args as a flat list of files; group by stem to find pairs.
+            # Treat all args as a flat list of files.
             arg_paths = [Path(p) for p in clean_args]
-            
-            # Check if all args are image files (re-enrich mode) vs looking for pairs
-            all_images = all(p.suffix.lower() in IMAGE_EXTENSIONS for p in arg_paths if p.exists())
-            has_archives = any(p.suffix.lower() in ASSET_FILE_EXTENSIONS for p in arg_paths if p.exists())
-            
-            if all_images and not has_archives:
-                # Re-enrich mode: all args are images, no archives provided
-                if sys.stdout.isatty():
-                    print(f"Re-enrich mode detected: {len(arg_paths)} image(s) without archives")
-                    print("Images will be re-enriched using existing metadata as base.")
-                    print()
-                
-                processed = 0
-                for img_path in arg_paths:
-                    if img_path.exists():
-                        process_reenrich(
-                            img_path,
-                            asset_type=asset_type,
-                            dry_run=dry_run,
-                            auto_yes=auto_yes,
-                            session_context=session_context,
-                            session_hints=session_hints,
-                        )
-                    else:
-                        print(f"  Image not found: {img_path}")
-                    processed += 1
-                    if sys.stdout.isatty():
-                        _print_progress(processed, len(arg_paths))
-            else:
-                # Standard pairing mode: looking for image/archive pairs
-                from collections import defaultdict
 
-                stems: dict[str, list[Path]] = defaultdict(list)
-                for p in arg_paths:
-                    stems[p.stem].append(p)
+            # Auto-detect sidecar file from the pasted/CLI file list.
+            if ingest_mode == "sidecar-collection" and sidecar_path is None:
+                _sidecar_exts = {".csv", ".txt", ".md"}
+                _csv_args = [p for p in arg_paths if p.suffix.lower() in _sidecar_exts]
+                if len(_csv_args) == 1:
+                    sidecar_path = _csv_args[0]
+                    arg_paths = [p for p in arg_paths if p != sidecar_path]
+                    print(f"Sidecar auto-detected from args: {sidecar_path.name}")
 
-                stems_items = list(stems.items())
-                total = len(stems_items)
-                if total == 0:
-                    print("No file pairs found in arguments.")
+            if ingest_mode == "image-only":
+                # ─ image-only: each image gets its own CRC-32 from itself
+                images = [p for p in arg_paths if p.suffix.lower() in IMAGE_EXTENSIONS]
+                if not images:
+                    print("No image files found in arguments.")
                 else:
                     if sys.stdout.isatty():
-                        print(f"Processing {total} pair(s)...")
+                        print(f"Processing {len(images)} image(s) (image-only mode)...")
+                    batch_confirm = len(images) > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        pre_processed = 0
+                        for img_path in images:
+                            if img_path.exists():
+                                process_image_only(
+                                    img_path,
+                                    asset_type=asset_type,
+                                    dry_run=True,
+                                    auto_yes=True,
+                                    session_context=session_context,
+                                    session_hints=session_hints,
+                                    author_input=author_input,
+                                    vision_only=vision_only_enrichment,
+                                )
+                            else:
+                                print(f"  Image not found: {img_path}")
+                            pre_processed += 1
+                            if sys.stdout.isatty():
+                                _print_progress(pre_processed, len(images))
+                        if not confirm_apply_all(len(images), "image(s)"):
+                            print("Skipped by user.")
+                            return
+
+                    run_dry = False if batch_confirm else dry_run
+                    run_yes = True if batch_confirm else auto_yes
                     processed = 0
-                    for stem, items in stems_items:
-                        if len(items) != 2:
-                            _print_unpaired_group(stem, items, arg_paths)
+                    for img_path in images:
+                        if img_path.exists():
+                            process_image_only(
+                                img_path,
+                                asset_type=asset_type,
+                                dry_run=run_dry,
+                                auto_yes=run_yes,
+                                session_context=session_context,
+                                session_hints=session_hints,
+                                author_input=author_input,
+                                vision_only=vision_only_enrichment,
+                            )
+                        else:
+                            print(f"  Image not found: {img_path}")
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(images))
+
+            elif ingest_mode == "collection":
+                # ─ collection: many images share one archive's CRC-32
+                images = [p for p in arg_paths if p.suffix.lower() in IMAGE_EXTENSIONS and p.exists()]
+                archives = [p for p in arg_paths if p.suffix.lower() in ASSET_FILE_EXTENSIONS and p.exists()]
+                if len(archives) != 1:
+                    print(f"[ERROR] collection mode requires exactly 1 archive; found {len(archives)}.")
+                    print("  Archives detected:", [str(a) for a in archives] or "(none)")
+                elif not images:
+                    print("[ERROR] collection mode: no image files found in arguments.")
+                else:
+                    _col_archive = archives[0]
+                    if sys.stdout.isatty():
+                        print(f"Collection: {len(images)} image(s) → archive: {_col_archive.name}")
+
+                    batch_confirm = len(images) > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        _pre_crc32, _pre_arc_name = _prepare_collection_archive(_col_archive, dry_run=True)
+                        pre_processed = 0
+                        for img_path in images:
+                            process_collection_image(
+                                img_path,
+                                archive_crc32=_pre_crc32,
+                                archive_file_name=_pre_arc_name,
+                                asset_type=asset_type,
+                                dry_run=True,
+                                auto_yes=True,
+                                session_context=session_context,
+                                session_hints=session_hints,
+                                author_input=author_input,
+                                vision_only=vision_only_enrichment,
+                            )
+                            pre_processed += 1
+                            if sys.stdout.isatty():
+                                _print_progress(pre_processed, len(images))
+                        if not confirm_apply_all(len(images), "image(s)"):
+                            print("Skipped by user.")
+                            return
+                        _col_crc32, _col_arc_name = _prepare_collection_archive(_col_archive, dry_run=False)
+                        run_dry = False
+                        run_yes = True
+                    else:
+                        _col_crc32, _col_arc_name = _prepare_collection_archive(_col_archive, dry_run=dry_run)
+                        run_dry = dry_run
+                        run_yes = auto_yes
+
+                    processed = 0
+                    for img_path in images:
+                        process_collection_image(
+                            img_path,
+                            archive_crc32=_col_crc32,
+                            archive_file_name=_col_arc_name,
+                            asset_type=asset_type, dry_run=run_dry, auto_yes=run_yes,
+                            session_context=session_context, session_hints=session_hints,
+                            author_input=author_input,
+                            vision_only=vision_only_enrichment,
+                        )
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(images))
+
+            elif ingest_mode == "sidecar-collection":
+                # ─ sidecar-collection: many images share one archive + sidecar text map
+                if sidecar_path is None:
+                    raise ValueError(
+                        "sidecar-collection mode requires a sidecar file (.csv/.md/.txt) — "
+                        "paste it together with the images and archive, or use --sidecar=PATH"
+                    )
+                if not sidecar_path.exists() or sidecar_path.suffix.lower() not in {".txt", ".md", ".csv"}:
+                    raise ValueError(f"Invalid sidecar file: {sidecar_path}")
+
+                images = [p for p in arg_paths if p.suffix.lower() in IMAGE_EXTENSIONS and p.exists()]
+                archives = [p for p in arg_paths if p.suffix.lower() in ASSET_FILE_EXTENSIONS and p.exists()]
+                if len(archives) == 0:
+                    auto_archives = _autodetect_archive_from_sidecar_folder(sidecar_path)
+                    if len(auto_archives) == 1:
+                        archives = [auto_archives[0]]
+                        print(f"Auto-detected archive from sidecar folder: {auto_archives[0]}")
+                if len(archives) != 1:
+                    print(f"[ERROR] sidecar-collection mode requires exactly 1 archive; found {len(archives)}.")
+                    print("  Archives detected:", [str(a) for a in archives] or "(none)")
+                elif not images:
+                    print("[ERROR] sidecar-collection mode: no image files found in arguments.")
+                else:
+                    sidecar_entries = parse_sidecar_entries(sidecar_path)
+                    if not sidecar_entries:
+                        print(f"[WARN] No parsable sidecar entries found in: {sidecar_path}")
+                    else:
+                        print(f"Sidecar loaded: {sidecar_path} ({len(sidecar_entries)} entries)")
+
+                    _col_archive = archives[0]
+                    if sys.stdout.isatty():
+                        print(f"Sidecar collection: {len(images)} image(s) → archive: {_col_archive.name}")
+                    _col_crc32, _col_arc_name = _prepare_collection_archive(_col_archive, dry_run=dry_run)
+                    _preview_cache = _show_sidecar_collection_preview(
+                        images, sidecar_entries, _col_crc32,
+                        archive_file_name=_col_arc_name,
+                        asset_type=asset_type,
+                        session_context=session_context,
+                        session_hints=session_hints,
+                        author_input=author_input,
+                        vision_only=vision_only_enrichment,
+                        dry_run=dry_run,
+                        auto_yes=auto_yes,
+                    )
+                    if _preview_cache is None:
+                        return
+                    processed = 0
+                    sidecar_hits = 0
+                    for img_path in images:
+                        page_key = extract_page_key_from_stem(img_path.stem)
+                        _st, matched_key = resolve_sidecar_text_for_image(sidecar_entries, img_path, page_key)
+                        if _st:
+                            sidecar_hits += 1
+                        process_collection_image(
+                            img_path,
+                            archive_crc32=_col_crc32,
+                            archive_file_name=_col_arc_name,
+                            asset_type=asset_type,
+                            dry_run=dry_run,
+                            auto_yes=True,
+                            session_context=session_context,
+                            session_hints=session_hints,
+                            author_input=author_input,
+                            vision_only=vision_only_enrichment,
+                            sidecar_text=_st,
+                            disable_web_search=True,
+                            precomputed=_preview_cache.get(str(img_path)),
+                        )
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(images))
+                    print(f"Sidecar mapping summary: {sidecar_hits}/{len(images)} images matched")
+
+            else:
+                # ─ pairs (default): stem-based matching; re-enrich if all images
+                # Check if all args are image files (re-enrich mode) vs looking for pairs
+                all_images = all(p.suffix.lower() in IMAGE_EXTENSIONS for p in arg_paths if p.exists())
+                has_archives = any(p.suffix.lower() in ASSET_FILE_EXTENSIONS for p in arg_paths if p.exists())
+
+                if all_images and not has_archives:
+                    # Re-enrich mode: all args are images, no archives provided
+                    if sys.stdout.isatty():
+                        print(f"Re-enrich mode detected: {len(arg_paths)} image(s) without archives")
+                        print("Images will be re-enriched using existing metadata as base.")
+                        print()
+                    batch_confirm = len(arg_paths) > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        pre_processed = 0
+                        for img_path in arg_paths:
+                            if img_path.exists():
+                                process_reenrich(
+                                    img_path,
+                                    asset_type=asset_type,
+                                    dry_run=True,
+                                    auto_yes=True,
+                                    session_context=session_context,
+                                    session_hints=session_hints,
+                                    vision_only=vision_only_enrichment,
+                                )
+                            else:
+                                print(f"  Image not found: {img_path}")
+                            pre_processed += 1
+                            if sys.stdout.isatty():
+                                _print_progress(pre_processed, len(arg_paths))
+                        if not confirm_apply_all(len(arg_paths), "image(s)"):
+                            print("Skipped by user.")
+                            return
+
+                    run_dry = False if batch_confirm else dry_run
+                    run_yes = True if batch_confirm else auto_yes
+                    processed = 0
+                    for img_path in arg_paths:
+                        if img_path.exists():
+                            process_reenrich(
+                                img_path,
+                                asset_type=asset_type,
+                                dry_run=run_dry,
+                                auto_yes=run_yes,
+                                session_context=session_context,
+                                session_hints=session_hints,
+                                vision_only=vision_only_enrichment,
+                            )
+                        else:
+                            print(f"  Image not found: {img_path}")
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(arg_paths))
+                else:
+                    # Standard pairing mode: looking for image/archive pairs
+                    from collections import defaultdict
+
+                    stems: dict[str, list[Path]] = defaultdict(list)
+                    for p in arg_paths:
+                        stems[p.stem].append(p)
+
+                    stems_items = list(stems.items())
+                    total = len(stems_items)
+                    if total == 0:
+                        print("No file pairs found in arguments.")
+                    else:
+                        valid_pairs = 0
+                        for stem, items in stems_items:
+                            if len(items) != 2:
+                                continue
+                            a, b = items
+                            if (a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS) or \
+                               (b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS):
+                                valid_pairs += 1
+
+                        batch_confirm = valid_pairs > 1 and not dry_run and not auto_yes
+                        if batch_confirm:
+                            print("Batch preview (no writes yet):")
+                            pre_processed = 0
+                            for stem, items in stems_items:
+                                if len(items) != 2:
+                                    _print_unpaired_group(stem, items, arg_paths)
+                                    pre_processed += 1
+                                    _print_progress(pre_processed, total)
+                                    continue
+                                a, b = items
+                                if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                                    process_pair(a, b, asset_type=asset_type, dry_run=True, auto_yes=True, session_context=session_context, session_hints=session_hints)
+                                elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                                    process_pair(b, a, asset_type=asset_type, dry_run=True, auto_yes=True, session_context=session_context, session_hints=session_hints)
+                                else:
+                                    print(f"Skipping stem '{stem}': could not identify image/asset pair ({a}, {b})")
+                                pre_processed += 1
+                                _print_progress(pre_processed, total)
+                            if not confirm_apply_all(valid_pairs, "pair(s)"):
+                                print("Skipped by user.")
+                                return
+
+                        run_dry = False if batch_confirm else dry_run
+                        run_yes = True if batch_confirm else auto_yes
+                        if sys.stdout.isatty():
+                            print(f"Processing {total} pair(s)...")
+                        processed = 0
+                        for stem, items in stems_items:
+                            if len(items) != 2:
+                                _print_unpaired_group(stem, items, arg_paths)
+                                processed += 1
+                                _print_progress(processed, total)
+                                continue
+                            a, b = items
+                            # determine which is image and which is asset/model file
+                            if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                                process_pair(a, b, asset_type=asset_type, dry_run=run_dry, auto_yes=run_yes, session_context=session_context, session_hints=session_hints)
+                            elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                                process_pair(b, a, asset_type=asset_type, dry_run=run_dry, auto_yes=run_yes, session_context=session_context, session_hints=session_hints)
+                            else:
+                                print(f"Skipping stem '{stem}': could not identify image/asset pair ({a}, {b})")
                             processed += 1
                             _print_progress(processed, total)
-                            continue
-                        a, b = items
-                        # determine which is image and which is asset/model file
-                        if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                            process_pair(a, b, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                        elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                            process_pair(b, a, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                        else:
-                            print(f"Skipping stem '{stem}': could not identify image/asset pair ({a}, {b})")
-                        processed += 1
-                        _print_progress(processed, total)
         else:
             # Interactive multiline paste mode.
             # User can paste any number of file paths (one per line, mixed order),
@@ -3135,61 +4557,343 @@ def main() -> None:
 
             # Detect asset type from pasted paths when not supplied via --asset-type=.
             if not asset_type:
-                _paste_img = next(
-                    (p for p in valid_paste_paths if p.suffix.lower() in IMAGE_EXTENSIONS),
-                    None,
-                )
-                if _paste_img:
-                    _auto_cat, _auto_conf = detect_asset_category(_paste_img.stem)
-                    asset_type = _auto_cat
-                    print(f"(auto-detected) asset type: {asset_type}")
+                # For sidecar-collection: extract CSV early (before dispatcher) so
+                # we can use sidecar text for keyword-based type detection.
+                _early_csv = None
+                if ingest_mode == "sidecar-collection" and sidecar_path is None:
+                    _sidecar_exts = {".csv", ".txt", ".md"}
+                    _csv_candidates = [p for p in valid_paste_paths if p.suffix.lower() in _sidecar_exts]
+                    if len(_csv_candidates) == 1:
+                        _early_csv = _csv_candidates[0]
+
+                if ingest_mode == "sidecar-collection" and _early_csv is not None:
+                    try:
+                        _sc_entries = parse_sidecar_entries(_early_csv)
+                        _sc_first_text = re.sub(r'^\d+[\.)]\s*', '', next(iter(_sc_entries.values()), "")).strip()
+                        if _sc_first_text:
+                            _sc_lower = _sc_first_text.lower()
+                            _kw_fixture = any(w in _sc_lower for w in (
+                                "lamp", "light", "chandelier", "pendant", "suspension",
+                                "lantern", "lumiere", "artichoke", "sconce", "fixture",
+                            ))
+                            _kw_furniture = any(w in _sc_lower for w in (
+                                "chair", "sofa", "table", "desk", "bed", "shelf",
+                                "wardrobe", "stool", "cabinet", "bookcase",
+                            ))
+                            if _kw_fixture and not _kw_furniture:
+                                asset_type = "fixture"
+                            elif _kw_furniture and not _kw_fixture:
+                                asset_type = "furniture"
+                            else:
+                                _auto_cat, _ = detect_asset_category(_sc_first_text[:120])
+                                asset_type = _auto_cat
+                            print(f"(auto-detected from sidecar) asset type: {asset_type}")
+                        else:
+                            asset_type = "furniture"
+                    except Exception:
+                        asset_type = "furniture"
                 else:
-                    asset_type = "furniture"
+                    _paste_img = next(
+                        (p for p in valid_paste_paths if p.suffix.lower() in IMAGE_EXTENSIONS),
+                        None,
+                    )
+                    if _paste_img:
+                        _auto_cat, _auto_conf = detect_asset_category(_paste_img.stem)
+                        asset_type = _auto_cat
+                        print(f"(auto-detected) asset type: {asset_type}")
+                    else:
+                        asset_type = "furniture"
 
             print(f"Processing {total} item(s)...")
-            
-            # Check if all items are image files (re-enrich mode)
-            all_paste_images = all(p.suffix.lower() in IMAGE_EXTENSIONS for p in valid_paste_paths)
-            paste_has_archives = any(p.suffix.lower() in ASSET_FILE_EXTENSIONS for p in valid_paste_paths)
-            
-            if all_paste_images and not paste_has_archives:
-                # Re-enrich mode in paste: all items are images, no archives
-                if sys.stdout.isatty():
-                    print("Re-enrich mode detected: all items are images without archives")
-                    print("Images will be re-enriched using existing metadata as base.")
-                    print()
-                
-                processed = 0
-                for img_path in valid_paste_paths:
-                    process_reenrich(
-                        img_path,
+
+            if ingest_mode == "image-only":
+                # ─ image-only
+                paste_images = [p for p in valid_paste_paths if p.suffix.lower() in IMAGE_EXTENSIONS]
+                if not paste_images:
+                    print("No image files found in pasted paths.")
+                else:
+                    batch_confirm = len(paste_images) > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        pre_processed = 0
+                        for img_path in paste_images:
+                            process_image_only(
+                                img_path,
+                                asset_type=asset_type,
+                                dry_run=True,
+                                auto_yes=True,
+                                session_context=session_context,
+                                session_hints=session_hints,
+                                author_input=author_input,
+                                vision_only=vision_only_enrichment,
+                            )
+                            pre_processed += 1
+                            if sys.stdout.isatty():
+                                _print_progress(pre_processed, len(paste_images))
+                        if not confirm_apply_all(len(paste_images), "image(s)"):
+                            print("Skipped by user.")
+                            return
+
+                    run_dry = False if batch_confirm else dry_run
+                    run_yes = True if batch_confirm else auto_yes
+                    processed = 0
+                    for img_path in paste_images:
+                        process_image_only(
+                            img_path,
+                            asset_type=asset_type,
+                            dry_run=run_dry,
+                            auto_yes=run_yes,
+                            session_context=session_context,
+                            session_hints=session_hints,
+                            author_input=author_input,
+                            vision_only=vision_only_enrichment,
+                        )
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(paste_images))
+
+            elif ingest_mode == "collection":
+                # ─ collection: many images share one archive's CRC-32
+                paste_images = [p for p in valid_paste_paths if p.suffix.lower() in IMAGE_EXTENSIONS]
+                paste_archives = [p for p in valid_paste_paths if p.suffix.lower() in ASSET_FILE_EXTENSIONS]
+                if len(paste_archives) != 1:
+                    print(f"[ERROR] collection mode requires exactly 1 archive; found {len(paste_archives)}.")
+                    print("  Archives detected:", [str(a) for a in paste_archives] or "(none)")
+                elif not paste_images:
+                    print("[ERROR] collection mode: no image files found in pasted paths.")
+                else:
+                    _col_archive = paste_archives[0]
+                    if sys.stdout.isatty():
+                        print(f"Collection: {len(paste_images)} image(s) → archive: {_col_archive.name}")
+
+                    batch_confirm = len(paste_images) > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        _pre_crc32, _pre_arc_name = _prepare_collection_archive(_col_archive, dry_run=True)
+                        pre_processed = 0
+                        for img_path in paste_images:
+                            process_collection_image(
+                                img_path,
+                                archive_crc32=_pre_crc32,
+                                archive_file_name=_pre_arc_name,
+                                asset_type=asset_type,
+                                dry_run=True,
+                                auto_yes=True,
+                                session_context=session_context,
+                                session_hints=session_hints,
+                                author_input=author_input,
+                                vision_only=vision_only_enrichment,
+                            )
+                            pre_processed += 1
+                            if sys.stdout.isatty():
+                                _print_progress(pre_processed, len(paste_images))
+                        if not confirm_apply_all(len(paste_images), "image(s)"):
+                            print("Skipped by user.")
+                            return
+                        _col_crc32, _col_arc_name = _prepare_collection_archive(_col_archive, dry_run=False)
+                        run_dry = False
+                        run_yes = True
+                    else:
+                        _col_crc32, _col_arc_name = _prepare_collection_archive(_col_archive, dry_run=dry_run)
+                        run_dry = dry_run
+                        run_yes = auto_yes
+
+                    processed = 0
+                    for img_path in paste_images:
+                        process_collection_image(
+                            img_path,
+                            archive_crc32=_col_crc32,
+                            archive_file_name=_col_arc_name,
+                            asset_type=asset_type, dry_run=run_dry, auto_yes=run_yes,
+                            session_context=session_context, session_hints=session_hints,
+                            author_input=author_input,
+                            vision_only=vision_only_enrichment,
+                        )
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(paste_images))
+
+            elif ingest_mode == "sidecar-collection":
+                # ─ sidecar-collection: many images share one archive + sidecar text map
+                # Auto-detect sidecar file from the pasted file list.
+                if sidecar_path is None:
+                    _sidecar_exts = {".csv", ".txt", ".md"}
+                    _csv_paste = [p for p in valid_paste_paths if p.suffix.lower() in _sidecar_exts]
+                    if len(_csv_paste) == 1:
+                        sidecar_path = _csv_paste[0]
+                        print(f"Sidecar auto-detected from pasted paths: {sidecar_path.name}")
+                if sidecar_path is None:
+                    raise ValueError(
+                        "sidecar-collection mode requires a sidecar file (.csv/.md/.txt) — "
+                        "paste it together with the images and archive, or use --sidecar=PATH"
+                    )
+                if not sidecar_path.exists() or sidecar_path.suffix.lower() not in {".txt", ".md", ".csv"}:
+                    raise ValueError(f"Invalid sidecar file: {sidecar_path}")
+
+                paste_images = [p for p in valid_paste_paths if p.suffix.lower() in IMAGE_EXTENSIONS]
+                paste_archives = [p for p in valid_paste_paths if p.suffix.lower() in ASSET_FILE_EXTENSIONS]
+                if len(paste_archives) == 0:
+                    auto_archives = _autodetect_archive_from_sidecar_folder(sidecar_path)
+                    if len(auto_archives) == 1:
+                        paste_archives = [auto_archives[0]]
+                        print(f"Auto-detected archive from sidecar folder: {auto_archives[0]}")
+                if len(paste_archives) != 1:
+                    print(f"[ERROR] sidecar-collection mode requires exactly 1 archive; found {len(paste_archives)}.")
+                    print("  Archives detected:", [str(a) for a in paste_archives] or "(none)")
+                elif not paste_images:
+                    print("[ERROR] sidecar-collection mode: no image files found in pasted paths.")
+                else:
+                    sidecar_entries = parse_sidecar_entries(sidecar_path)
+                    if not sidecar_entries:
+                        print(f"[WARN] No parsable sidecar entries found in: {sidecar_path}")
+                    else:
+                        print(f"Sidecar loaded: {sidecar_path} ({len(sidecar_entries)} entries)")
+
+                    _col_archive = paste_archives[0]
+                    if sys.stdout.isatty():
+                        print(f"Sidecar collection: {len(paste_images)} image(s) → archive: {_col_archive.name}")
+                    _col_crc32, _col_arc_name = _prepare_collection_archive(_col_archive, dry_run=dry_run)
+                    _preview_cache = _show_sidecar_collection_preview(
+                        paste_images, sidecar_entries, _col_crc32,
+                        archive_file_name=_col_arc_name,
                         asset_type=asset_type,
-                        dry_run=dry_run,
-                        auto_yes=auto_yes,
                         session_context=session_context,
                         session_hints=session_hints,
+                        author_input=author_input,
+                        vision_only=vision_only_enrichment,
+                        dry_run=dry_run,
+                        auto_yes=auto_yes,
                     )
-                    processed += 1
-                    if sys.stdout.isatty():
-                        _print_progress(processed, len(valid_paste_paths))
+                    if _preview_cache is None:
+                        return
+                    processed = 0
+                    sidecar_hits = 0
+                    for img_path in paste_images:
+                        page_key = extract_page_key_from_stem(img_path.stem)
+                        _st, matched_key = resolve_sidecar_text_for_image(sidecar_entries, img_path, page_key)
+                        if _st:
+                            sidecar_hits += 1
+                        process_collection_image(
+                            img_path,
+                            archive_crc32=_col_crc32,
+                            archive_file_name=_col_arc_name,
+                            asset_type=asset_type,
+                            dry_run=dry_run,
+                            auto_yes=True,
+                            session_context=session_context,
+                            session_hints=session_hints,
+                            author_input=author_input,
+                            vision_only=vision_only_enrichment,
+                            sidecar_text=_st,
+                            disable_web_search=True,
+                            precomputed=_preview_cache.get(str(img_path)),
+                        )
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(paste_images))
+                    print(f"Sidecar mapping summary: {sidecar_hits}/{len(paste_images)} images matched")
+
             else:
-                # Standard pairing mode: looking for image/archive pairs
-                processed = 0
-                for stem, items in paste_items:
-                    if len(items) != 2:
-                        _print_unpaired_group(stem, items, valid_paste_paths, indent="  ")
+                # ─ pairs (default): re-enrich if all images, else stem-based pairing
+                # Check if all items are image files (re-enrich mode)
+                all_paste_images = all(p.suffix.lower() in IMAGE_EXTENSIONS for p in valid_paste_paths)
+                paste_has_archives = any(p.suffix.lower() in ASSET_FILE_EXTENSIONS for p in valid_paste_paths)
+
+                if all_paste_images and not paste_has_archives:
+                    # Re-enrich mode in paste: all items are images, no archives
+                    if sys.stdout.isatty():
+                        print("Re-enrich mode detected: all items are images without archives")
+                        print("Images will be re-enriched using existing metadata as base.")
+                        print()
+                    batch_confirm = len(valid_paste_paths) > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        pre_processed = 0
+                        for img_path in valid_paste_paths:
+                            process_reenrich(
+                                img_path,
+                                asset_type=asset_type,
+                                dry_run=True,
+                                auto_yes=True,
+                                session_context=session_context,
+                                session_hints=session_hints,
+                                vision_only=vision_only_enrichment,
+                            )
+                            pre_processed += 1
+                            if sys.stdout.isatty():
+                                _print_progress(pre_processed, len(valid_paste_paths))
+                        if not confirm_apply_all(len(valid_paste_paths), "image(s)"):
+                            print("Skipped by user.")
+                            return
+
+                    run_dry = False if batch_confirm else dry_run
+                    run_yes = True if batch_confirm else auto_yes
+                    processed = 0
+                    for img_path in valid_paste_paths:
+                        process_reenrich(
+                            img_path,
+                            asset_type=asset_type,
+                            dry_run=run_dry,
+                            auto_yes=run_yes,
+                            session_context=session_context,
+                            session_hints=session_hints,
+                            vision_only=vision_only_enrichment,
+                        )
+                        processed += 1
+                        if sys.stdout.isatty():
+                            _print_progress(processed, len(valid_paste_paths))
+                else:
+                    # Standard pairing mode: looking for image/archive pairs
+                    valid_pairs = 0
+                    for stem, items in paste_items:
+                        if len(items) != 2:
+                            continue
+                        a, b = items
+                        if (a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS) or \
+                           (b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS):
+                            valid_pairs += 1
+
+                    batch_confirm = valid_pairs > 1 and not dry_run and not auto_yes
+                    if batch_confirm:
+                        print("Batch preview (no writes yet):")
+                        pre_processed = 0
+                        for stem, items in paste_items:
+                            if len(items) != 2:
+                                _print_unpaired_group(stem, items, valid_paste_paths, indent="  ")
+                                pre_processed += 1
+                                _print_progress(pre_processed, total)
+                                continue
+                            a, b = items
+                            if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                                process_pair(a, b, asset_type=asset_type, dry_run=True, auto_yes=True, session_context=session_context, session_hints=session_hints)
+                            elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                                process_pair(b, a, asset_type=asset_type, dry_run=True, auto_yes=True, session_context=session_context, session_hints=session_hints)
+                            else:
+                                print(f"  Skipping '{stem}': could not identify image/asset pair")
+                            pre_processed += 1
+                            _print_progress(pre_processed, total)
+                        if not confirm_apply_all(valid_pairs, "pair(s)"):
+                            print("Skipped by user.")
+                            return
+
+                    run_dry = False if batch_confirm else dry_run
+                    run_yes = True if batch_confirm else auto_yes
+                    processed = 0
+                    for stem, items in paste_items:
+                        if len(items) != 2:
+                            _print_unpaired_group(stem, items, valid_paste_paths, indent="  ")
+                            processed += 1
+                            _print_progress(processed, total)
+                            continue
+                        a, b = items
+                        if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                            process_pair(a, b, asset_type=asset_type, dry_run=run_dry, auto_yes=run_yes, session_context=session_context, session_hints=session_hints)
+                        elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
+                            process_pair(b, a, asset_type=asset_type, dry_run=run_dry, auto_yes=run_yes, session_context=session_context, session_hints=session_hints)
+                        else:
+                            print(f"  Skipping '{stem}': could not identify image/asset pair")
                         processed += 1
                         _print_progress(processed, total)
-                        continue
-                    a, b = items
-                    if a.suffix.lower() in IMAGE_EXTENSIONS and b.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                        process_pair(a, b, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                    elif b.suffix.lower() in IMAGE_EXTENSIONS and a.suffix.lower() in ASSET_FILE_EXTENSIONS:
-                        process_pair(b, a, asset_type=asset_type, dry_run=dry_run, auto_yes=auto_yes, session_context=session_context, session_hints=session_hints)
-                    else:
-                        print(f"  Skipping '{stem}': could not identify image/asset pair")
-                    processed += 1
-                    _print_progress(processed, total)
     except KeyboardInterrupt:
         print("Cancelled by user.")
         sys.exit(1)
