@@ -50,10 +50,6 @@ def suggest_asset_name(filename):
         return f"{to_pascal(parts[0])}_{to_pascal(parts[1])}_{to_pascal(parts[2])}{ext}"
     return f"{to_pascal(stem)}_Unknown_Unknown{ext}"
 
-def suggest_doc_name(filename):
-    stem = Path(filename).stem
-    return '_'.join(to_pascal(p) for p in re.split(r'[\s_\-]+', stem)) + '.md'
-
 def suggest_script_name(filename):
     stem = Path(filename).stem
     return re.sub(r'[^a-z0-9_]', '', stem.lower().replace(' ', '_').replace('-', '_')) + '.py'

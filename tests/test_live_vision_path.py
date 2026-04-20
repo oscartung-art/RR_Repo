@@ -8,8 +8,8 @@ Simulates three realistic scenarios for what the online vision model returns:
   D) classify_image returns label:    vision_label = "ModernSculpture" (fallback path)
   E) Model returns nothing useful:    {} — should still resolve via vision_label hint
 
-Also tests that the _SECTION_HEADERS blacklist no longer blocks "Sculpture" in
-normalize_furniture_subcategory (which is used as a last-resort for furniture/fixture).
+This validates current behavior where object subcategories are not constrained to
+predefined leaves during AI enrichment.
 """
 import sys, types, importlib.util, pathlib, os, json
 
@@ -39,7 +39,7 @@ from pathlib import Path
 DUMMY_ARCHIVE = Path("TEMP_00000000.glb")
 CRC = "DEADBEEF"
 
-def run(vision_response: dict, vision_label: str = "", enrich_mode: str = "vision"):
+def run(vision_response: dict, vision_label: str = "", vision_only: bool = True):
     """Simulate one ingest cycle with a given vision model response."""
     source_stem = "object_0"
     asset_type = "object"
@@ -59,26 +59,26 @@ def run(vision_response: dict, vision_label: str = "", enrich_mode: str = "visio
         crc32_value=CRC,
     )
     row = ia.enrich_row_with_models(
-        image_path=Path("dummy.jpeg"),
+        image_path=Path(__file__),
         source_stem=source_stem,
         asset_type=asset_type,
         hints=hints,
         row=row,
         session_context="",
         session_hints=None,
-        enrich_mode=enrich_mode,
+        vision_only=vision_only,
+        disable_web_search=True,
     )
-    return row.get("Mood", "")
+    return row.get("Subject", "")
 
-EXPECTED = "Object/Decor/Sculpture"
 passed = 0
 failed = 0
 
-def check(label, mood):
+def check(label, mood, expected):
     global passed, failed
-    ok = mood == EXPECTED
+    ok = mood == expected
     status = "PASS" if ok else "FAIL"
-    print(f"{status}  [{label}]  Mood={mood!r}")
+    print(f"{status}  [{label}]  Subject={mood!r}  expected={expected!r}")
     if ok:
         passed += 1
     else:
@@ -89,43 +89,28 @@ check("A: exact match",
       run({"subcategory": "Sculpture", "model_name": "-", "brand": "-",
            "collection": "-", "primary_material_or_color": "-",
            "usage_location": "-", "shape_form": "-", "period": "-",
-           "size": "-", "vendor_name": "-"}))
+           "size": "-", "vendor_name": "-"}),
+      "Object/Decor/Sculpture")
 
-# B) Free-text "Modern Sculpture" from vision model
+# B) Free-text is preserved (not forced into canonical leaves)
 check("B: free-text 'Modern Sculpture'",
-      run({"subcategory": "Modern Sculpture"}))
+      run({"subcategory": "Modern Sculpture"}),
+      "Modern Sculpture")
 
-# C) CamelCase compound "ModernSculpture"
+# C) CamelCase compound is preserved
 check("C: compound 'ModernSculpture'",
-      run({"subcategory": "ModernSculpture"}))
+      run({"subcategory": "ModernSculpture"}),
+      "ModernSculpture")
 
 # D) Vision model returns nothing useful, but classify_image gave a label
 check("D: empty vision_data, vision_label='ModernSculpture'",
-      run({}, vision_label="ModernSculpture"))
+      run({}, vision_label="ModernSculpture"),
+      "ModernSculpture")
 
 # E) Vision model returns nothing at all
 check("E: empty vision_data, no label (should be '-')",
-      run({}, vision_label=""))
-# E is expected to be "-" since there is no info at all
-if passed + failed > 0:
-    last = passed + failed - 1
-# Adjust: E should return "-" not EXPECTED
-e_mood = run({}, vision_label="")
-if e_mood == "-":
-    print(f"PASS  [E: no info → '-']  Mood={e_mood!r}")
-    passed += 1
-    failed -= 1  # undo the failed count from check()
-else:
-    print(f"FAIL  [E: no info → '-']  Mood={e_mood!r}  (expected '-')")
-
-# F) normalize_furniture_subcategory no longer blocks "Sculpture"
-_nfs = ia.normalize_furniture_subcategory("Sculpture", "object_0", {})
-if _nfs == "Sculpture":
-    print(f"PASS  [F: normalize_furniture_subcategory('Sculpture') = {_nfs!r}]")
-    passed += 1
-else:
-    print(f"FAIL  [F: normalize_furniture_subcategory('Sculpture') = {_nfs!r}  (expected 'Sculpture')]")
-    failed += 1
+      run({}, vision_label=""),
+      "-")
 
 print(f"\n{passed} passed, {failed} failed.")
 if failed:

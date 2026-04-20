@@ -38,7 +38,7 @@ _type_subcats = sorted(
     subcat for subcat, grp in _all_groups.items()
     if grp.lower().startswith(_type_prefix.lower())
 )
-allowed_subcats = _type_subcats if _type_subcats else sorted(ia.load_furniture_subcategories())
+allowed_subcats = _type_subcats if _type_subcats else sorted(_all_groups.keys())
 print(f"allowed_subcats has {len(allowed_subcats)} entries")
 print(f"'Sculpture' in allowed_subcats: {'Sculpture' in allowed_subcats}")
 

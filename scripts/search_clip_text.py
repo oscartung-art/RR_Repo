@@ -12,7 +12,6 @@ DEPENDENCIES: torch, open_clip, pandas, numpy, pywin32
 import pandas as pd
 import torch
 import open_clip
-import win32clipboard
 import numpy as np
 import os
 import sys
@@ -21,15 +20,6 @@ import sys
 PARQUET_PATH = r"G:/_index.parquet"
 MODEL_NAME = 'ViT-L-14'
 PRETRAINED = 'openai'
-
-def set_clipboard(text):
-	"""Copies the file path to the Windows clipboard."""
-	win32clipboard.OpenClipboard()
-	try:
-		win32clipboard.EmptyClipboard()
-		win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
-	finally:
-		win32clipboard.CloseClipboard()
 
 def find_asset():
 	print("--- \U0001F50D VIBE SEARCH v1.0 ---")

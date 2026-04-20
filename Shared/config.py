@@ -8,7 +8,6 @@ Drive Topology:
   G:\\ (Assets)   — NAS for 3D asset archives.
 """
 
-import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -39,19 +38,3 @@ LANDSCAPE_SPREADSHEET_ID = "1kvXmUldDFyiXMJLQb2yPclFnHZOTsFHom7uGS7GGLPk"
 
 DEFAULT_CSV_ENCODING = "utf-8-sig"
 
-# ---------------------------------------------------------------------------
-# Helper: Environment Variable Loader
-# ---------------------------------------------------------------------------
-
-def get_env_variable(var_name: str, default: str = None) -> str:
-    """
-    Retrieve an environment variable by name.
-    Raises ValueError if the variable is not set and no default is provided.
-    """
-    value = os.environ.get(var_name, default)
-    if value is None:
-        raise ValueError(
-            f"Environment variable '{var_name}' is not set. "
-            f"Add it to your .env file or system environment."
-        )
-    return value

@@ -1,0 +1,16 @@
+﻿Extract only explicit numbered catalogue entries from this PDF.
+
+Return markdown only, one line per entry, in this exact style:
+01. Text beside number.
+02. Text beside number.
+
+Rules:
+- Do NOT infer product names from images.
+- Use only visible text in the PDF.
+- For each visible catalogue item number, copy the text directly beside/associated with that number.
+- Keep the original numbering when available.
+- If numbering appears as 1, 2, 3, format as 01, 02, 03.
+- Ignore unnumbered captions, headers, footers, page numbers, and decorative text.
+- Ignore covers/legal/contact/index pages unless they contain numbered catalogue entries.
+- If an item number exists but text is unclear, still include the number with best readable text.
+- End each line with a period.
