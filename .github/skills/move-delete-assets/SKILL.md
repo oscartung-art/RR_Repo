@@ -8,17 +8,12 @@ allowed-tools: shell, powershell
 
 Use this skill when the user wants to **move** assets to a different folder or **delete** EFU entries for assets they will remove manually.
 
-### SKILL_DIR
-`D:\rr_repo\.github\skills\move-delete-assets`
-
----
-
-## Move assets
+### Move assets
 
 When the user says "move these to G:\DB\misc\" (or any destination):
 
 ```
-python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --move "DEST_DIR" "FILE1" "FILE2" ...
+python "tools/move_delete_assets.py" --move "DEST_DIR" "FILE1" "FILE2" ...
 ```
 
 What happens:
@@ -36,14 +31,14 @@ What happens:
 
 **Step 1 — dry-run (always first):**
 ```
-python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --move "G:\DB\misc\" --dry-run "G:\DB\project\Bed_Flou_10965538.jpg" "G:\DB\project\Bed_EE43A3EE.jpg"
+cd D:\rr_repo && python "tools/move_delete_assets.py" --move "G:\DB\misc\" --dry-run "G:\DB\project\Bed_Flou_10965538.jpg" "G:\DB\project\Bed_EE43A3EE.jpg"
 ```
 
 Show output to user, then ask: **"Preview looks good — apply the move?"**
 
 **Step 2 — apply:**
 ```
-python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --move "G:\DB\misc\" "G:\DB\project\Bed_Flou_10965538.jpg" "G:\DB\project\Bed_EE43A3EE.jpg"
+cd D:\rr_repo && python "tools/move_delete_assets.py" --move "G:\DB\misc\" "G:\DB\project\Bed_Flou_10965538.jpg" "G:\DB\project\Bed_EE43A3EE.jpg"
 ```
 
 ---
@@ -53,7 +48,7 @@ python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --mo
 When the user says "delete these" or "remove from index":
 
 ```
-python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --delete "FILE1" "FILE2" ...
+cd D:\rr_repo && python "tools/move_delete_assets.py" --delete "FILE1" "FILE2" ...
 ```
 
 What happens:
@@ -68,12 +63,12 @@ What happens:
 
 **Step 1 — dry-run:**
 ```
-python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --delete --dry-run "G:\DB\misc\OldChair_ABC123.jpg"
+cd D:\rr_repo && python "tools/move_delete_assets.py" --delete --dry-run "G:\DB\misc\OldChair_ABC123.jpg"
 ```
 
 **Step 2 — apply:**
 ```
-python "D:\rr_repo\.github\skills\move-delete-assets\move_delete_assets.py" --delete "G:\DB\misc\OldChair_ABC123.jpg"
+cd D:\rr_repo && python "tools/move_delete_assets.py" --delete "G:\DB\misc\OldChair_ABC123.jpg"
 ```
 
 ---

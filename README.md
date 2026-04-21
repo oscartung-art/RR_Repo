@@ -11,8 +11,7 @@ This repository combines:
 
 Primary active areas are:
 - `projects/` — per-project markdown records (flexible, no YAML)
-- `scripts/` — asset indexing, search, and tagging
-- `tools/` — project maintenance, asset ingestion, PDF processing
+- `tools/` — project maintenance, asset ingestion, indexing, search, and tagging
 
 Historical and superseded utilities are kept in `archive/`.
 
@@ -46,10 +45,10 @@ Ask Qwen Code directly to read, update, or query any project file.
 ### Asset Library Workflow
 
 Key scripts:
-- `scripts/search_index_master.py` — builds/updates G:\_index.parquet with CLIP vectors
-- `scripts/search_clip_text.py` — semantic search against vectors
-- `scripts/search_tag_assets.py` — writes vendor/rating metadata and .metadata.efu sidecars
-- `scripts/search_everything_bridge.py` — IPC bridge for Everything-based flow
+- `tools/search_index_master.py` — builds/updates G:\_index.parquet with CLIP vectors
+- `tools/search_clip_text.py` — semantic search against vectors
+- `tools/search_tag_assets.py` — writes vendor/rating metadata and .metadata.efu sidecars
+- `tools/search_everything_bridge.py` — IPC bridge for Everything-based flow
 
 ### Asset Ingestion
 
@@ -64,8 +63,7 @@ Key scripts:
 ## Repository Layout (Current)
 
 - `Shared/` — shared config/helpers
-- `scripts/` — asset indexing/search/tagging
-- `tools/` — operational automation (ingestion, audits, PDF processing)
+- `tools/` — operational automation (ingestion, indexing, search, tagging, audits, PDF processing)
 - `projects/` — per-project markdown records
 - `db/` — local data stores (Master_CRM.csv)
 - `log/` — operational logs, notes, orphan reports
@@ -85,7 +83,7 @@ Rules:
 ## Maintenance Notes
 
 - Python scripts should pass syntax validation before commit.
-- Keep temporary experiments in `scratch/`, not `scripts/` or `tools/`.
+- Keep temporary experiments in `scratch/`, not `tools/`.
 - Move replaced scripts/docs into `archive/` instead of deleting blindly.
 - Prefer updating existing entry points over introducing duplicate scripts.
 - Project files are flexible markdown — no rigid schema, add sections as needed.

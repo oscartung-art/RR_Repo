@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Helper to display ingest-schedule final enriched review table.
-Usage: python display_preview.py "<PDF_PATH>" ["<OUT_DIR>"]
+Usage: python display_schedule_preview.py "<PDF_PATH>" ["<OUT_DIR>"]
 """
 import os
 import sys
@@ -10,34 +10,43 @@ import subprocess
 from pathlib import Path
 
 if len(sys.argv) < 2:
-    print("Usage: python display_preview.py '<PDF_PATH>' ['<OUT_DIR>']")
+    print("Usage: python display_schedule_preview.py '<PDF_PATH>' ['<OUT_DIR>']")
     sys.exit(1)
 
-pdf_path = sys.argv[1]
-out_dir = sys.argv[2] if len(sys.argv) > 2 else input("Output folder for .metadata.efu: ").strip().strip('"')
-if not out_dir:
-    print("ERROR: Output folder is required.")
-    sys.exit(1)
+# Find repo root (this script is in tools/, so parent is root)
+REPO_ROOT = Path(__file__).parent.parent
+pdf_path = Path(sys.argv[1]).expanduser()
+out_dir_arg = sys.argv[2] if len(sys.argv) > 2 else None
+if out_dir_arg:
+    out_dir = Path(out_dir_arg).expanduser()
+else:
+    out_dir_str = input("Output folder for .metadata.efu: ").strip().strip('"')
+    if not out_dir_str:
+        print("ERROR: Output folder is required.")
+        sys.exit(1)
+    out_dir = Path(out_dir_str).expanduser()
 
 # Load API key from environment or API.env
 env = os.environ.copy()
 if not env.get('OPENROUTER_API_KEY'):
     try:
-        api_env = Path("D:/rr_repo/API.env").read_text()
+        api_env = (REPO_ROOT / "API.env").read_text()
         for line in api_env.split('\n'):
             line = line.strip()
             if line.startswith('sk-or'):
                 env['OPENROUTER_API_KEY'] = line
                 break
-    except:
+    except Exception:
         pass
 
 # Run ingest_schedule with --csv flag (AI enrichment enabled by default)
+# Use the same Python interpreter that's running this script
+python_exe = sys.executable
+ingest_schedule_path = REPO_ROOT / "tools" / "ingest_schedule.py"
+
 result = subprocess.run(
-    ["D:/rr_repo/.venv/Scripts/python.exe", 
-     "D:/rr_repo/.github/skills/ingest-schedule/ingest_schedule.py", 
-     pdf_path, "--csv", "--out", out_dir],
-    capture_output=True, text=True, timeout=120, cwd="D:/rr_repo",
+    [python_exe, str(ingest_schedule_path), str(pdf_path), "--csv", "--out", str(out_dir)],
+    capture_output=True, text=True, timeout=120, cwd=str(REPO_ROOT),
     env=env
 )
 

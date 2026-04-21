@@ -47,13 +47,11 @@ When the user asks to change metadata for asset files:
 1. Identify the **field** from the prompt using the table above.
 2. Extract the **value** to set.
 3. Extract all **file paths** from the prompt (full Windows paths).
-4. Run the script from this skill's directory:
+4. Run the script from tools/:
 
 ```
-python "<SKILL_DIR>/edit_metadata.py" --field <FIELD> --value "<VALUE>" "<FILE1>" "<FILE2>" ...
+python "tools/edit_efu_metadata.py" --field <FIELD> --value "<VALUE>" "<FILE1>" "<FILE2>" ...
 ```
-
-Replace `<SKILL_DIR>` with the directory of this SKILL.md file.
 
 ### Examples
 
@@ -63,21 +61,21 @@ Replace `<SKILL_DIR>` with the directory of this SKILL.md file.
 > G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C_01.jpg"
 
 ```
-python ".github/skills/edit-efu-metadata/edit_metadata.py" --field Rating --value 99 "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg" "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C_01.jpg"
+python "tools/edit_efu_metadata.py" --field Rating --value 99 "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg" "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C_01.jpg"
 ```
 
 **Change subject:**
 > "set subject to Fixture/Lighting/RecessedSpotLight for G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg"
 
 ```
-python ".github/skills/edit-efu-metadata/edit_metadata.py" --field Subject --value "Fixture/Lighting/RecessedSpotLight" "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg"
+python "tools/edit_efu_metadata.py" --field Subject --value "Fixture/Lighting/RecessedSpotLight" "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg"
 ```
 
 **Change title:**
 > "change title to Onoк for G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg"
 
 ```
-python ".github/skills/edit-efu-metadata/edit_metadata.py" --field Title --value "Onok" "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg"
+python "tools/edit_efu_metadata.py" --field Title --value "Onok" "G:\DB\mpm\mpmv04\RecessedSpotlights_94F58A3C.jpg"
 ```
 
 ### How the script works

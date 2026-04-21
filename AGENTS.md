@@ -21,8 +21,7 @@ Use those docs as source of truth. Link to them instead of duplicating large tab
 
 ## Repository Map (Operational)
 
-- [tools](tools): ingestion, audits, migration utilities
-- [scripts](scripts): indexing/search/tagging automation
+- [tools](tools): ingestion, indexing, search, tagging, audits, migration utilities
 - [Shared](Shared): shared config/helpers
 - [projects](projects): per-project markdown records
 - [manual](manual): authoritative metadata conventions
@@ -49,11 +48,14 @@ Primary ingestion entry point is [tools/ingest_asset.py](tools/ingest_asset.py).
   - `python tools/ingest_asset.py --asset-type=furniture --dry-run --yes IMAGE ARCHIVE`
 - Keyword table audit:
   - `python tools/audit_keywords.py`
+- Display CSV/EFU tables neatly in terminal:
+  - `python tools/csvlook.py <file.efu|csv> [--lines N]`
+  - **Always use this tool** when displaying table data (`.metadata.efu`, `.csv`)
 
 ## Project-Specific Guardrails
 
 - Never guess file paths; verify first.
-- Keep temporary experiments in [scratch](scratch), not in [tools](tools) or [scripts](scripts).
+- Keep temporary experiments in [scratch](scratch), not in [tools](tools).
 - Move replaced logic/docs to [archive](archive) instead of deleting blindly.
 - Do not commit secrets/tokens/API keys.
 - Prefer small, targeted edits over broad refactors.

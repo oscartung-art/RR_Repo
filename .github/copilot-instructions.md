@@ -20,13 +20,12 @@ Purpose: concise, actionable guidance for future Copilot sessions working in thi
 
 2) High-level architecture (big picture)
 - Entry points:
-  - tools/ : operational automation and asset ingestion (tools/ingest_asset.py is the canonical ingest path).
-  - scripts/ : indexing, building vector search (CLIP), semantic search, and tagging flows (e.g., scripts/search_index_master.py).
+  - tools/ : operational automation - asset ingestion, indexing, building vector search (CLIP), semantic search, and tagging flows (tools/ingest_asset.py is the canonical ingest path).
   - Shared/ : shared configuration and helpers (Shared/config.py exposes env overrides).
   - projects/ : project records kept as freeform markdown.
   - manual/ : authoritative metadata conventions (especially everything_columnmapping.md).
   - db/ and Database/ : local data stores and EFU metadata stores.
-- Data flow (simplified): ingestion -> metadata enrichment (tools/ingest_asset.py) -> write sidecar .metadata.efu + update indexes -> scripts/* build semantic search/index (search vectors) -> queries from tools/scripts.
+- Data flow (simplified): ingestion -> metadata enrichment (tools/ingest_asset.py) -> write sidecar .metadata.efu + update indexes -> tools/* build semantic search/index (search vectors) -> queries from tools.
 - Models: ingest_asset.py supports local Ollama use and optional online routes (OpenRouter); configure credentials externally.
 
 3) Key repository-specific conventions

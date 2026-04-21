@@ -2,7 +2,7 @@ import subprocess
 import time
 import os
 
-script = "scripts/search_tag_assets.py"
+script = "tools/search_tag_assets.py"
 last_mtime = os.path.getmtime(script)
 
 print("[auto-restart] Starting tagger with auto-restart on file changes...")

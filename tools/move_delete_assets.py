@@ -25,7 +25,8 @@ from collections import defaultdict
 from pathlib import Path
 
 # Central index that stores full-path Filename values.
-CENTRAL_EFU = Path(r"D:\rr_repo\Database\.metadata.efu")
+# Resolve relative to repository root (this script is in tools/)
+CENTRAL_EFU = Path(__file__).parent.parent / "Database" / ".metadata.efu"
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 ARCHIVE_EXTENSIONS = {".zip", ".rar", ".7z"}

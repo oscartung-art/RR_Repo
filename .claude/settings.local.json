@@ -9,7 +9,24 @@
       "Bash(mkdir -p archive/temp)",
       "Bash(mv scratch/* sandbox/* archive/temp/)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(python *)",
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(dir \"F:\\\\PLS\\\\incoming\\\\20250717 ARK -drive-download-T033717Z-1-001\\\\Specification\\\\Typical floor\" /B)",
+      "Bash(findstr -E \".jpg .efu\")",
+      "Bash(grep -E \"\\\\.\\(jpg|efu\\)$\")",
+      "Bash(pdftotext *)",
+      "Bash(.\\\\.venv\\\\Scripts\\\\python.exe *)",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\ATOLO\\\\Stills\\\\C3B02200221+C9Z.jpg\" \"G:\\\\DB\\\\dedon\\\\\" && cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\ATOLO\\\\Stills\\\\C3D0221+C68.jpg\" \"G:\\\\DB\\\\dedon\\\\\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\ATOLO\\\\Stills\\\\C3F02200221+C9S.jpg\" \"G:\\\\DB\\\\dedon\\\\\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\ATOLO\\\\Stills\\\\C3B02200221+C9Z.jpg\" \"G:\\\\DB\\\\dedon\\\\C3B02200221+C9Z.jpg\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\ATOLO\\\\Stills\\\\C3D0221+C68.jpg\" \"G:\\\\DB\\\\dedon\\\\C3D0221+C68.jpg\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\ATOLO\\\\Stills\\\\C3F02200221+C9S.jpg\" \"G:\\\\DB\\\\dedon\\\\C3F02200221+C9S.jpg\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADH030.jpg\" \"G:\\\\DB\\\\dedon\\\\ADH030.jpg\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADK030.jpg\" \"G:\\\\DB\\\\dedon\\\\ADK030.jpg\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADK0308IT.jpg\" \"G:\\\\DB\\\\dedon\\\\ADK0308IT.jpg\")",
+      "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADP230V000C.jpg\" \"G:\\\\DB\\\\dedon\\\\ADP230V000C.jpg\")",
+      "Skill(update-config)"
     ]
   },
   "model": "auto"

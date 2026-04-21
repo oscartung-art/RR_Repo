@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-edit_metadata.py — Update any field in .metadata.efu for specified asset files.
+edit_efu_metadata.py — Update any field in .metadata.efu for specified asset files.
 
 The .metadata.efu is always expected to be co-located with the asset files.
 No fallback to a central database EFU.
 
 Usage:
-    python edit_metadata.py --field Rating --value 99 "G:\\DB\\mpm\\file1.jpg" "G:\\DB\\mpm\\file2.jpg"
-    python edit_metadata.py --field Subject --value "Fixture/Lighting/SpotLight" "G:\\DB\\mpm\\file.jpg"
-    python edit_metadata.py --field Title --value "Barcelona" --dry-run "G:\\DB\\misc\\Chair.jpg"
+    python edit_efu_metadata.py --field Rating --value 99 "G:\\DB\\mpm\\file1.jpg" "G:\\DB\\mpm\\file2.jpg"
+    python edit_efu_metadata.py --field Subject --value "Fixture/Lighting/SpotLight" "G:\\DB\\mpm\\file.jpg"
+    python edit_efu_metadata.py --field Title --value "Barcelona" --dry-run "G:\\DB\\misc\\Chair.jpg"
 
 Friendly field aliases (case-insensitive):
     rating                    -> Rating

@@ -666,7 +666,7 @@ def main():
 
     written, replaced = write_metadata_efu(rows, out_path)
     action = f"Written ({written} rows, {replaced} updated)" if replaced else f"Written ({written} rows)"
-    print(f"EFU     : {action} → {out_path}", file=log)
+    print(f"EFU     : {action} -> {out_path}", file=log)
 
 
 if __name__ == "__main__":

@@ -36,7 +36,7 @@ Maps extracted fields to EFU columns:
 Use the helper to show the final enriched table (it will prompt for output folder):
 
 ```
-cd D:\rr_repo && .\.venv\Scripts\python.exe ".github/skills/ingest-schedule/display_preview.py" "<PDF_PATH>"
+cd D:\rr_repo && .\.venv\Scripts\python.exe "tools/display_schedule_preview.py" "<PDF_PATH>"
 ```
 
 This will display:
@@ -49,7 +49,7 @@ Then ask: **"Final enriched table looks good — write the file?"**
 **Step 2 — Write (only after user confirms):**
 
 ```
-cd D:\rr_repo && .\.venv\Scripts\python.exe ".github/skills/ingest-schedule/ingest_schedule.py" "<PDF_PATH>"
+cd D:\rr_repo && .\.venv\Scripts\python.exe "tools/ingest_schedule.py" "<PDF_PATH>"
 ```
 
 **Optional flags:**

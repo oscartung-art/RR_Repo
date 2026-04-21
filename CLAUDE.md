@@ -63,13 +63,12 @@ Check canonical metadata column definitions: `manual/everything_columnmapping.md
 ## High-Level Architecture
 
 ### Entry Points
-1. **`tools/`**: Operational automation and asset ingestion (canonical path: `tools/ingest_asset.py`)
-2. **`scripts/`**: Indexing, vector search (CLIP), semantic search, and tagging
-3. **`Shared/`**: Shared configuration and helpers
-4. **`projects/`**: Per-project markdown records (freeform, no schema)
-5. **`manual/`**: Authoritative metadata conventions (critical: `everything_columnmapping.md`)
-6. **`Database/`**: Local EFU metadata store
-7. **`tests/`**: Diagnostic/regression scripts
+1. **`tools/`**: Operational automation - asset ingestion, indexing, vector search (CLIP), semantic search, tagging (canonical path: `tools/ingest_asset.py`)
+2. **`Shared/`**: Shared configuration and helpers
+3. **`projects/`**: Per-project markdown records (freeform, no schema)
+4. **`manual/`**: Authoritative metadata conventions (critical: `everything_columnmapping.md`)
+5. **`Database/`**: Local EFU metadata store
+6. **`tests/`**: Diagnostic/regression scripts
 
 ### Data Flow
 ```
@@ -77,7 +76,7 @@ Ingestion (tools/ingest_asset.py)
   → Metadata Enrichment (AI) 
   → Write .metadata.efu sidecar 
   → Update indexes 
-  → Build semantic search vectors (scripts/) 
+  → Build semantic search vectors (tools/) 
   → Queries
 ```
 
