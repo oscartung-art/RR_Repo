@@ -26,7 +26,9 @@
       "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADK030.jpg\" \"G:\\\\DB\\\\dedon\\\\ADK030.jpg\")",
       "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADK0308IT.jpg\" \"G:\\\\DB\\\\dedon\\\\ADK0308IT.jpg\")",
       "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADP230V000C.jpg\" \"G:\\\\DB\\\\dedon\\\\ADP230V000C.jpg\")",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(tee /tmp/bellmonde_files.txt)",
+      "Bash(awk -F',' 'NR>1 && $2 ~ /Furniture/ && $8 == \"BELLMONDE Collection\" {print \"G:/DB/dedon/\" $1}' G:/DB/dedon/.metadata.efu)"
     ]
   },
   "model": "auto"

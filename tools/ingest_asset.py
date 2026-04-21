@@ -1767,6 +1767,7 @@ def infer_metadata_fields(
     when text/filename hints conflict or are too broad.
     Returns a dict with keys: subject, model_name, brand, collection,
     primary_material_or_color, usage_location, shape_form, period, size, vendor_name.
+    For vegetation assets, also includes: latin_name, chinese_name.
     """
     location_list = ", ".join(sorted(USAGE_LOCATION_ROOMS))
 
@@ -1796,34 +1797,62 @@ def infer_metadata_fields(
         )
         trust_index += 1
     prompt += f"{trust_index}. The attached image (accurate but may have ambiguity)\n\n"
-    prompt += (
-        "Return ONLY a compact JSON object with these exact keys:\n"
-        '"subject", "model_name", "brand", "collection", '
-        '"primary_material_or_color", "usage_location", "shape_form", '
-        '"period", "size", "vendor_name".\n'
-        "Rules:\n"
-        "- subject: one short leaf subject phrase (Title Case, spaces, no root category prefix). "
-        "Examples: Outdoor Lounge Furniture, Pendant Lighting, Decorative Vase.\n"
-        "- subject should be as specific as the image reliably allows. Prefer the leaf-level object subtype, not a broad parent class.\n"
-        "- For subject, ALWAYS choose the most prominent physical object visible in the image. "
-        "Do not use room/context labels when a specific object is clearly dominant. "
-        "Example: if the image shows a bed as the main object, subject should be 'Bed' (not 'Bedroom Furniture').\n"
-        "- If filename/sidecar text conflicts with what is visually dominant, prefer the image for subject.\n"
-        "- Avoid overly generic subject labels like 'Chair', 'Table', 'Lamp', or 'Sofa' when a more specific subtype is visible. "
-        "For seating, prefer labels such as 'Armchair', 'Lounge Chair', 'Dining Chair', 'Side Chair', 'Bar Stool', 'Stool', 'Office Chair', or 'Bench' when supported by the image.\n"
-        "- If the filename stem contains a generic category token such as 'Chair' but the image shows a more specific subtype, ignore the generic filename token and return the more specific visual subtype for subject.\n"
-        "- Use a broad label like 'Chair' only as a last resort when no narrower subtype can be inferred with reasonable confidence from the image, sidecar text, or filename.\n"
-        "- model_name: product name/model title only (e.g. 'PH Snowball', 'Zenith Lounger').\n"
-        "- model_name must not be empty when the filename stem contains a plausible product token. "
-        "If the exact catalog/model title is unclear, fall back to the best short human-readable product token from the filename stem, converted to clean Title Case. "
-        "Prefer the descriptive word token over numeric codes. Examples: '10-07 single' -> 'Single', '10-07 snug' -> 'Snug', '10-07 sotai' -> 'Sotai'.\n"
-        "- Use '-' for model_name only when there is truly no plausible product/title token in the sidecar text, filename stem, or image.\n"
-        "- brand: manufacturer name only (e.g. 'Gloster', 'Louis Poulsen').\n"
-        f"- usage_location: one value from: {location_list}.\n"
-        "- If the sidecar text contains multiple products, first identify the single section that matches the attached image.\n"
-        "- Use '-' for any field you cannot confidently determine.\n"
-        "- No markdown, no explanation, no extra keys."
-    )
+    
+    # For vegetation, add special instructions for Latin/Chinese name extraction
+    if asset_type == "vegetation":
+        prompt += (
+            "Return ONLY a compact JSON object with these exact keys:\n"
+            '"subject", "model_name", "brand", "collection", '
+            '"primary_material_or_color", "usage_location", "shape_form", '
+            '"period", "size", "vendor_name", "latin_name", "chinese_name", "common_name".\n'
+            "Vegetation-specific rules:\n"
+            "- If the filename ('{source_stem}') appears to be a botanical Latin name (e.g., 'quercus_robur', 'rosa_damascena'), "
+            "  recognize it and extract the Latin name, Traditional Chinese name, and common name.\n"
+            "- latin_name: The scientific/botanical Latin name in proper format (e.g., 'Quercus robur', 'Rosa damascena').\n"
+            "- chinese_name: The Traditional Chinese name for the plant (e.g., '英國橡樹' for Quercus robur, '大馬士革玫瑰' for Rosa damascena).\n"
+            "- common_name: The common English name of the plant (e.g., 'English Oak' for Quercus robur, 'Damask Rose' for Rosa damascena).\n"
+            "- subject: One short leaf subject phrase describing the plant type (e.g., 'Conifer Tree', 'Flowering Shrub', 'Groundcover').\n"
+            "- primary_material_or_color: The dominant color(s) of the plant as shown in the image (e.g., 'Green', 'Pink Flowers', 'Purple Blooms', 'Green with Red Berries').\n"
+            "- usage_location: Primary visual/growth context from the image (e.g., 'Garden', 'Indoor', 'Landscape', 'Container', 'Wildflower', 'Aquatic'). Use '-' if unclear.\n"
+            "- shape_form: The overall growth form or visual silhouette (e.g., 'Upright', 'Spreading', 'Creeping', 'Mounded', 'Columnar', 'Prostrate'). Use '-' if unclear.\n"
+            "- period: Leave as '-' (not applicable for living plants).\n"
+            "- size: Relative size category (e.g., 'Small', 'Medium', 'Large', 'Dwarf', 'Tall') based on typical mature plant height. Use '-' if unclear.\n"
+            "- model_name: Common cultivar or variety name if identifiable from image or filename; otherwise use '-'.\n"
+            "- brand: Leave as '-' (not applicable for wild/natural vegetation).\n"
+            "- collection: The collection or series name if available in filename/sidecar; otherwise use '-'.\n"
+            "- vendor_name: Leave as '-' (not applicable for vegetation).\n"
+            "- Use '-' for any field you cannot confidently determine from the image.\n"
+            "- No markdown, no explanation, no extra keys."
+        )
+    else:
+        prompt += (
+            "Return ONLY a compact JSON object with these exact keys:\n"
+            '"subject", "model_name", "brand", "collection", '
+            '"primary_material_or_color", "usage_location", "shape_form", '
+            '"period", "size", "vendor_name".\n'
+            "Rules:\n"
+            "- subject: one short leaf subject phrase (Title Case, spaces, no root category prefix). "
+            "Examples: Outdoor Lounge Furniture, Pendant Lighting, Decorative Vase.\n"
+            "- subject should be as specific as the image reliably allows. Prefer the leaf-level object subtype, not a broad parent class.\n"
+            "- For subject, ALWAYS choose the most prominent physical object visible in the image. "
+            "Do not use room/context labels when a specific object is clearly dominant. "
+            "Example: if the image shows a bed as the main object, subject should be 'Bed' (not 'Bedroom Furniture').\n"
+            "- If filename/sidecar text conflicts with what is visually dominant, prefer the image for subject.\n"
+            "- Avoid overly generic subject labels like 'Chair', 'Table', 'Lamp', or 'Sofa' when a more specific subtype is visible. "
+            "For seating, prefer labels such as 'Armchair', 'Lounge Chair', 'Dining Chair', 'Side Chair', 'Bar Stool', 'Stool', 'Office Chair', or 'Bench' when supported by the image.\n"
+            "- If the filename stem contains a generic category token such as 'Chair' but the image shows a more specific subtype, ignore the generic filename token and return the more specific visual subtype for subject.\n"
+            "- Use a broad label like 'Chair' only as a last resort when no narrower subtype can be inferred with reasonable confidence from the image, sidecar text, or filename.\n"
+            "- model_name: product name/model title only (e.g., 'PH Snowball', 'Zenith Lounger').\n"
+            "- model_name must not be empty when the filename stem contains a plausible product token. "
+            "If the exact catalog/model title is unclear, fall back to the best short human-readable product token from the filename stem, converted to clean Title Case. "
+            "Prefer the descriptive word token over numeric codes. Examples: '10-07 single' -> 'Single', '10-07 snug' -> 'Snug', '10-07 sotai' -> 'Sotai'.\n"
+            "- Use '-' for model_name only when there is truly no plausible product/title token in the sidecar text, filename stem, or image.\n"
+            "- brand: manufacturer name only (e.g., 'Gloster', 'Louis Poulsen').\n"
+            f"- usage_location: one value from: {location_list}.\n"
+            "- If the sidecar text contains multiple products, first identify the single section that matches the attached image.\n"
+            "- Use '-' for any field you cannot confidently determine.\n"
+            "- No markdown, no explanation, no extra keys."
+        )
 
     try:
         raw = ollama_generate(
@@ -1901,6 +1930,11 @@ def enrich_row_with_models(
     period        = _clean_field(fields, "period")
     size          = _clean_field(fields, "size")
     vendor_name   = _clean_field(fields, "vendor_name")
+    
+    # For vegetation: extract Latin, Chinese, and common names from AI output
+    latin_name = _clean_field(fields, "latin_name") if asset_type == "vegetation" else "-"
+    chinese_name = _clean_field(fields, "chinese_name") if asset_type == "vegetation" else "-"
+    common_name = _clean_field(fields, "common_name") if asset_type == "vegetation" else "-"
 
     # Vendor defaults to brand when AI leaves it blank.
     if vendor_name == "-" and brand != "-":
@@ -1929,7 +1963,8 @@ def enrich_row_with_models(
 
     # ── Write to EFU row ─────────────────────────────────────────────────
     row["Subject"] = build_subject_path(asset_type, subject_path) if subject_path != "-" else "-"
-    row["Title"] = model_name
+    # For vegetation, Title is the common name; for other assets, it's model_name
+    row["Title"] = common_name if asset_type == "vegetation" else model_name
     row["Company"] = brand
     row["Album"] = collection
     row["custom_property_0"] = primary_material
@@ -1938,6 +1973,11 @@ def enrich_row_with_models(
     row["Period"] = period
     row["custom_property_5"] = size
     row["Author"] = vendor_name if vendor_name != "-" else (brand if brand != "-" else "-")
+    
+    # Vegetation-specific fields: Latin name and Traditional Chinese name
+    if asset_type == "vegetation":
+        row["custom_property_3"] = chinese_name
+        row["custom_property_4"] = latin_name
 
     return row
 
