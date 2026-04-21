@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.\\\\.venv\\\\Scripts\\\\python.exe -m pylint \".github/skills/ingest-schedule/ingest_schedule.py\" \".github/skills/ingest-schedule/display_preview.py\" \".github/skills/edit-efu-metadata/edit_metadata.py\" \".github/skills/move-delete-assets/move_delete_assets.py\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe \".github/skills/ingest-schedule/ingest_schedule.py\" --help)",
+      "Bash(.venv\\\\Scripts\\\\python.exe \".github/skills/ingest-schedule/display_preview.py\" --help)",
+      "Bash(.venv\\\\Scripts\\\\python.exe \".github/skills/edit-efu-metadata/edit_metadata.py\" --help)",
+      "Bash(.venv\\\\Scripts\\\\python.exe \".github/skills/move-delete-assets/move_delete_assets.py\" --help)",
+      "Bash(mkdir -p archive/temp)",
+      "Bash(mv scratch/* sandbox/* archive/temp/)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  },
+  "model": "auto"
+}

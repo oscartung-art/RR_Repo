@@ -54,6 +54,7 @@ Key scripts:
 ### Asset Ingestion
 
 - `tools/ingest_asset.py` — AI-powered metadata enrichment (Ollama local, OpenRouter optional)
+- `Subject` is canonicalized as `AssetType/<AI subject>` for all asset types; the model determines the leaf subject phrase.
 
 ### Data / Sync Utilities
 

@@ -1,110 +1,60 @@
-"""
-Offline regression test: verify that ALL asset types now flow through
-enrich_row_with_models in text mode and produce a correct Mood path
-and Manager label.  No Ollama or OpenRouter required.
-"""
-import sys, types, importlib.util, pathlib, os
-
-# ── Stub heavy imports ───────────────────────────────────────────────────────
-for mod_name in ("open_clip", "torch"):
-    stub = types.ModuleType(mod_name)
-    sys.modules[mod_name] = stub
-
-pil_stub = types.ModuleType("PIL")
-pil_image_stub = types.ModuleType("PIL.Image")
-pil_stub.Image = pil_image_stub
-sys.modules["PIL"] = pil_stub
-sys.modules["PIL.Image"] = pil_image_stub
-
-os.environ.setdefault("INGEST_BACKEND", "online")
-os.environ.setdefault("OPENROUTER_API_KEY", "dummy")
-
-sys.path.insert(0, r"D:\RR_Repo")
-
-spec = importlib.util.spec_from_file_location(
-    "ingest_asset", r"D:\RR_Repo\tools\ingest_asset.py"
-)
-ia = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(ia)
-
-# Patch all network calls to no-ops
-ia.web_search_enrich = lambda **kw: {}
-ia.enrich_vision_pass = lambda *a, **kw: {}
-ia.ollama_generate = lambda *a, **kw: ""
-
 from pathlib import Path
+import sys
 
-DUMMY_ARCHIVE = Path("TEMP_00000000.glb")
-CRC = "DEADBEEF"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-def run(asset_type, source_stem, vision_label=None, enrich_mode="text"):
-    hints = ia.parse_filename_hints(source_stem)
-    if vision_label:
-        hints["vision_label"] = vision_label
-    row = ia.build_metadata_row(
-        thumbnail_filename="",
-        archive_path=DUMMY_ARCHIVE,
-        asset_type=asset_type,
-        source_stem=source_stem,
-        crc32_value=CRC,
+from _ingest_test_utils import DUMMY_CRC, build_enriched_row
+
+
+def test_ai_subject_is_prefixed_for_supported_asset_types():
+    cases = [
+        ("furniture", "chair_stub", "Armchair", "Furniture/Armchair"),
+        ("fixture", "lamp_stub", "Pendant Light", "Fixture/Pendant Light"),
+        ("vegetation", "tree_stub", "Conifer Tree", "Vegetation/Conifer Tree"),
+        ("people", "person_stub", "Standing Person", "People/Standing Person"),
+        ("material", "wood_stub", "Wood Veneer", "Material/Wood Veneer"),
+        ("layouts", "layout_stub", "Dining Layout", "Layouts/Dining Layout"),
+        ("object", "vase_stub", "Decorative Vase", "Object/Decorative Vase"),
+        ("vehicle", "car_stub", "Sports Car", "Vehicle/Sports Car"),
+        ("vfx", "smoke_stub", "Smoke Plume", "VFX/Smoke Plume"),
+    ]
+
+    for asset_type, stem, ai_subject, expected_subject in cases:
+        _, row = build_enriched_row(asset_type, stem, {"subject": ai_subject})
+        assert row["Subject"] == expected_subject
+        assert row["CRC-32"] == DUMMY_CRC
+        assert "Mood" not in row
+
+
+def test_material_fields_map_to_canonical_columns():
+    _, row = build_enriched_row(
+        "material",
+        "wood-veneer-sk3-Gym-Flooring",
+        {
+            "subject": "Wood Veneer",
+            "model_name": "SK3",
+            "brand": "Loro Piana",
+            "collection": "Gym Flooring",
+            "primary_material_or_color": "Beige",
+            "shape_form": "Linear Grain",
+            "period": "Contemporary",
+            "size": "1200x2400mm",
+            "vendor_name": "Loro Piana",
+        },
     )
-    row = ia.enrich_row_with_models(
-        image_path=Path("dummy.jpeg"),
-        source_stem=source_stem,
-        asset_type=asset_type,
-        hints=hints,
-        row=row,
-        session_context="",
-        session_hints=None,
-        enrich_mode=enrich_mode,
-    )
-    return row
 
-# ── Test cases ───────────────────────────────────────────────────────────────
-tests = [
-    # (asset_type, source_stem, vision_label, enrich_mode, expected_mood_prefix, expected_manager)
-    ("object",     "object_0",              "Modernscuulpture", "vision", "Object/Decor/Sculpture", "Object"),
-    ("object",     "12-11 object_0",        None,               "text",   "Object/Decor/Sculpture", "Object"),
-    ("object",     "modern_sculpture_01",   None,               "text",   "Object/Decor/Sculpture", "Object"),
-    ("furniture",  "10-03 mychair",         None,               "text",   "Furniture/Seating/Chair", "Furniture"),
-    ("fixture",    "15-04 floor_lamp_01",   None,               "text",   "Fixture/Lighting/FloorLamp", "Fixture"),
-    ("vegetation", "14-24 oak_tree",        None,               "text",   "Vegetation/Tree",         "Vegetation"),
-    ("vehicle",    "vehicle_car_01",        None,               "text",   "-",                       "Vehicle"),
-    ("vfx",        "vfx_fire_01",           None,               "text",   "-",                       "VFX"),
-    ("material",   "material_wood_01",      None,               "text",   "-",                       "Material"),
-    ("buildings",  "11-03 door_01",         None,               "text",   "Building/Door",           "Buildings"),
-    ("layouts",    "layout_dining_01",      None,               "text",   "-",                       "Layouts"),
-    ("people",     "people_woman_01",       None,               "text",   "-",                       "People"),
-    ("location",   "location_lobby_01",     None,               "text",   "-",                       "Location"),
-    ("procedural", "procedural_railing_01", None,               "text",   "-",                       "Procedural"),
-]
+    assert row["Subject"] == "Material/Wood Veneer"
+    assert row["Title"] == "SK3"
+    assert row["Company"] == "Loro Piana"
+    assert row["Album"] == "Gym Flooring"
+    assert row["Period"] == "Contemporary"
+    assert row["custom_property_0"] == "Beige"
+    assert row["custom_property_2"] == "Linear Grain"
+    assert row["custom_property_5"] == "1200x2400mm"
+    assert row["Author"] == "Loro Piana"
 
-passed = 0
-failed = 0
-for asset_type, stem, vlabel, mode, mood_prefix, manager_label in tests:
-    row = run(asset_type, stem, vlabel, mode)
-    mood = row.get("Mood", "")
-    manager = row.get("Manager", "")
 
-    # Mood check: either exact prefix match or we just verify it's not "-" when expected
-    mood_ok = (
-        mood_prefix == "-"  # don't care / no taxonomy entry yet
-        or mood.startswith(mood_prefix)
-    )
-    manager_ok = manager_label in manager
-
-    status = "PASS" if (mood_ok and manager_ok) else "FAIL"
-    if status == "FAIL":
-        failed += 1
-        print(f"FAIL  [{asset_type:12}] stem={stem!r:30} mood={mood!r:35} manager={manager!r}")
-        if not mood_ok:
-            print(f"       expected Mood to start with {mood_prefix!r}")
-        if not manager_ok:
-            print(f"       expected Manager to contain {manager_label!r}")
-    else:
-        passed += 1
-        print(f"PASS  [{asset_type:12}] Mood={mood!r:35} Manager={manager.split(';')[0]!r}")
-
-print(f"\n{passed} passed, {failed} failed.")
-if failed:
-    sys.exit(1)
+if __name__ == "__main__":
+    test_ai_subject_is_prefixed_for_supported_asset_types()
+    test_material_fields_map_to_canonical_columns()
+    print("All tests passed.")

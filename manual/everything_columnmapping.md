@@ -4,17 +4,18 @@ Reference for all available metadata columns in `.metadata.efu`. Defines column 
 
 ## Asset Type Column Usage Matrix
 
-| Category | Subject | Title | Company | Album | Author | Period | Color (cp_0) | Location (cp_1) | Form (cp_2) | Chinese (cp_3) | Latin (cp_4) | Size (cp_5) |
-|----------|---------|-------|---------|-------|--------|--------|--------------|-----------------|-----------|---|---|--|
-| **Furniture** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ |
-| **Fixture** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ |
-| **Vegetation** | ✓ | ✓ | ✓ | — | — | — | ✓ | — | ✓ | ✓ | ✓ | ✓ |
-| **Object** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ |
-| **Material** | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | — | ✓ | — | — | ✓ |
-| **Vehicle** | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | — | — | — | — | ✓ |
-| **Layouts** | ✓ | — | — | ✓ | — | — | — | ✓ | ✓ | — | — | ✓ |
-| **People** | ✓ | — | — | — | — | ✓ | ✓ | ✓ | — | — | — | — |
-| **VFX** | ✓ | — | — | — | — | — | — | — | — | — | — | — |
+| Category | Subject | Title | Company | Album | Author | Period | Color (cp_0) | Location (cp_1) | Form (cp_2) | Chinese (cp_3) | Latin (cp_4) | Size (cp_5) | Code (cp_6) | Finish (cp_7) |
+|----------|---------|-------|---------|-------|--------|--------|--------------|-----------------|-----------|---|---|--|--|--|
+| **Furniture** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | — | — |
+| **Fixture** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | — | — |
+| **Vegetation** | ✓ | ✓ | ✓ | — | — | — | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | — |
+| **Object** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | — | — |
+| **Material** | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | — | ✓ | — | — | ✓ | — | — |
+| **Vehicle** | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | — | — | — | — | ✓ | — | — |
+| **Layouts** | ✓ | — | — | ✓ | — | — | — | ✓ | ✓ | — | — | ✓ | — | — |
+| **People** | ✓ | — | — | — | — | ✓ | ✓ | ✓ | — | — | — | — | — | — |
+| **VFX** | ✓ | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| **Schedule** | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | — | — | — | ✓ | ✓ | ✓ |
 
 **Legend:** ✓ = Used | — = Not used | cp = custom_property
 
@@ -44,16 +45,17 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 
 ## Categorization (Text)
 
-**Subject** : Asset classification (primary categorization field) — uses full hierarchical subcategory paths per `ingest_keywords.md`
-- **Furniture**: Full path. Examples: `Furniture/Seating/Armchair`, `Furniture/Table/CoffeeTable`, `Furniture/Storage/Bookcase`, `Furniture/Carpet/Carpet`
-- **Fixture**: Full path. Examples: `Fixture/Lighting/TableLamp`, `Fixture/Lighting/PendantLight`, `Fixture/BathroomFixture`, `Fixture/KitchenFaucet`, `Fixture/KitchenAppliance`
-- **Vegetation**: Full path. Examples: `Vegetation/Tree/ConiferTree`, `Vegetation/FlowerShrub`, `Vegetation/Cactus`, `Vegetation/Groundcover`, `Vegetation/Plant`
-- **Layouts**: Full path. Examples: `Layouts/BarTable`, `Layouts/BedSet`, `Layouts/DiningTable`, `Layouts/Seating/SeatingLounge`
-- **Object**: Full path. Examples: `Object/Decor/Vase`, `Object/Decor/Cushion`, `Object/Tableware/Book`, `Object/Decor/Sculpture`, `Object/Tableware/Tableware`
-- **Material**: Full path. Examples: `Material/Leather`, `Material/Wood`, `Material/Metal`, `Material/Glass`, `Material/Tile`, `Material/Fabric`, `Material/Stone`
-- **Vehicle**: Full path. Examples: `Vehicle/Car`, `Vehicle/Aircraft`, `Vehicle/Boat`, `Vehicle/Ship`, `Vehicle/Space`
-- **VFX**: Full path. Examples: `VFX/Fire`, `VFX/Smoke`, `VFX/Water`, `VFX/Sky`, `VFX/Caustics`, `VFX/Pattern`
-- **People**: Full path. Examples: `People/Standing`, `People/Sitting`, `People/Walking`, `People/Group`
+**Subject** : Asset classification (primary categorization field) — AI determines the leaf subject phrase, and ingestion stores it as `AssetType/<AI subject>`
+- **Furniture**: Examples: `Furniture/Armchair`, `Furniture/Coffee Table`, `Furniture/Bookcase`, `Furniture/Carpet`
+- **Fixture**: Examples: `Fixture/Table Lamp`, `Fixture/Pendant Light`, `Fixture/Bathroom Fixture`, `Fixture/Kitchen Faucet`
+- **Vegetation**: Examples: `Vegetation/Conifer Tree`, `Vegetation/Flower Shrub`, `Vegetation/Cactus`, `Vegetation/Groundcover`
+- **Layouts**: Examples: `Layouts/Bar Table`, `Layouts/Bed Set`, `Layouts/Dining Table`, `Layouts/Seating Lounge`
+- **Object**: Examples: `Object/Vase`, `Object/Cushion`, `Object/Book`, `Object/Sculpture`
+- **Material**: Examples: `Material/Wood Veneer`, `Material/Brushed Steel`, `Material/Porcelain Tile`, `Material/White Marble`
+- **Vehicle**: Examples: `Vehicle/Car`, `Vehicle/Aircraft`, `Vehicle/Boat`, `Vehicle/Ship`
+- **VFX**: Examples: `VFX/Fire`, `VFX/Smoke`, `VFX/Water`, `VFX/Sky`
+- **People**: Examples: `People/Standing Person`, `People/Sitting Person`, `People/Walking Person`, `People/Group`
+- **Schedule**: Examples: `Material/Tile`, `Material/Metal`, `Material/Glass`, `Material/Stone`
 
 **Title** : Model name/designer name. Examples:
 - **Furniture**: Model name. Examples: `Barcelona`, `Vernis Blend`, `Eames Lounge`
@@ -61,12 +63,12 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Object**: Model name. Examples: `Sahal`, `Bonbori`
 - **Vehicle**: Model. Examples: `Model S`, `Boeing 747`, `Yacht`
 - **Material**: Material/finish name. Examples: `White Marble`, `Brushed Steel`, `Oak Wood`, `Porcelain Tile`
+- **Schedule**: Model/spec name from schedule. Examples: `HMW-6040`, `Timbrium PVDF`, `Type A`
 
-**Album** : Collection
+**Album** : Collection / Model
 - **Furniture**: Collection. Examples: `Vernis Collection`, `Arco Collection`
 - **Fixture**: Collection. Examples: `Arco Collection`
 - **Object**: Collection. Examples: `Sahal Collection`
-- **Schedule**: Collection/series. If stated in spec, else `-`. Examples: `Standard`, `Premium`
 
 **ChineseName** (custom_property_3) : Chinese Name Scientific for Vegetation
 - **Vegetation**: Chinese Scientific name. Examples: `栎树`, `月季`, `仙人掌`, `地被植物`
@@ -81,12 +83,14 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Object**: Brand. Examples: `Kartell`, `Alessi`
 - **Vehicle**: Brand. Examples: `BMW`, `Boeing`, `Ferrari`
 - **Material**: Brand/Manufacturer. Examples: `Armani`, `Loro Piana`
+- **Schedule**: Client name. Examples: `Wang On`, `Henderson Land`
 
 **Author** : Vendor/company name or source
 - **Furniture**: Vendor. Examples: `Dimensiva`, `Design Connected`
 - **Fixture**: Vendor. Examples: `Dimensiva`, `Design Connected`
 - **Object**: Vendor. Examples: `Dimensiva`, `3dsky`
 - **All**: Source origin company
+- **Schedule**: Project name. Examples: `Ming Fung Street`, `Lohas Park Phase 3`
 
 
 ---
@@ -108,6 +112,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Fixture**: Primary color/material. Examples: `Chrome`, `Opal Glass`, `Brushed Steel`
 - **Object**: Primary color/material. Examples: `Ceramic`, `Glass`, `Fabric`
 - **Vehicle**: Primary color/material. Examples: `Black`, `Silver Metallic`, `Red`
+- **Schedule**: Color from spec. Examples: `White`, `Clear`, `Natural`, `Black`
 
 **Period** : Style, era, or temporal classification
 - **Furniture**: Style. Examples: `Modern`, `Contemporary`, `Mid-Century`, `Industrial`
@@ -125,6 +130,12 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Fixture**: Shape/form. Examples: `Wall-mounted`, `Floor-standing`, `Built-in`
 - **Object**: Shape/form. Examples: `Round`, `Rectangular`, `Abstract`
 
+**Code** (custom_property_6) : Material or reference code identifier
+- **Schedule**: Material code from spec. Examples: `AL-01`, `GL-02`, `ST-03`, `TL-01`
+
+**Finish** (custom_property_7) : Surface finish or treatment
+- **Schedule**: Finish from spec. Examples: `Matt`, `Polished`, `Brushed`, `Sandblasted`, `Powder Coated`, `Anodised`
+
 **Location** (custom_property_1) : Usage context, location, or occupancy
 - **Furniture**: Usage location. Examples: `Living Room`, `Bedroom`, `Office`, `Outdoor`
 - **Vegetation**: Growth location/habitat. Examples: `Aquatic`, `Home Garden`, `Outdoor`, `Lawn`
@@ -132,7 +143,7 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - **Layouts**: Room type. Examples: `Kitchen`, `Bedroom`, `Living Room`, `Dining Room`
 - **Fixture**: Usage location. Examples: `Bathroom`, `Kitchen`, `Office`, `Living Room`
 - **Object**: Usage location. Examples: `Kitchen`, `Bathroom`, `Office`, `Dining Room`
-- **Schedule**: Location. Examples: `Kitchen`, `Master Bathroom`, `Storage Cabinet`
+- **Schedule**: Room or area from spec. Examples: `Lobby`, `Master Bathroom`, `Kitchen`, `Facade`
 
 ---
 
@@ -164,15 +175,16 @@ Examples: 'procedural', 'multibranched', 'forestpack', 'color adjustable'
 - `custom_property_3` = **ChineseName** — Chinese/scientific name (vegetation)
 - `custom_property_4` = **LatinName** — Latin/scientific name (vegetation)
 - `custom_property_5` = **Size** — Size or dimensions
-- `custom_property_6-9` — Reserved/unused
+- `custom_property_6` = **Code** — Material or reference code identifier (schedule)
+- `custom_property_7` = **Finish** — Surface finish or treatment (schedule)
+- `custom_property_8-9` — Reserved/unused
 
 **Note:** Everything Search treats property names as case-insensitive in CSV headers. One-meaning-per-column semantic rule enforced.
 
 ---
 
-## Active Prefix Codes
+## Legacy Taxonomy Notes
 
-See [manual/ingest_keywords.md](manual/ingest_keywords.md) for current prefix code mappings (10-xx, 11-xx, 12-xx, 14-xx, 15-xx). The file is source-of-truth for all active category codes and subcategory paths.
+Legacy prefix-code and static subcategory-table workflows are obsolete for `Subject` inference. `Subject` is now produced by the AI model for all asset types, then prefixed with the asset root during ingestion.
 
 *End of document.*
-

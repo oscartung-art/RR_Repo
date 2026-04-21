@@ -3,6 +3,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# AI Agent configs
+.gemini/
+.qwen/
+
+# Temporary directories
+sandbox/
+scratch/
+
+# Working files
+working/
+
 # C extensions
 *.so
 
