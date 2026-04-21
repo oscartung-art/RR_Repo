@@ -2646,11 +2646,26 @@ def process_image_only(
             use_filename_signal=use_filename_signal,
         )
 
-        # Build image target path inside THUMBNAIL_BASE.
-        image_dir = image_path.parent
-        short_base = build_short_base_name(asset_type, temp_row, hints, fallback=image_path.stem)
-        short_base_with_crc = f"{short_base}_{crc32_value}"
-        image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
+        # Keep original filename
+        metadata_row = dict(temp_row)
+        metadata_row["Filename"] = image_path.name
+        metadata_row["ArchiveFile"] = "-"
+
+        if show_preview_card and not quiet:
+            print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+            print(f"(preview) CRC-32: {crc32_value}")
+            print(f"(preview) Image: {image_path}")
+            print(f"(preview) Metadata file: {METADATA_EFU_PATH}")
+            preview_mapped_metadata(asset_type, metadata_row)
+
+        if dry_run:
+            if not quiet:
+                print("(dry-run) No files were moved and no metadata was written.")
+            return
+
+        if not auto_yes and not confirm_apply():
+            print("Skipped by user.")
+            return
 
         overwrite_existing = False
         existing_entry = find_existing_index_entry(METADATA_EFU_PATH, crc32_value)
@@ -2670,46 +2685,12 @@ def process_image_only(
             else:
                 choice = input("Overwrite existing entry? [y/N]: ").strip().lower()
                 overwrite_existing = choice in {"y", "yes"}
-                if not overwrite_existing:
-                    image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
-
-        metadata_row = dict(temp_row)
-        metadata_row["Filename"] = image_target.name
-        metadata_row["ArchiveFile"] = "-"
-
-        if show_preview_card and not quiet:
-            print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
-            print(f"(preview) CRC-32: {crc32_value}")
-            print(f"(preview) Image target: {image_target}")
-            print(f"(preview) Metadata file: {METADATA_EFU_PATH}")
-            preview_mapped_metadata(asset_type, metadata_row)
-
-        if dry_run:
-            if not quiet:
-                print("(dry-run) No files were moved and no metadata was written.")
-            return
-
-        if not auto_yes and not confirm_apply():
-            print("Skipped by user.")
-            return
-
-        if overwrite_existing and existing_entry is not None:
-            stale_image = _delete_stale_indexed_file(existing_img, image_dir, image_path, image_target)
-            if stale_image is not None and not quiet:
-                print(f"  Deleted stale file: {stale_image.name}")
-
-        if overwrite_existing and image_target.exists() and image_target.resolve() != image_path.resolve():
-            image_target.unlink()
-        if image_path.resolve() != image_target.resolve():
-            moved_image = _move_with_timeout(str(image_path), str(image_target))
-        else:
-            moved_image = image_target
 
         append_metadata_row(METADATA_EFU_PATH, metadata_row, overwrite_existing=overwrite_existing)
         if not quiet:
             print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
             print(f"CRC-32: {crc32_value}")
-            print(f"Image renamed to: {moved_image}")
+            print(f"Image: {image_path}")
         if overwrite_existing:
             if not quiet:
                 print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
@@ -2791,37 +2772,23 @@ def process_collection_image(
             if collection_album:
                 temp_row["Album"] = collection_album
 
-        # Collection mode: rename in the source folder, not in THUMBNAIL_BASE.
-        # This keeps the files where they are but gives them the canonical name.
-        image_dir = image_path.parent
-        short_base = build_short_base_name(asset_type, temp_row, hints, fallback=image_path.stem)
-        short_base_with_crc = f"{short_base}_{archive_crc32}"
-        image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
+        # Keep original filename
+        metadata_row = dict(temp_row)
+        metadata_row["Filename"] = image_path.name
+        metadata_row["ArchiveFile"] = archive_file_name
+        metadata_row["CRC-32"] = archive_crc32
 
-        # If an old entry exists, delete the old stale file and overwrite the EFU row
-        # with the freshly computed canonical name.
+        # If an old entry exists, overwrite the EFU row
         existing_entry = find_existing_index_entry_by_filename(METADATA_EFU_PATH, image_path.name)
         if existing_entry is not None:
-            existing_img = (existing_entry.get("Filename") or "").strip()
-            if existing_img and existing_img != "-":
-                _ep_abs = Path(existing_img) if Path(existing_img).is_absolute() else image_dir / existing_img
-                if _ep_abs.resolve() != image_path.resolve() and _ep_abs.exists():
-                    _ep_abs.unlink()
-                    if not quiet:
-                        print(f"  Deleted stale file: {_ep_abs.name}")
             if not quiet:
                 print(f"  Re-ingesting: {image_path.name} (old entry replaced)")
         overwrite_existing = existing_entry is not None
 
-        metadata_row = dict(temp_row)
-        metadata_row["Filename"] = image_target.name
-        metadata_row["ArchiveFile"] = archive_file_name
-        metadata_row["CRC-32"] = archive_crc32
-
         if show_preview_card and not quiet:
             print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
             print(f"(preview) CRC-32: {archive_crc32}  (archive)")
-            print(f"(preview) Image target: {image_target}")
+            print(f"(preview) Image: {image_path}")
             preview_mapped_metadata(asset_type, metadata_row)
 
         if dry_run:
@@ -2833,11 +2800,6 @@ def process_collection_image(
             print("Skipped by user.")
             return
 
-        if image_path.resolve() != image_target.resolve():
-            moved_image = _move_with_timeout(str(image_path), str(image_target))
-        else:
-            moved_image = image_target
-
         append_metadata_row(
             METADATA_EFU_PATH, metadata_row,
             overwrite_existing=overwrite_existing,
@@ -2846,7 +2808,7 @@ def process_collection_image(
         if not quiet:
             print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
             print(f"CRC-32: {archive_crc32}")
-            print(f"Image renamed to: {moved_image}")
+            print(f"Image: {image_path}")
         if overwrite_existing:
             if not quiet:
                 print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
@@ -2868,40 +2830,15 @@ def _prepare_collection_archive(
     archive_path: Path,
     dry_run: bool = False,
 ) -> tuple[str, str]:
-    """Compute archive CRC-32, move it to ARCHIVE_BASE (once), return (crc32, final_name)."""
+    """Compute archive CRC-32, keep archive filename/path as-is, return (crc32, original filename)."""
     # Dry-run should still preview the real archive CRC for accurate metadata/filename output.
     crc32 = compute_crc32(archive_path)
 
-    # In no-move mode, keep archive filename/path as-is and only compute CRC.
-    if not MOVE_FILES:
-        if dry_run:
-            print(f"(dry-run) Archive source kept: {archive_path}")
-        else:
-            print(f"Archive source kept: {archive_path}")
-        return crc32, archive_path.name
-
-    stem_clean = re.sub(r'[<>":?*|/\\]', "_", archive_path.stem)
-    # Avoid repeated suffixes like "name_<CRC>_<CRC>.rar" on re-runs.
-    stem_base = stem_clean
-    if re.fullmatch(r"[0-9A-F]{8}", crc32):
-        crc_token = crc32.upper()
-        while re.search(rf"_{crc_token}$", stem_base, flags=re.IGNORECASE):
-            stem_base = re.sub(rf"_{crc_token}$", "", stem_base, flags=re.IGNORECASE)
-    final_name = f"{stem_base}_{crc32}{archive_path.suffix.lower()}"
-    final_path = ARCHIVE_BASE / final_name
-
-    if not dry_run:
-        if final_path.exists() and final_path.resolve() == archive_path.resolve():
-            pass  # already in place
-        elif final_path.exists():
-            print(f"Archive already at target: {final_path}")
-        else:
-            _move_with_timeout(str(archive_path), str(final_path))
-            print(f"Archive moved to: {final_path}")
+    if dry_run:
+        print(f"(dry-run) Archive source kept: {archive_path}")
     else:
-        print(f"(dry-run) Archive target would be: {final_path}")
-
-    return crc32, final_name
+        print(f"Archive source kept: {archive_path}")
+    return crc32, archive_path.name
 
 
 def main() -> None:
@@ -2988,22 +2925,30 @@ def main() -> None:
                 # Restore user-provided Author — prevent AI enrichment from overwriting it.
                 if author_input:
                     temp_row["Author"] = author_input
-                # Pair mode should always rename both files:
-                # - image always renames in place
-                # - archive renames in place when MOVE_FILES=0, otherwise moves to ARCHIVE_BASE
-                image_dir = image_path.parent
-                archive_dir = ARCHIVE_BASE if MOVE_FILES else archive_path.parent
-                temp_archive_target = archive_dir / f"TEMP_{crc32_value}{archive_path.suffix.lower()}"
+                # Keep original filenames
+                metadata_row = dict(temp_row)
+                metadata_row["Filename"] = image_path.name
+                # Keep Subject as the AI-determined root/leaf path; track archive filename in ArchiveFile.
+                metadata_row["ArchiveFile"] = archive_path.name
 
-                short_base = build_short_base_name(asset_type, temp_row, hints, fallback=image_path.stem)
-                short_base_with_crc = f"{short_base}_{crc32_value}"
-                image_target, archive_target, new_base_name = ensure_unique_targets(
-                    short_base_with_crc,
-                    image_path.suffix.lower(),
-                    archive_path.suffix.lower(),
-                    image_dir=image_dir,
-                    archive_dir=archive_dir,
-                )
+                # Always preview (dry-run style) first.
+                if show_preview_card and not quiet:
+                    print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
+                    print(f"(preview) CRC-32: {crc32_value}")
+                    print(f"(preview) Image: {image_path}")
+                    print(f"(preview) Archive: {archive_path}")
+                    print(f"(preview) Metadata file: {METADATA_EFU_PATH}")
+                    preview_mapped_metadata(asset_type, metadata_row)
+
+                if dry_run:
+                    if not quiet:
+                        print("(dry-run) No files were moved and no metadata was written.")
+                    return
+
+                if not auto_yes and not confirm_apply():
+                    print("Skipped by user.")
+                    return
+
                 overwrite_existing = False
                 existing_entry = find_existing_index_entry(METADATA_EFU_PATH, crc32_value)
                 existing_img = ""
@@ -3027,79 +2972,13 @@ def main() -> None:
                     else:
                         choice = input("Overwrite existing files + metadata row? [y/N]: ").strip().lower()
                         overwrite_existing = choice in {"y", "yes"}
-                        if not overwrite_existing:
-                            image_target, archive_target, new_base_name = ensure_unique_targets(
-                                short_base_with_crc,
-                                image_path.suffix.lower(),
-                                archive_path.suffix.lower(),
-                                image_dir=image_dir,
-                                archive_dir=archive_dir,
-                            )
 
-                metadata_row = dict(temp_row)
-                metadata_row["Filename"] = image_target.name
-                # Keep Subject as the AI-determined root/leaf path; track archive filename in ArchiveFile.
-                metadata_row["ArchiveFile"] = archive_target.name
-
-                # Always preview (dry-run style) first.
-                if show_preview_card and not quiet:
-                    print(f"(preview) Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
-                    print(f"(preview) CRC-32: {crc32_value}")
-                    print(f"(preview) Image target: {image_target}")
-                    print(f"(preview) Archive target: {archive_target}")
-                    print(f"(preview) Metadata file: {METADATA_EFU_PATH}")
-                    preview_mapped_metadata(asset_type, metadata_row)
-
-                if dry_run:
-                    if not quiet:
-                        print("(dry-run) No files were moved and no metadata was written.")
-                    return
-
-                if not auto_yes and not confirm_apply():
-                    print("Skipped by user.")
-                    return
-
-                if overwrite_existing and existing_entry is not None:
-                    stale_image = _delete_stale_indexed_file(existing_img, image_dir, image_path, image_target)
-                    if stale_image is not None and not quiet:
-                        print(f"  Deleted stale file: {stale_image.name}")
-                    stale_archive = _delete_stale_indexed_file(existing_arc, archive_dir, archive_path, archive_target)
-                    if stale_archive is not None and not quiet:
-                        print(f"  Deleted stale file: {stale_archive.name}")
-
-                # Always rename image in place.
-                if overwrite_existing and image_target.exists() and image_target.resolve() != image_path.resolve():
-                    image_target.unlink()
-                if image_path.resolve() != image_target.resolve():
-                    moved_image = _move_with_timeout(str(image_path), str(image_target))
-                else:
-                    moved_image = image_target
-
-                # Always process archive target in pair mode:
-                # in-place rename when MOVE_FILES=0, move+rename when MOVE_FILES=1.
-                _, moved_archive = move_pair(
-                    moved_image, archive_path, new_base_name,
-                    image_target=moved_image,
-                    archive_target=archive_target,
-                    overwrite=overwrite_existing,
-                    image_dir=image_dir,
-                    archive_dir=archive_dir,
-                )
                 append_metadata_row(METADATA_EFU_PATH, metadata_row, overwrite_existing=overwrite_existing)
                 if not quiet:
                     print(f"Label: {label} | Source: {label_source} | Confidence: {confidence:.2%}")
                     print(f"CRC-32: {crc32_value}")
-                    print(f"Image renamed to: {moved_image}")
-                if moved_archive.resolve() != archive_path.resolve():
-                    if MOVE_FILES:
-                        if not quiet:
-                            print(f"Archive moved to: {moved_archive}")
-                    else:
-                        if not quiet:
-                            print(f"Archive renamed to: {moved_archive}")
-                else:
-                    if not quiet:
-                        print(f"Archive source kept: {moved_archive}")
+                    print(f"Image: {image_path}")
+                    print(f"Archive source kept: {archive_path}")
                 if overwrite_existing:
                     if not quiet:
                         print(f"Metadata row overwritten in: {METADATA_EFU_PATH}")
@@ -3180,16 +3059,7 @@ def main() -> None:
 
         def _preview_collection_archive_info(archive_path: Path) -> tuple[str, str]:
             crc32 = compute_crc32(archive_path)
-            if not MOVE_FILES:
-                return crc32, archive_path.name
-
-            stem_clean = re.sub(r'[<>":?*|/\\]', "_", archive_path.stem)
-            stem_base = stem_clean
-            if re.fullmatch(r"[0-9A-F]{8}", crc32):
-                crc_token = crc32.upper()
-                while re.search(rf"_{crc_token}$", stem_base, flags=re.IGNORECASE):
-                    stem_base = re.sub(rf"_{crc_token}$", "", stem_base, flags=re.IGNORECASE)
-            return crc32, f"{stem_base}_{crc32}{archive_path.suffix.lower()}"
+            return crc32, archive_path.name
 
         def _build_preview_row(
             index: int,
@@ -3287,18 +3157,6 @@ def main() -> None:
             if author_input:
                 temp_row["Author"] = author_input
 
-            image_dir = image_path.parent
-            archive_dir = ARCHIVE_BASE if MOVE_FILES else archive_path.parent
-            short_base = build_short_base_name(_eff_type, temp_row, hints, fallback=image_path.stem)
-            short_base_with_crc = f"{short_base}_{crc32_value}"
-            image_target, archive_target, new_base_name = ensure_unique_targets(
-                short_base_with_crc,
-                image_path.suffix.lower(),
-                archive_path.suffix.lower(),
-                image_dir=image_dir,
-                archive_dir=archive_dir,
-            )
-
             note_parts = [label_source]
             existing_entry = find_existing_index_entry(METADATA_EFU_PATH, crc32_value)
             overwrite_existing = existing_entry is not None
@@ -3308,15 +3166,15 @@ def main() -> None:
                 note_parts.append("new")
 
             metadata_row = dict(temp_row)
-            metadata_row["Filename"] = image_target.name
-            metadata_row["ArchiveFile"] = archive_target.name
+            metadata_row["Filename"] = image_path.name
+            metadata_row["ArchiveFile"] = archive_path.name
             preview_row = _build_preview_row(
                 index=index,
                 source_name=image_path.name,
                 route="pair",
-                archive_name=archive_target.name,
+                archive_name=archive_path.name,
                 sidecar_name=sidecar_label,
-                target_name=image_target.name,
+                target_name=image_path.name,
                 metadata_row=metadata_row,
                 notes="; ".join(note_parts),
             )
@@ -3372,11 +3230,6 @@ def main() -> None:
                 use_filename_signal=use_filename_signal,
             )
 
-            image_dir = image_path.parent
-            short_base = build_short_base_name(_eff_type, temp_row, hints, fallback=image_path.stem)
-            short_base_with_crc = f"{short_base}_{crc32_value}"
-            image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
-
             note_parts = [label_source]
             if note_prefix:
                 note_parts.append(note_prefix)
@@ -3388,7 +3241,7 @@ def main() -> None:
                 note_parts.append("new")
 
             metadata_row = dict(temp_row)
-            metadata_row["Filename"] = image_target.name
+            metadata_row["Filename"] = image_path.name
             metadata_row["ArchiveFile"] = "-"
             preview_row = _build_preview_row(
                 index=index,
@@ -3396,7 +3249,7 @@ def main() -> None:
                 route="image-only",
                 archive_name="-",
                 sidecar_name=sidecar_label,
-                target_name=image_target.name,
+                target_name=image_path.name,
                 metadata_row=metadata_row,
                 notes="; ".join(note_parts),
             )
@@ -3454,11 +3307,6 @@ def main() -> None:
             if collection_album:
                 temp_row["Album"] = collection_album
 
-            image_dir = image_path.parent
-            short_base = build_short_base_name(_eff_type, temp_row, hints, fallback=image_path.stem)
-            short_base_with_crc = f"{short_base}_{archive_crc32}"
-            image_target = _make_unique_image_target(image_path, short_base_with_crc, image_dir)
-
             note_parts = [label_source]
             existing_entry = find_existing_index_entry_by_filename(METADATA_EFU_PATH, image_path.name)
             overwrite_existing = existing_entry is not None
@@ -3468,7 +3316,7 @@ def main() -> None:
                 note_parts.append("new")
 
             metadata_row = dict(temp_row)
-            metadata_row["Filename"] = image_target.name
+            metadata_row["Filename"] = image_path.name
             metadata_row["ArchiveFile"] = archive_file_name
             metadata_row["CRC-32"] = archive_crc32
             preview_row = _build_preview_row(
