@@ -293,7 +293,7 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     # Strip out Everything's bracketed prefix/suffix like "[Image: ...]" or "[Image #1]"
     # BUT preserve brackets that are part of the filename (when path is quoted)
     # Strategy: Only remove brackets that are NOT inside quoted strings
-    
+
     # Remove any bracketed prefixes/suffixes like [Image: ...]
     # (This may remove brackets inside quotes in rare cases, but keeps parsing simple.)
     text = re.sub(r'\[[^\]]*\]', '', text).strip()
@@ -302,12 +302,22 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     # This handles paths wrapped in <> without losing content
     text = text.replace('<', ' ').replace('>', ' ').strip()
 
-    # Support flag-style set commands pasted from terminal, e.g.:
-    # --field 4 --value "Yellow" "G:\\DB\\img.jpg"
-    import shlex
-    try:
-        tokens = shlex.split(text)
-    except Exception:
+    # Extract all quoted content upfront - this works for action-first format regardless of spacing
+    all_quoted = re.findall(r'"([^"]+)"', text)
+
+    # Check for flag-style commands
+    has_flags = '--' in text or any(word.startswith('-') and len(word) > 1 for word in text.split())
+    if has_flags and any(('--field' in text or '--value' in text)):
+        # Support flag-style set commands pasted from terminal, e.g.:
+        # --field 4 --value "Yellow" "G:\\DB\\img.jpg"
+        import shlex
+        try:
+            tokens = shlex.split(text)
+        except Exception:
+            tokens = text.split()
+    else:
+        # No flags - split into tokens. For action-first with multiple quoted strings
+        # we've already extracted all quoted content separately below
         tokens = text.split()
 
     if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') or t in ('-a','--action') or t.startswith('--action=') or t in ('--asset-type',) or t.startswith('--asset-type=') or t in ('-d','--description') or t.startswith('--description=') for t in tokens):
@@ -464,55 +474,54 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
 
     action_raw = all_words[action_index].lower().rstrip(':')
 
-    if action_index == 0:
-        # Action-first format (Everything search): action [args] "description" "path"
-        # Since the entire text has already been processed (brackets removed),
-        # extract all quoted content - last quoted is always the path
-        all_quoted = re.findall(r'"([^"]+)"', text)
-        if len(all_quoted) >= 1:
-            # Last quoted is always the path
-            path_strs = [all_quoted[-1]]
-            # All other quoted are args (description) - join back together
-            quoted_args = all_quoted[:-1]
-            # Get any non-quoted text before the first quote for asset type abbreviation (e.g. -fur)
-            first_quote_pos = text.find('"')
-            pre_quote = text[first_candidate_pos+1:first_quote_pos].strip()
-            args_str = (pre_quote + ' ' + ' '.join(quoted_args)).strip()
-        else:
-            # No quotes - fallback: last token is path, everything else is args
+    # Extract all quoted strings from the entire text
+    all_quoted = re.findall(r'"([^"]+)"', text)
+
+    if action_index == 0 and len(all_quoted) >= 1:
+        # Action-first format with quoted content: action [abbr] "description" "path"
+        # Last quoted is always the path
+        path_strs = [all_quoted[-1]]
+        # All other quoted are the description
+        quoted_args = all_quoted[:-1]
+        # Get any non-quoted text before the first quote (usually asset abbreviation like -fur)
+        first_quote_idx = text.find('"')
+        # Get the start position after the first word (the action)
+        action_end_pos = len(all_words[0])
+        # Step back past any whitespace after the action
+        while action_end_pos < len(text) and text[action_end_pos].isspace():
+            action_end_pos += 1
+        pre_quote_text = text[action_end_pos:first_quote_idx].strip()
+        # Combine pre-quote text + any quoted args for full args string
+        args_parts = [pre_quote_text] + quoted_args
+        args_str = ' '.join(args_parts).strip()
+    else:
+        # Regular parsing: either traditional format (path action) or no quotes
+        if action_index == 0:
+            # Action-first, no quotes - last token is path, everything else is args
             all_remaining = all_words[action_index+1:]
             if len(all_remaining) == 0:
                 return None, None, None
             if len(all_remaining) == 1:
-                # Just a path, no args: action path
                 args_str = ""
                 path_strs = [all_remaining[-1]]
             else:
-                # Multiple words: everything except last is args, last is path
                 args_words = all_remaining[:-1]
                 args_str = " ".join(args_words)
                 path_strs = [all_remaining[-1]]
-    else:
-        # Traditional format: paths... action [args]
-        # All words before action_index are paths (may be quoted)
-        # All words after action_index are arguments
-        path_words = all_words[:action_index]
-        args_words = all_words[action_index+1:]
-        args_str = " ".join(args_words)
-        # Collect paths: extract all quoted paths from path_words
-        paths_text = " ".join(path_words)
-        # Remove any angle brackets < > around the entire paths list
-        paths_text = paths_text.strip('<>')
-        # Find all "..." quoted strings - these are individual paths
-        quoted_paths = re.findall(r'"([^"]+)"', paths_text)
-        if quoted_paths:
-            # We have quoted paths - use ONLY those (ignore unquoted search paths from Everything)
-            path_strs = quoted_paths
         else:
-            # No quotes - split on pipe or whitespace
-            # Replace pipes with spaces first
-            temp_text = paths_text.replace('|', ' ').strip()
-            path_strs = temp_text.split()
+            # Traditional format: paths... action [args]
+            path_words = all_words[:action_index]
+            args_words = all_words[action_index+1:]
+            args_str = " ".join(args_words)
+            # Collect paths from path_words
+            paths_text = " ".join(path_words)
+            paths_text = paths_text.strip('<>')
+            quoted_paths = re.findall(r'"([^"]+)"', paths_text)
+            if quoted_paths:
+                path_strs = quoted_paths
+            else:
+                temp_text = paths_text.replace('|', ' ').strip()
+                path_strs = temp_text.split()
 
     # Filter out empty strings, pipe symbols, and paths with invalid characters
     path_strs = [p.strip() for p in path_strs
@@ -1502,10 +1511,12 @@ def run():
 
             # Parse command
             parsed = parse_command(current)
-            if parsed is None:
-                print(f"[clipboard-watcher] Could not parse command: {current[:80]}")
+            # Defensive check: parse_command must return a 3-tuple (paths, action, args)
+            if not isinstance(parsed, (list, tuple)) or len(parsed) != 3:
+                print(f"[clipboard-watcher] Could not parse command (unexpected return): {parsed!r}")
                 _last_seen = current
                 continue
+
             file_path, action, args = parsed
 
             if file_path is None or action is None:
