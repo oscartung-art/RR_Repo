@@ -182,7 +182,7 @@ python tools/extract_schedule_json.py --yes --extract-images "material.pdf"
 **Skill definition:** `.github/skills/extract-schedule-json/SKILL.md`
 **Documentation:** `.github/skills/extract-schedule-json/README.md`
 **Script:** `tools/extract_schedule_json.py`
-**Watcher logic:** `tools/clipboard_asset_watcher.py`
+**Watcher logic:** `tools/watcher.py`
 **Extraction logic:** `tools/ingest_schedule.py`
 
 ## Related Documentation

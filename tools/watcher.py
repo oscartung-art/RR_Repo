@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-# NOTE: This file will be renamed to watcher.py by automated update
 
 """
-clipboard_asset_watcher.py — Background daemon to handle asset management commands from clipboard.
+watcher.py — Background daemon to handle asset management commands from clipboard.
 
 Runs in background, monitors clipboard for commands in the format:
     <file-path> <action>[:] [arguments]
@@ -18,7 +17,7 @@ Supported actions:
 - set:       Set one or more metadata fields (e.g. "path set Rating=99 Tags=lighting;modern")
 
 Run:
-    python tools/clipboard_asset_watcher.py [--dry-run]
+    python tools/watcher.py [--dry-run]
 
 Stop with Ctrl+C.
 """
@@ -36,7 +35,6 @@ from typing import Tuple, Optional, List, Dict
 # Windows-specific imports — this is a Windows-only tool
 # ---------------------------------------------------------------------------
 try:
-    import win32gui
     import winsound
     import pyperclip
     # Disable win10toast due to known bugs with classAtom attribute
@@ -61,7 +59,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 # Add parent directory to path so we can import project modules
-# When running as python tools/clipboard_asset_watcher.py, tools/ is on the same level
+# When running as python tools/watcher.py, tools/ is on the same level
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Load .env file if it exists (for API keys and configuration)

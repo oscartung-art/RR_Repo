@@ -7,7 +7,7 @@ from pathlib import Path
 # Add tools to path
 sys.path.insert(0, str(Path(__file__).parent / "tools"))
 
-from clipboard_asset_watcher import _enrich_image
+from watcher import _enrich_image
 from move_delete_assets import _load_efu
 
 # Test file

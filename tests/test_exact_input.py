@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "tools"))
 
-from clipboard_asset_watcher import parse_command, _looks_like_command
+from watcher import parse_command, _looks_like_command
 
 # Exact string the user is copying
 test_input = '"G:\\DB\\sandbox\\.metadata.efu" audit:'
