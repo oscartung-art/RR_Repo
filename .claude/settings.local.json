@@ -41,7 +41,8 @@
       "Bash(powershell *)",
       "Bash(del *)",
       "Read(//d D:/**)",
-      "Bash(\"D:\\\\rr_repo\\\\.venv\\\\Scripts\\\\python.exe\" \"test_extraction.py\")"
+      "Bash(\"D:\\\\rr_repo\\\\.venv\\\\Scripts\\\\python.exe\" \"test_extraction.py\")",
+      "Bash(.\\\\.venv\\\\Scripts\\\\python *)"
     ]
   },
   "model": "auto"
