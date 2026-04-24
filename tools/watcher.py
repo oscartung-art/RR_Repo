@@ -37,15 +37,12 @@ from typing import Tuple, Optional, List, Dict
 # Windows-specific imports — this is a Windows-only tool
 # ---------------------------------------------------------------------------
 try:
-    import winsound
     import pyperclip
-    # Disable win10toast due to known bugs with classAtom attribute
-    # from win10toast import ToastNotifier
     HAS_TOAST = False
 except ImportError as exc_main:
     sys.exit(
         f"[clipboard-watcher] Missing required package: {exc_main}\n"
-        "Install with: pip install pywin32 pyperclip"
+        "Install with: pip install pyperclip"
     )
 
 # Try to import send2trash for safe deletion to Recycle Bin
@@ -130,60 +127,8 @@ _last_seen: str = ""
 
 
 # ---------------------------------------------------------------------------
-# Helpers - Audio feedback
+# Helpers - Window automation
 # ---------------------------------------------------------------------------
-def _notify(kind, message=""):
-    """Show Windows toast notification instead of beep."""
-    if not HAS_TOAST:
-        # Fallback to beep if win10toast not available
-        mapping = {
-            "start":    winsound.MB_ICONQUESTION,
-            "success":  winsound.MB_ICONASTERISK,
-            "error":    winsound.MB_ICONHAND,
-            "no_match": winsound.MB_ICONEXCLAMATION,
-        }
-        try:
-            winsound.MessageBeep(mapping.get(kind, winsound.MB_ICONASTERISK))
-        except Exception:
-            pass
-        return
-    
-    # Show toast notification
-    titles = {
-        "start":    "⏳ Processing...",
-        "success":  "✓ Success",
-        "error":    "✗ Error",
-        "no_match": "⚠ Not Found",
-    }
-    
-    title = titles.get(kind, "Clipboard Watcher")
-    if not message:
-        message = {
-            "start":    "Processing asset command",
-            "success":  "Operation completed",
-            "error":    "Operation failed",
-            "no_match": "File or entry not found",
-        }.get(kind, "Notification")
-    
-    try:
-        toaster = ToastNotifier()
-        toaster.show_toast(
-            title,
-            message,
-            duration=3,
-            threaded=True,
-        )
-    except Exception:
-        # Fallback to beep on error
-        try:
-            winsound.MessageBeep(winsound.MB_ICONASTERISK)
-        except Exception:
-            pass
-
-# Backward compatibility alias
-_beep = lambda kind: _notify(kind)
-
-
 def _refresh_everything():
     """Send F5 key to Everything Search window."""
     try:
@@ -806,7 +751,6 @@ def _handle_enrich(file_paths: list[Path], args: list[Tuple[str, str]] | None = 
 
     if not file_path.exists():
         print(f"[error] File not found: {file_path}")
-        _beep("error")
         return False
 
     # Route based on file type
@@ -831,7 +775,6 @@ def _enrich_batch_ai(image_paths: list[Path], args: list[tuple]) -> bool:
     if asset_type:
         print(f"  Asset type: {asset_type}")
     
-    _beep("start")
     
     success_count = 0
     error_count = 0
@@ -910,10 +853,8 @@ def _enrich_batch_ai(image_paths: list[Path], args: list[tuple]) -> bool:
     print(f"\n  Enriched: {success_count}/{len(image_paths)}")
     if error_count > 0:
         print(f"  Errors: {error_count}")
-        _beep("error")
         return False
     else:
-        _beep("success")
         return True
 
 
@@ -929,7 +870,6 @@ def _enrich_batch_with_json(image_paths: list[Path], json_path: Path) -> bool:
     
     if not json_path.exists():
         print(f"[error] JSON file not found: {json_path}")
-        _beep("error")
         return False
     
     # Load JSON metadata
@@ -939,12 +879,10 @@ def _enrich_batch_with_json(image_paths: list[Path], json_path: Path) -> bool:
         print(f"  → Loaded {len(metadata_map)} entries from JSON")
     except Exception as exc:
         print(f"[error] Failed to load JSON: {exc}")
-        _beep("error")
         return False
     
     if not image_paths:
         print(f"[warn] No images to enrich")
-        _beep("no_match")
         return False
     
     # Group images by parent folder (one EFU per folder)
@@ -953,7 +891,6 @@ def _enrich_batch_with_json(image_paths: list[Path], json_path: Path) -> bool:
     for img in image_paths:
         by_folder[img.parent].append(img)
     
-    _beep("start")
     total_enriched = 0
     
     for folder, images in by_folder.items():
@@ -1023,10 +960,8 @@ def _enrich_batch_with_json(image_paths: list[Path], json_path: Path) -> bool:
             print(f"    ✓ EFU saved: {efu_path}")
         except Exception as exc:
             print(f"    [error] Failed to write EFU: {exc}")
-            _beep("error")
             return False
     
-    _beep("success")
     print(f"\n[clipboard-watcher] Done ✓ - {total_enriched} entries enriched")
     return True
 
@@ -1084,14 +1019,12 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
         print(f"[error] Asset type required for image enrichment")
         print(f"  Usage: \"G:\\DB\\asset.jpg\" enrich furniture")
         print(f"  Or for existing rows: \"G:\\DB\\asset.jpg\" enrich (auto-detects type)")
-        _beep("error")
         return False
     
     print(f"  Asset type: {asset_type}")
 
     # Enrich using ingest_asset functions
     try:
-        _beep("start")
         print(f"  Running AI enrichment...")
         
         # Get source stem from filename
@@ -1133,18 +1066,15 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
         print(f"  ✓ Row {action}: {file_path.name}")
     except Exception as exc:
         print(f"[error] AI enrichment failed: {exc}")
-        _beep("error")
         return False
 
     # Write back to EFU
     try:
         _write_efu(efu_path, fieldnames, rows)
         print(f"  ✓ EFU saved: {efu_path}")
-        _beep("success")
         return True
     except Exception as exc:
         print(f"[error] Failed to write EFU: {exc}")
-        _beep("error")
         return False
 
 
@@ -1168,7 +1098,6 @@ def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | 
 
     if not file_path.exists():
         print(f"[error] File not found: {file_path}")
-        _beep("error")
         return False
 
     # Extract description and optional asset_type from args
@@ -1183,7 +1112,6 @@ def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | 
 
     if not description:
         print("[error] No description provided. Usage: add: \"description\" \"path\"")
-        _beep("error")
         return False
 
     print(f"  Description: {description[:100]}{'...' if len(description) > 100 else ''}")
@@ -1235,14 +1163,12 @@ def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | 
     if not asset_type:
         print(f"[error] Asset type required (no existing entry). Add asset type abbreviation after add:")
         print(f"  Example: add: -fur \"this is a chair\" \"path.jpg\"")
-        _beep("error")
         return False
 
     print(f"  Asset type: {asset_type}")
 
     # Enrich using AI with description as sidecar text
     try:
-        _beep("start")
         print(f"  Running AI enrichment from description...")
 
         # Get source stem from filename
@@ -1285,18 +1211,15 @@ def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | 
         print(f"  ✓ Row {action}: {file_path.name}")
     except Exception as exc:
         print(f"[error] AI enrichment failed: {exc}")
-        _beep("error")
         return False
 
     # Write back to EFU
     try:
         _write_efu(efu_path, fieldnames, rows)
         print(f"  ✓ EFU saved: {efu_path}")
-        _beep("success")
         return True
     except Exception as exc:
         print(f"[error] Failed to write EFU: {exc}")
-        _beep("error")
         return False
 
 
@@ -1337,17 +1260,14 @@ def _enrich_pdf(file_path: Path, asset_type: str | None = None) -> bool:
             print(f"  → Client: {client}")
     except Exception as exc:
         print(f"[error] PDF extraction failed: {exc}")
-        _beep("error")
         return False
 
     if not rows:
         print("[warn] No rows extracted from PDF")
-        _beep("no_match")
         return False
 
     # AI cleanup
     print(f"  Running AI cleanup...")
-    _beep("start")
     try:
         cleaned_rows = cleanup_rows_with_ai(rows, file_path)
     except Exception as exc:
@@ -1370,10 +1290,8 @@ def _enrich_pdf(file_path: Path, asset_type: str | None = None) -> bool:
             print(f"  ✓ {replaced} entries updated")
     except Exception as exc:
         print(f"[error] Failed to write EFU: {exc}")
-        _beep("error")
         return False
 
-    _beep("success")
     print(f"[clipboard-watcher] Done ✓")
     return True
 
@@ -1384,12 +1302,10 @@ def _handle_audit(efu_path: Path) -> bool:
 
     if not efu_path.exists():
         print(f"[error] EFU file not found: {efu_path}")
-        _beep("error")
         return False
 
     if efu_path.name != ".metadata.efu":
         print(f"[error] Not a .metadata.efu file: {efu_path}")
-        _beep("error")
         return False
 
     folder = efu_path.parent
@@ -1404,7 +1320,6 @@ def _handle_audit(efu_path: Path) -> bool:
         print(f"  → Total entries in EFU: {len(rows)}")
     except Exception as exc:
         print(f"[error] Failed to read EFU: {exc}")
-        _beep("error")
         return False
 
     # Check which files exist
@@ -1426,7 +1341,6 @@ def _handle_audit(efu_path: Path) -> bool:
 
     if removed_count == 0:
         print(f"  ✓ All entries reference existing files (no cleanup needed)")
-        _beep("success")
         return True
 
     # Write back updated EFU
@@ -1448,12 +1362,10 @@ def _handle_audit(efu_path: Path) -> bool:
             print(f"  → Removed {removed_count} entries from EFU")
         except Exception as exc:
             print(f"[error] Failed to write EFU: {exc}")
-            _beep("error")
             return False
     else:
         print(f"  (dry-run) Would remove {removed_count} entries")
 
-    _beep("success")
     print(f"[clipboard-watcher] Done ✓")
     return True
 
@@ -1473,7 +1385,6 @@ def _handle_create(file_path: Path, args: list[Tuple[str, str]] | None = None) -
 
     if not file_path.exists() or file_path.suffix.lower() != ".pdf":
         print(f"[error] Not an existing PDF: {file_path}")
-        _beep("error")
         return False
 
     output_dir = file_path.parent
@@ -1490,12 +1401,10 @@ def _handle_create(file_path: Path, args: list[Tuple[str, str]] | None = None) -
             print(f"  → Client: {client}")
     except Exception as exc:
         print(f"[error] PDF extraction failed: {exc}")
-        _beep("error")
         return False
 
     if not codes:
         print("[warn] No items with codes found")
-        _beep("no_match")
         return False
 
     # Extract images
@@ -1521,10 +1430,8 @@ def _handle_create(file_path: Path, args: list[Tuple[str, str]] | None = None) -
         print(f"[error] Image extraction failed: {exc}")
         import traceback
         traceback.print_exc()
-        _beep("error")
         return False
 
-    _beep("success")
     print(f"[clipboard-watcher] Done ✓ - {image_count} images saved to {output_dir}")
     print(f"  Next: Generate JSON metadata and run: \"<images>\" \"<json>\" enrich:")
     return True
@@ -1542,14 +1449,12 @@ def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -
 
     if not file_path.exists():
         print(f"[error] File not found: {file_path}")
-        _beep("error")
         return False
 
     efu_path = file_path.parent / ".metadata.efu"
     
     if not efu_path.exists():
         print(f"[error] No .metadata.efu file found in {file_path.parent}")
-        _beep("error")
         return False
     
     # Parse args to determine what to remove
@@ -1565,7 +1470,6 @@ def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -
         fieldnames, rows = _load_efu(efu_path)
     except Exception as exc:
         print(f"[error] Failed to read EFU: {exc}")
-        _beep("error")
         return False
     
     # Find the row matching this file
@@ -1578,7 +1482,6 @@ def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -
     
     if row_index == -1:
         print(f"[error] No entry found for {file_path.name}")
-        _beep("error")
         return False
     
     target_row = rows[row_index]
@@ -1601,22 +1504,18 @@ def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -
                 print(f"  ✓ Cleared {field_name}")
             else:
                 print(f"[error] Field {field_name} not found in EFU")
-                _beep("error")
                 return False
         except ValueError:
             print(f"[error] Invalid field number: {field_to_remove}")
-            _beep("error")
             return False
     
     # Write back to EFU
     try:
         _write_efu(efu_path, fieldnames, rows)
         print(f"  ✓ EFU saved: {efu_path}")
-        _beep("success")
         return True
     except Exception as exc:
         print(f"[error] Failed to write EFU: {exc}")
-        _beep("error")
         return False
 
 def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
@@ -1625,7 +1524,6 @@ def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
 
     if not file_path.exists():
         print(f"[error] File not found: {file_path}")
-        _beep("error")
         return False
 
     efu_path = file_path.parent / ".metadata.efu"
@@ -1641,7 +1539,6 @@ def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
                     print(f"[warn] {value} is not a standard rating. Standard: {sorted(VALID_RATINGS)}")
             except ValueError:
                 print(f"[error] Rating must be an integer, got: {value!r}")
-                _beep("error")
                 return False
 
     for column, value in updates:
@@ -1651,10 +1548,8 @@ def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
 
     if total_updated == 0:
         print(f"\n  [warn] No rows updated")
-        _beep("no_match")
         return False
 
-    _beep("success")
     print(f"\n[clipboard-watcher] Done ✓ - {total_updated} change(s) applied")
     return True
 
@@ -1783,7 +1678,6 @@ def run():
 
             print()
             print(f"[clipboard-watcher] Received: {current}")
-            _beep("start")
 
             # Dispatch (file_paths is always a list now)
             success = True
@@ -1818,7 +1712,6 @@ def run():
             elif action == "set":
                 if args is None:
                     print("[error] Invalid 'set' command syntax")
-                    _beep("error")
                     success = False
                 else:
                     for fp in file_path:
@@ -1834,7 +1727,6 @@ def run():
                         success = False
             else:
                 print(f"[error] Unknown action: {action}")
-                _beep("error")
                 success = False
 
             # Summary
@@ -1843,10 +1735,7 @@ def run():
 
             # Done beep
             if success:
-                _beep("success")
                 _refresh_everything()  # Auto-refresh Everything Search window
-            else:
-                _beep("error")
 
             # Update last_seen so we don't reprocess
             _last_seen = current
@@ -1857,7 +1746,6 @@ def run():
         except Exception as exc:
             # Never let an unhandled exception kill the background loop
             print(f"[clipboard-watcher] Unhandled error (continuing): {exc}")
-            _beep("error")
             continue
 
 if __name__ == "__main__":
