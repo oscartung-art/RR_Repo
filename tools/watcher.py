@@ -238,33 +238,22 @@ def resolve_asset_type_abbreviation(abbr: str) -> str:
 # Command Parsing
 # ---------------------------------------------------------------------------
 def _looks_like_command(text: str) -> bool:
-    """Cheap heuristic: does this look like a file path + command?"""
-    low = text.lower().strip()
-    # If user pasted flag-style input like '--field' treat as command
-    if '--field' in low or '--value' in low or low.startswith('-f') or low.startswith('-v'):
-        return True
+    """Detect only flag-style commands.
 
-    # Check if any token (could be first or last) is an action keyword
-    tokens = low.split()
-    if not tokens:
+    Returns True only when the clipboard text contains at least one
+    recognized flag (e.g. --field, --value, --action, --description, -t).
+    This rejects the old action-first/abbrev formats like: enrich: -fur "path".
+    """
+    if not text:
         return False
-
-    has_action = False
-    for token in tokens:
-        cleaned = token.rstrip(':')
-        if cleaned in ["enrich", "audit", "create", "set", "add"]:
-            has_action = True
-            break
-
-    if not has_action:
-        return False
-
-    # Must have a drive letter (Windows) or path separator somewhere in the command
-    # (action-first format has it at the end, which is fine)
-    if ":" not in low and "\\" not in low and "/" not in low:
-        return False
-
-    return True
+    low = text.lower()
+    flags = ["--field", "--value", "-f", "-v", "--action", "-a",
+             "--description", "-d", "--asset-type", "--type", "-t",
+             "--dry-run", "-n"]
+    for flag in flags:
+        if flag in low or low.startswith(flag):
+            return True
+    return False
 
 def _extract_all_after_keyword(text: str, keyword: str) -> Optional[str]:
     """Extract everything after a keyword (including after colon if present)."""
