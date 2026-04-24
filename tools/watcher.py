@@ -1019,11 +1019,22 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
             asset_type = subject.split("/")[0].strip().lower()
             print(f"  Asset type auto-detected from existing row: {asset_type}")
     
-    # Validate asset type
+    # If still no asset type, try to detect from filename
     if not asset_type:
-        print(f"[error] Asset type required for image enrichment")
+        try:
+            from ingest_asset import detect_root_from_name
+            detected = detect_root_from_name(file_path.name)
+            if detected:
+                asset_type = detected.lower()
+                print(f"  Asset type auto-detected from filename: {asset_type}")
+        except Exception:
+            pass
+    
+    # If still no asset type, error
+    if not asset_type:
+        print(f"[error] Could not determine asset type")
         print(f"  Usage: \"G:\\DB\\asset.jpg\" enrich furniture")
-        print(f"  Or for existing rows: \"G:\\DB\\asset.jpg\" enrich (auto-detects type)")
+        print(f"  Or provide filename with asset indicators (e.g., furniture_name_xyz.jpg)")
         return False
     
     print(f"  Asset type: {asset_type}")
