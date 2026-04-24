@@ -128,15 +128,6 @@ ASSET_TYPE_ABBREVIATIONS = {
 # ---------------------------------------------------------------------------
 _last_seen: str = ""
 
-# For description-based enrichment state tracking
-_waiting_for_description: bool = False
-_pending_image_path: Optional[Path] = None
-_last_paste_time: float = 0.0
-_DESCRIPTION_TIMEOUT = 300.0  # 5 minutes
-
-# Constants for description detection
-_MIN_DESC_LENGTH = 50         # Minimum characters to be considered a description
-_MAX_DESC_LENGTH = 2000      # Maximum reasonable description length
 
 # ---------------------------------------------------------------------------
 # Helpers - Audio feedback
@@ -191,30 +182,6 @@ def _notify(kind, message=""):
 
 # Backward compatibility alias
 _beep = lambda kind: _notify(kind)
-
-
-def _looks_like_description(text: str) -> bool:
-    """Determine if text looks like an asset description (not a command)."""
-    text = text.strip()
-
-    # Skip empty or very short text
-    if len(text) < _MIN_DESC_LENGTH or len(text) > _MAX_DESC_LENGTH:
-        return False
-
-    # Skip if it looks like a command (contains action keywords)
-    if _looks_like_command(text):
-        return False
-
-    # Skip if it contains file path patterns
-    if re.search(r'[A-Z]:[\\/].*', text, re.IGNORECASE) or re.search(r'\.(jpg|jpeg|png|pdf|json|efu)$', text.lower()):
-        return False
-
-    # Looks like a description if it has sentence structure
-    has_sentence = re.search(r'[A-Z][^.!?]*[.!?]', text)  # Capital letter followed by sentence ending
-    has_multiline = text.count('\n') >= 1
-    has_keywords = any(keyword in text.lower() for keyword in ['designed', 'designed by', 'dimensions', 'materials', 'features', 'specifications', 'collection', 'manufactured', 'brand', 'model'])
-
-    return has_sentence or has_multiline or has_keywords
 
 
 def _is_image_file(path: Path) -> bool:
@@ -289,7 +256,7 @@ def _looks_like_command(text: str) -> bool:
 
     for token in tokens:
         cleaned = token.rstrip(':')
-        if cleaned in ["enrich", "audit", "create", "set", "describe"]:
+        if cleaned in ["enrich", "audit", "create", "set"]:
             return True
     return False
 
@@ -484,9 +451,6 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
                 print(f"[clipboard-watcher] Resolved asset type: {asset_type} -> {resolved_asset_type}")
             return paths, "enrich", [("asset_type", resolved_asset_type)]
         return paths, "enrich", []
-    elif action_raw == "describe":
-        # Special handling for describe command - treat remaining text as description
-        return paths, "describe", [("description", args_str)]
     elif action_raw in ["audit", "create"]:
         return paths, action_raw, []
     else:
@@ -495,94 +459,6 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
 # ---------------------------------------------------------------------------
 # Action Handlers
 # ---------------------------------------------------------------------------
-def _handle_describe_enrich(image_path: Path, description_text: str) -> bool:
-    """Enrich asset with metadata from description text using existing AI pipeline."""
-    print(f"\n[clipboard-watcher] DESCRIBE-ENRICH {image_path}")
-    print(f"  Description length: {len(description_text)} characters")
-
-    if not image_path.exists() or not _is_image_file(image_path):
-        print(f"[error] Not a valid image file: {image_path}")
-        _beep("error")
-        return False
-
-    efu_path = image_path.parent / ".metadata.efu"
-    fieldnames: list[str]
-    rows: list[dict]
-    existing_row = None
-    row_index = -1
-
-    if efu_path.exists():
-        fieldnames, rows = _load_efu(efu_path)
-        target_basename = image_path.name.lower()
-        for i, row in enumerate(rows):
-            if _row_basename(row) == target_basename:
-                existing_row = row
-                row_index = i
-                break
-    else:
-        from ingest_schedule import EFU_FIELDNAMES
-        fieldnames = EFU_FIELDNAMES
-        rows = []
-
-    # Auto-detect asset type
-    try:
-        from ingest_asset import detect_root_from_name
-        asset_type = detect_root_from_name(image_path.name)
-        if not asset_type:
-            asset_type = "material"
-        print(f"  Asset type (auto-detected): {asset_type}")
-    except Exception as e:
-        print(f"  [warn] Failed to detect asset type: {e}")
-        asset_type = "material"
-
-    # Run AI enrichment with description as sidecar text
-    try:
-        from ingest_asset import infer_metadata_fields, enrich_row_with_models
-        print(f"  Running AI enrichment with description...")
-        _beep("start")
-
-        metadata = infer_metadata_fields(
-            asset_type=asset_type,
-            source_stem=image_path.stem,
-            image_path=image_path,
-            sidecar_text=description_text
-        )
-
-        enriched_row = enrich_row_with_models(
-            image_path=image_path,
-            source_stem=image_path.stem,
-            asset_type=asset_type,
-            hints={},
-            row=existing_row.copy() if existing_row else {},
-            raw_sidecar_text=description_text
-        )
-
-        # Set Filename field (critical for EFU)
-        enriched_row["Filename"] = image_path.name
-
-        if existing_row:
-            # Update existing row
-            rows[row_index] = enriched_row
-            print(f"  ✓ Updated existing entry")
-        else:
-            # Add new row
-            rows.append(enriched_row)
-            print(f"  ✓ Created new entry")
-
-        # Write EFU
-        _write_efu(efu_path, fieldnames, rows)
-        print(f"  ✓ EFU saved: {efu_path}")
-
-        _beep("success")
-        return True
-
-    except Exception as e:
-        print(f"[error] Enrichment failed: {e}")
-        import traceback
-        traceback.print_exc()
-        _beep("error")
-        return False
-
 
 def _handle_enrich(file_paths: list[Path], args: list[Tuple[str, str]] | None = None) -> bool:
     """Enrich metadata for asset(s).
@@ -1246,7 +1122,7 @@ def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
 # Main Loop
 # ---------------------------------------------------------------------------
 def run():
-    global _last_seen, DRY_RUN, _waiting_for_description, _pending_image_path, _last_paste_time
+    global _last_seen, DRY_RUN
 
     parser = argparse.ArgumentParser(
         description="Background clipboard watcher for RR asset management.",
@@ -1265,8 +1141,6 @@ def run():
     print("[clipboard-watcher] Copy commands like:")
     print("  Single existing:  g:/db/image.jpg enrich:   -> AI-enrich metadata (uses existing asset_type)")
     print("  Single new:       g:/db/image.jpg enrich furniture -> Create entry with specified type")
-    print("  Two-step:         g:/db/image.jpg then paste description -> AI-enrich with description")
-    print("  Explicit describe: \"g:/db/image.jpg\" describe \"description text here\" -> AI-enrich")
     print("  Multiple new:     \"g:/db/1.jpg\" \"g:/db/2.jpg\" enrich furniture -> Create multiple entries")
     print("  g:/db/.metadata.efu audit:   -> Audit EFU and remove entries for missing files")
     print("  g:/db/schedule.pdf create: -> Extract images + create metadata")
@@ -1324,51 +1198,6 @@ def run():
             if not current or current == _last_seen:
                 continue
 
-            # Check for description-based enrichment (two-step workflow)
-            if _waiting_for_description:
-                # Check if we've timed out
-                elapsed = time.time() - _last_paste_time
-                if elapsed > _DESCRIPTION_TIMEOUT:
-                    print(f"[clipboard-watcher] Timed out waiting for description")
-                    _waiting_for_description = False
-                    _pending_image_path = None
-                    _last_seen = current
-                    continue
-
-                # Check if current text looks like a description
-                if _looks_like_description(current):
-                    print()
-                    print(f"[clipboard-watcher] Received description for: {_pending_image_path}")
-                    print(f"[clipboard-watcher] Description snippet: {current[:100]}...")
-                    _beep("start")
-
-                    # Handle enrichment with description
-                    success = _handle_describe_enrich(_pending_image_path, current)
-
-                    _waiting_for_description = False
-                    _pending_image_path = None
-                    _last_seen = current
-
-                    if success:
-                        print(f"[clipboard-watcher] Done ✓")
-                        _beep("success")
-                    else:
-                        _beep("error")
-
-                    continue
-
-            # Check if this looks like an image file path that should trigger waiting state
-            if _is_single_image_path(current):
-                path = Path(current.strip('"').strip())
-                if path.exists() and _is_image_file(path):
-                    print(f"[clipboard-watcher] Image path detected, waiting for description (timeout: {int(_DESCRIPTION_TIMEOUT)}s)")
-                    print(f"[clipboard-watcher] If not pasting a description, copy anything else to cancel")
-                    _waiting_for_description = True
-                    _pending_image_path = path
-                    _last_paste_time = time.time()
-                    _last_seen = current
-                    _beep("start")
-                    continue
 
             # Check if this looks like a command for us
             if not _looks_like_command(current):
@@ -1397,18 +1226,7 @@ def run():
             file_count = len(file_path)
             success_count = 0
 
-            if action == "describe":
-                for fp in file_path:
-                    description = next(arg[1] for arg in args if arg[0] == "description") if args else ""
-                    if not description:
-                        print(f"[error] No description provided for 'describe' command")
-                        _beep("error")
-                        continue
-                    if _handle_describe_enrich(fp, description):
-                        success_count += 1
-                    else:
-                        success = False
-            elif action == "enrich":
+            if action == "enrich":
                 # Enrich handles batching internally (supports JSON)
                 if _handle_enrich(file_path, args):
                     success_count = file_count
