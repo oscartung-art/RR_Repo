@@ -310,17 +310,19 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     except Exception:
         tokens = text.split()
 
-    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') or t in ('-a','--action') or t.startswith('--action=') or t in ('--asset-type',) or t.startswith('--asset-type=') for t in tokens):
+    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') or t in ('-a','--action') or t.startswith('--action=') or t in ('--asset-type',) or t.startswith('--asset-type=') or t in ('-d','--description') or t.startswith('--description=') for t in tokens):
         # Parse flag-style commands only. Supported flags:
         # --field/-f, --value/-v (repeatable pairs)
-        # --action/-a (enrich/create/audit/set)
-        # --asset-type (for enrich)
+        # --action/-a (enrich/create/audit/set/add)
+        # --asset-type (for enrich/add)
+        # --description/-d (for add)
         # --dry-run/-n (ignored, watcher-level DRY_RUN still controls writes)
         field_vals: list[str] = []
         value_vals: list[str] = []
         paths_tokens: list[str] = []
         action: Optional[str] = None
         asset_type: Optional[str] = None
+        description: Optional[str] = None
         i = 0
         while i < len(tokens):
             t = tokens[i]
@@ -368,6 +370,17 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
                 asset_type = t.split('=', 1)[1].lower()
                 i += 1
                 continue
+            if t in ('-d','--description'):
+                if i + 1 < len(tokens):
+                    description = tokens[i+1]
+                    i += 2
+                    continue
+                else:
+                    return None, None, None
+            if t.startswith('--description='):
+                description = t.split('=', 1)[1]
+                i += 1
+                continue
             if t in ('--dry-run', '-n'):
                 i += 1
                 continue
@@ -408,6 +421,13 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
                 args = [("asset_type", resolve_asset_type_abbreviation(asset_type))]
             else:
                 args = []
+        elif action == 'add':
+            # description required
+            if not description:
+                return None, None, None
+            args = [("description", description)]
+            if asset_type:
+                args.insert(0, ("asset_type", resolve_asset_type_abbreviation(asset_type)))
         elif action in ('audit', 'create'):
             args = []
         else:
@@ -445,44 +465,54 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     action_raw = all_words[action_index].lower().rstrip(':')
 
     if action_index == 0:
-        # Action-first format (Everything search): action [args] [tags] path
-        # After bracket stripping, this is: action abbr "path"
-        # All words between action and the last word are args, last word is path
-        all_remaining = all_words[action_index+1:]
-        if len(all_remaining) == 0:
-            return None, None, None
-        if len(all_remaining) == 1:
-            # Just a path, no args: action "path"
-            args_words = []
-            path_words = all_remaining
+        # Action-first format (Everything search): action [args] "description" "path"
+        # Since the entire text has already been processed (brackets removed),
+        # extract all quoted content - last quoted is always the path
+        all_quoted = re.findall(r'"([^"]+)"', text)
+        if len(all_quoted) >= 1:
+            # Last quoted is always the path
+            path_strs = [all_quoted[-1]]
+            # All other quoted are args (description) - join back together
+            quoted_args = all_quoted[:-1]
+            # Get any non-quoted text before the first quote for asset type abbreviation (e.g. -fur)
+            first_quote_pos = text.find('"')
+            pre_quote = text[first_candidate_pos+1:first_quote_pos].strip()
+            args_str = (pre_quote + ' ' + ' '.join(quoted_args)).strip()
         else:
-            # Multiple words: action [abbr] "path" → abbr is arg, last is path
-            args_words = all_remaining[:-1]
-            path_words = all_remaining[-1:]
+            # No quotes - fallback: last token is path, everything else is args
+            all_remaining = all_words[action_index+1:]
+            if len(all_remaining) == 0:
+                return None, None, None
+            if len(all_remaining) == 1:
+                # Just a path, no args: action path
+                args_str = ""
+                path_strs = [all_remaining[-1]]
+            else:
+                # Multiple words: everything except last is args, last is path
+                args_words = all_remaining[:-1]
+                args_str = " ".join(args_words)
+                path_strs = [all_remaining[-1]]
     else:
         # Traditional format: paths... action [args]
         # All words before action_index are paths (may be quoted)
         # All words after action_index are arguments
         path_words = all_words[:action_index]
         args_words = all_words[action_index+1:]
-
-    args_str = " ".join(args_words)
-
-    # Collect paths: extract all quoted paths (handles spaces in filenames)
-    paths_text = " ".join(path_words)
-    # Remove any angle brackets < > around the entire paths list
-    paths_text = paths_text.strip('<>')
-
-    # Find all "..." quoted strings - these are individual paths
-    quoted_paths = re.findall(r'"([^"]+)"', paths_text)
-    if quoted_paths:
-        # We have quoted paths - use ONLY those (ignore unquoted search paths from Everything)
-        path_strs = quoted_paths
-    else:
-        # No quotes - split on pipe or whitespace
-        # Replace pipes with spaces first
-        temp_text = paths_text.replace('|', ' ').strip()
-        path_strs = temp_text.split()
+        args_str = " ".join(args_words)
+        # Collect paths: extract all quoted paths from path_words
+        paths_text = " ".join(path_words)
+        # Remove any angle brackets < > around the entire paths list
+        paths_text = paths_text.strip('<>')
+        # Find all "..." quoted strings - these are individual paths
+        quoted_paths = re.findall(r'"([^"]+)"', paths_text)
+        if quoted_paths:
+            # We have quoted paths - use ONLY those (ignore unquoted search paths from Everything)
+            path_strs = quoted_paths
+        else:
+            # No quotes - split on pipe or whitespace
+            # Replace pipes with spaces first
+            temp_text = paths_text.replace('|', ' ').strip()
+            path_strs = temp_text.split()
 
     # Filter out empty strings, pipe symbols, and paths with invalid characters
     path_strs = [p.strip() for p in path_strs
@@ -1403,10 +1433,13 @@ def run():
     print("    Extract images from a PDF into the same folder (creates code-named JPGs).")
     print("  --action audit \"<folder_or_efu_path>\"")
     print("    Audit .metadata.efu and remove entries for missing files.")
+    print("  --action add --description \"<text>\" --asset-type <type> \"<path>\"")
+    print("    Enrich image(s) using a textual description as sidecar. Use --asset-type when creating new entries.")
     print("  Examples:")
     print("    --field 4 --value \"Green\" \"G:\\DB\\image.jpg\"")
     print("    --action enrich --asset-type vegetation \"G:\\DB\\image.jpg\"")
     print("    --action enrich \"G:\\DB\\images\\\" \"G:\\DB\\metadata.json\"")
+    print("    --action add --description \"Eames lounge chair by Herman Miller\" --asset-type furniture \"G:\\DB\\image.jpg\"")
     print("")
 
     if not HAS_SEND2TRASH:
@@ -1495,6 +1528,13 @@ def run():
                     success_count = file_count
                 else:
                     success = False
+            elif action == "add":
+                # Add with description: use --description/-d and optional --asset-type
+                for fp in file_path:
+                    if _handle_add_with_description(fp, args):
+                        success_count += 1
+                    else:
+                        success = False
             elif action == "audit":
                 for fp in file_path:
                     if _handle_audit(fp):
