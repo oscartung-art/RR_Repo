@@ -274,7 +274,11 @@ def resolve_asset_type_abbreviation(abbr: str) -> str:
 def _looks_like_command(text: str) -> bool:
     """Cheap heuristic: does this look like a file path + command?"""
     low = text.lower().strip()
-    # Must have a drive letter (Windows) or path separator
+    # If user pasted flag-style input like '--field' treat as command
+    if '--field' in low or '--value' in low or low.startswith('-f') or low.startswith('-v'):
+        return True
+
+    # Must have a drive letter (Windows) or path separator for the original style
     if ":" not in low and "\\" not in low and "/" not in low:
         return False
 
