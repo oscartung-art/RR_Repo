@@ -14,7 +14,9 @@ Supported actions:
              Multiple files: "path1" "path2" enrich furniture creates all new entries
 - audit:    Audit .metadata.efu file and remove entries for files no longer in folder
 - create:    Extract images from PDF and create .metadata.efu entries (like ingest_schedule)
-- set:       Set one or more metadata fields (e.g. "path set Rating=99 Tags=lighting;modern")
+- set:       Set a metadata field value (e.g. set 4 "value" "path" or set 3 "value" <"p1"|"p2"|...>)
+- add:       Add/enrich with description
+- remove:    Remove metadata from asset (all or specific field with -f)
 
 Run:
     python tools/watcher.py [--dry-run]
@@ -182,6 +184,53 @@ def _notify(kind, message=""):
 _beep = lambda kind: _notify(kind)
 
 
+def _refresh_everything():
+    """Send F5 key to Everything Search window."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        import time
+        
+        # Find the Everything Search window by class name
+        FindWindowW = ctypes.windll.user32.FindWindowW
+        FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+        FindWindowW.restype = wintypes.HWND
+        
+        GetForegroundWindow = ctypes.windll.user32.GetForegroundWindow
+        GetForegroundWindow.restype = wintypes.HWND
+        
+        SetForegroundWindow = ctypes.windll.user32.SetForegroundWindow
+        SetForegroundWindow.argtypes = [wintypes.HWND]
+        SetForegroundWindow.restype = wintypes.BOOL
+        
+        # Find Everything Search window - try common window class names
+        hwnd = None
+        for class_name in ["EVERYTHING_(1.5a)", "Everything", "EVERYTHING", "Everything1", "Everything Search", "TES_Window"]:
+            hwnd = FindWindowW(class_name, None)
+            if hwnd:
+                break
+        
+        if hwnd:
+            # Save current foreground window
+            prev_hwnd = GetForegroundWindow()
+            
+            # Bring Everything to foreground
+            SetForegroundWindow(hwnd)
+            time.sleep(0.05)  # Brief pause for window to gain focus
+            
+            # Send F5 key using keyboard simulation
+            ctypes.windll.user32.keybd_event(0x74, 0, 0, 0)      # F5 down
+            ctypes.windll.user32.keybd_event(0x74, 0, 2, 0)      # F5 up
+            
+            time.sleep(0.05)  # Brief pause after keypress
+            
+            # Restore previous window
+            if prev_hwnd:
+                SetForegroundWindow(prev_hwnd)
+    except Exception:
+        pass  # Silently fail if unable to send keystroke
+
+
 def _is_image_file(path: Path) -> bool:
     """Check if a path is an image file (by extension)."""
     return path.is_file() and path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp']
@@ -238,21 +287,29 @@ def resolve_asset_type_abbreviation(abbr: str) -> str:
 # Command Parsing
 # ---------------------------------------------------------------------------
 def _looks_like_command(text: str) -> bool:
-    """Detect only flag-style commands.
+    """Detect both flag-style and action-keyword commands.
 
-    Returns True only when the clipboard text contains at least one
-    recognized flag (e.g. --field, --value, --action, --description, -t).
-    This rejects the old action-first/abbrev formats like: enrich: -fur "path".
+    Returns True when:
+    1. Text contains a recognized flag (e.g. --field, --value, --action, --description, -t)
+    2. Text starts with an action keyword (add, enrich, set, audit, create)
     """
     if not text:
         return False
     low = text.lower()
+    
+    # Check for flags (flag-style commands)
     flags = ["--field", "--value", "-f", "-v", "--action", "-a",
              "--description", "-d", "--asset-type", "--type", "-t",
              "--dry-run", "-n"]
     for flag in flags:
         if flag in low or low.startswith(flag):
             return True
+    
+    # Check for action keywords at the start (simple format: add "desc" "path")
+    first_word = low.split()[0].rstrip(':') if low.split() else ""
+    if first_word in ["add", "enrich", "set", "audit", "create", "remove"]:
+        return True
+    
     return False
 
 def _extract_all_after_keyword(text: str, keyword: str) -> Optional[str]:
@@ -274,6 +331,7 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     Accepts:
     - Single path: "path action"
     - Multiple paths: "path1" | "path2" | "path3" action args
+    - Multiple paths pipe-separated in angle brackets: action <"path1"|"path2"|"path3"> args
     - Multiple paths whitespace-separated: path1 path2 action args
     Strips: Everything bracketed [ ... ] (added by Everything when copying images)
     Returns: (list_of_file_paths, action, args) where args is list of (canonical_field, value) for 'set'.
@@ -287,6 +345,52 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     # (This may remove brackets inside quotes in rare cases, but keeps parsing simple.)
     text = re.sub(r'\[[^\]]*\]', '', text).strip()
 
+    # Check for pipe-separated format with angle brackets: action <"path1"|"path2"|...>
+    # This must be done BEFORE replacing angle brackets
+    pipe_sep_match = re.match(r'^(\w+)(?:\s+([^<]+))?\s*<(.+?)>\s*(.*?)$', text)
+    if pipe_sep_match:
+        action_raw = pipe_sep_match.group(1)
+        args_before_pipes = pipe_sep_match.group(2)  # e.g., "-fur" or "3 \"Dedon\"" or None
+        pipe_content = pipe_sep_match.group(3)        # e.g., "path1"|"path2"|...
+        extra_args = pipe_sep_match.group(4)          # remaining args
+        
+        # Extract quoted paths separated by pipes
+        quoted_paths = re.findall(r'"([^"]+)"', pipe_content)
+        if quoted_paths:
+            try:
+                path_objs = [Path(p).absolute() for p in quoted_paths]
+                
+                # Parse action and asset type / field+value
+                asset_type = None
+                args: list[tuple[str, str]] = []
+                
+                if action_raw.lower() in ("enrich", "audit", "create"):
+                    # For these actions, args_before_pipes could be asset_type like "-fur"
+                    if args_before_pipes:
+                        asset_type = resolve_asset_type_abbreviation(args_before_pipes.strip().lstrip('-').lower())
+                        args = [("asset_type", asset_type)]
+                elif action_raw.lower() in ("add", "remove"):
+                    args = []
+                elif action_raw.lower() == "set":
+                    # For set, args_before_pipes contains field and value
+                    # Format: set <field> "value" <files>
+                    if args_before_pipes:
+                        args_text = args_before_pipes.strip()
+                        # Extract field (first token) and value (first quoted string)
+                        parts = args_text.split(None, 1)  # Split on first whitespace
+                        if parts:
+                            field_raw = parts[0]
+                            # Extract quoted value
+                            value_match = re.search(r'"([^"]+)"', args_text)
+                            if value_match:
+                                value = value_match.group(1)
+                                field = resolve_field(field_raw)
+                                args = [(field, value)]
+                
+                return path_objs, action_raw.lower(), args
+            except Exception:
+                pass  # Fall through to standard parsing if conversion fails
+
     # Replace angle brackets with spaces instead of removing them entirely
     # This handles paths wrapped in <> without losing content
     text = text.replace('<', ' ').replace('>', ' ').strip()
@@ -296,9 +400,9 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
 
     # Check for flag-style commands
     has_flags = '--' in text or any(word.startswith('-') and len(word) > 1 for word in text.split())
-    if has_flags and any(('--field' in text or '--value' in text)):
-        # Support flag-style set commands pasted from terminal, e.g.:
-        # --field 4 --value "Yellow" "G:\\DB\\img.jpg"
+    # Use shlex for all flag-style commands (to properly handle quoted descriptions)
+    if has_flags:
+        # Support flag-style commands with proper quote handling
         import shlex
         try:
             tokens = shlex.split(text)
@@ -384,6 +488,11 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
             if t in ('--dry-run', '-n'):
                 i += 1
                 continue
+            # Check if it's an action keyword (when action not yet set from flags)
+            if not action and t.lower() in ("enrich", "audit", "create", "set", "add", "remove"):
+                action = t.lower()
+                i += 1
+                continue
             # Otherwise treat as path
             paths_tokens.append(t)
             i += 1
@@ -428,6 +537,12 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
             args = [("description", description)]
             if asset_type:
                 args.insert(0, ("asset_type", resolve_asset_type_abbreviation(asset_type)))
+        elif action == 'remove':
+            # Handle -f field_num for remove action
+            if field_vals:
+                args = [("field", field_vals[0])]
+            else:
+                args = []
         elif action in ('audit', 'create'):
             args = []
         else:
@@ -449,13 +564,13 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     action_index = -1
     # Check first word first - handles Everything copied format (action at start)
     first_candidate = all_words[0].lower().rstrip(':')
-    if first_candidate in ["enrich", "audit", "create", "set"]:
+    if first_candidate in ["enrich", "audit", "create", "set", "add", "remove"]:
         action_index = 0
     else:
         # Traditional format: search from end for last action (paths before action)
         for i, word in enumerate(reversed(all_words)):
             candidate = word.lower().rstrip(':')
-            if candidate in ["enrich", "audit", "create", "set"]:
+            if candidate in ["enrich", "audit", "create", "set", "add", "remove"]:
                 action_index = len(all_words) - 1 - i
                 break
 
@@ -535,16 +650,30 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
 
     # Parse arguments based on action
     if action_raw == "set":
-        if not args_str:
+        # New simplified syntax: set <field> "value" "path"
+        # all_quoted contains all quoted strings in order: ["value", "path"]
+        # paths already contains the path(s)
+        # args_str contains the field number (e.g., "3" or "4")
+        
+        if not args_str and not all_quoted:
             return paths, "set", []
-        # Parse key=value pairs
-        pairs = []
-        # Split on whitespace, but handle quoted values (simple approach)
-        tokens = re.findall(r'([^\s=]+)=("[^"]+"|\'[^\']+\'|\S+)', args_str)
-        for field_raw, value in tokens:
-            value = value.strip('"\'')
-            field = resolve_field(field_raw)
-            pairs.append((field, value))
+        
+        # Extract field from args_str (first token before any quoted content)
+        args_parts = args_str.strip().split(None, 1)
+        if not args_parts:
+            return paths, "set", []
+        
+        field_raw = args_parts[0]  # e.g., "3" or "4"
+        
+        # The value should be the first quoted string (not the path)
+        # If we have 2 or more quoted strings, first is value, last is path
+        # If we have 1 quoted string, it must be the path (no value provided)
+        if len(all_quoted) < 2:
+            return paths, "set", []
+        
+        value = all_quoted[0]  # First quoted string is the value
+        field = resolve_field(field_raw)
+        pairs = [(field, value)]
         return paths, "set", pairs if pairs else None
     elif action_raw == "enrich":
         # For enrich, allow optional trailing asset_type argument
@@ -601,6 +730,19 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
             description = re.sub(r'\s+', ' ', description).strip()
             return paths, "add", [("description", description)]
         return paths, "add", []
+    elif action_raw == "remove":
+        # Remove format: "remove 'path'" or "remove -f 1 'path'" (remove field 1)
+        # Parse optional field specification (-f <field_num>)
+        field_to_remove = None
+        if args_str and args_str.strip().startswith('-f'):
+            # Pattern: -f 1 or -f=1
+            args_parts = args_str.strip().split()
+            if len(args_parts) >= 2:
+                try:
+                    field_to_remove = args_parts[1].strip('=')
+                except:
+                    pass
+        return paths, "remove", [("field", field_to_remove)] if field_to_remove else []
     elif action_raw in ["audit", "create"]:
         return paths, action_raw, []
     else:
@@ -974,8 +1116,14 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
         enriched_row["Filename"] = file_path.name
         
         if existing_row:
-            # Merge with existing (preserve manual edits)
-            rows[row_index] = enriched_row
+            # Merge: preserve non-empty existing fields, only fill empty ones
+            merged_row = existing_row.copy()
+            for field, value in enriched_row.items():
+                # Only update if the existing field is empty ("-") and enriched value is not empty
+                if merged_row.get(field, "-").strip() in ("-", ""):
+                    if value and value.strip() not in ("-", ""):
+                        merged_row[field] = value
+            rows[row_index] = merged_row
             action = "updated"
         else:
             # New entry
@@ -1075,6 +1223,16 @@ def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | 
             print(f"  Asset type auto-detected from existing row: {asset_type}")
 
     if not asset_type:
+        # Try vision-based auto-detection from image
+        try:
+            from ingest_asset import detect_asset_category_vision
+            detected_type, confidence = detect_asset_category_vision(file_path)
+            asset_type = detected_type
+            print(f"  Asset type auto-detected from image: {asset_type} ({confidence:.0%} confidence)")
+        except Exception:
+            pass
+
+    if not asset_type:
         print(f"[error] Asset type required (no existing entry). Add asset type abbreviation after add:")
         print(f"  Example: add: -fur \"this is a chair\" \"path.jpg\"")
         _beep("error")
@@ -1111,7 +1269,14 @@ def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | 
 
         # Update or append
         if existing_row:
-            rows[row_index] = enriched_row
+            # Merge: preserve non-empty existing fields, only fill empty ones
+            merged_row = existing_row.copy()
+            for field, value in enriched_row.items():
+                # Only update if the existing field is empty ("-") and enriched value is not empty
+                if merged_row.get(field, "-").strip() in ("-", ""):
+                    if value and value.strip() not in ("-", ""):
+                        merged_row[field] = value
+            rows[row_index] = merged_row
             action = "updated"
         else:
             rows.append(enriched_row)
@@ -1364,6 +1529,96 @@ def _handle_create(file_path: Path, args: list[Tuple[str, str]] | None = None) -
     print(f"  Next: Generate JSON metadata and run: \"<images>\" \"<json>\" enrich:")
     return True
 
+
+
+def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -> bool:
+    """Remove metadata from an asset.
+    
+    Args:
+        args: List of tuples. If [("field", None)], remove all metadata.
+              If [("field", "1")], remove only custom_property_1.
+    """
+    print(f"\n[clipboard-watcher] REMOVE {file_path}")
+
+    if not file_path.exists():
+        print(f"[error] File not found: {file_path}")
+        _beep("error")
+        return False
+
+    efu_path = file_path.parent / ".metadata.efu"
+    
+    if not efu_path.exists():
+        print(f"[error] No .metadata.efu file found in {file_path.parent}")
+        _beep("error")
+        return False
+    
+    # Parse args to determine what to remove
+    field_to_remove = None
+    if args:
+        for key, value in args:
+            if key == "field":
+                field_to_remove = value
+                break
+    
+    # Load EFU
+    try:
+        fieldnames, rows = _load_efu(efu_path)
+    except Exception as exc:
+        print(f"[error] Failed to read EFU: {exc}")
+        _beep("error")
+        return False
+    
+    # Find the row matching this file
+    target_basename = file_path.name.lower()
+    row_index = -1
+    for i, row in enumerate(rows):
+        if _row_basename(row) == target_basename:
+            row_index = i
+            break
+    
+    if row_index == -1:
+        print(f"[error] No entry found for {file_path.name}")
+        _beep("error")
+        return False
+    
+    target_row = rows[row_index]
+    
+    if field_to_remove is None:
+        # Remove all metadata (set all fields to "-")
+        for field in fieldnames:
+            if field not in ("Filename", "ArchiveFile"):  # Keep these
+                target_row[field] = "-"
+        print(f"  ✓ All metadata cleared")
+    else:
+        # Remove specific field
+        # Map field number to custom_property name
+        # Field 1 → custom_property_1, etc.
+        try:
+            field_num = int(field_to_remove)
+            field_name = f"custom_property_{field_num}"
+            if field_name in fieldnames:
+                target_row[field_name] = "-"
+                print(f"  ✓ Cleared {field_name}")
+            else:
+                print(f"[error] Field {field_name} not found in EFU")
+                _beep("error")
+                return False
+        except ValueError:
+            print(f"[error] Invalid field number: {field_to_remove}")
+            _beep("error")
+            return False
+    
+    # Write back to EFU
+    try:
+        _write_efu(efu_path, fieldnames, rows)
+        print(f"  ✓ EFU saved: {efu_path}")
+        _beep("success")
+        return True
+    except Exception as exc:
+        print(f"[error] Failed to write EFU: {exc}")
+        _beep("error")
+        return False
+
 def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
     """Set multiple metadata fields on an asset."""
     print(f"\n[clipboard-watcher] SET {file_path}")
@@ -1423,6 +1678,20 @@ def run():
         print("[clipboard-watcher] DRY RUN mode enabled - no changes will be saved")
 
     print(f"[clipboard-watcher] Started, polling every {CHECK_INTERVAL}s (Ctrl+C to stop)")
+    print("[clipboard-watcher] Commands (simple format with action keywords):")
+    print("  add \"<description>\" \"<path>\"")
+    print("    Add/enrich with description (auto-detects asset type from image)")
+    print("  enrich \"<path>\" (or enrich furniture \"<path>\")")
+    print("    Enrich with AI (preserves non-empty fields). Auto-detects asset type if not specified.")
+    print("  set <field> \"<value>\" \"<path>\"")
+    print("    Set a single field to a value (e.g., set 4 \"Dedon\" \"image.jpg\")")
+    print("  set <field> \"<value>\" <\"path1\"|\"path2\"|\"path3\">")
+    print("    Set field on multiple files using pipe-separated format")
+    print("  remove \"<path>\"")
+    print("    Remove all metadata from an asset")
+    print("  remove -f 1 \"<path>\"")
+    print("    Remove specific field (e.g., -f 1 removes custom_property_1)")
+    print("")
     print("[clipboard-watcher] Commands (flag-style):")
     print("  --field <field> --value <value> \"<path>\"")
     print("    Set a metadata field to a value for the given file. Repeat -f/-v pairs for multiple updates.")
@@ -1432,13 +1701,11 @@ def run():
     print("    Extract images from a PDF into the same folder (creates code-named JPGs).")
     print("  --action audit \"<folder_or_efu_path>\"")
     print("    Audit .metadata.efu and remove entries for missing files.")
-    print("  --action add --description \"<text>\" --asset-type <type> \"<path>\"")
-    print("    Enrich image(s) using a textual description as sidecar. Use --asset-type when creating new entries.")
     print("  Examples:")
-    print("    --field 4 --value \"Green\" \"G:\\DB\\image.jpg\"")
-    print("    --action enrich --asset-type vegetation \"G:\\DB\\image.jpg\"")
-    print("    --action enrich \"G:\\DB\\images\\\" \"G:\\DB\\metadata.json\"")
-    print("    --action add --description \"Eames lounge chair by Herman Miller\" --asset-type furniture \"G:\\DB\\image.jpg\"")
+    print("    add \"Eames lounge chair\" \"G:\\DB\\image.jpg\"")
+    print("    enrich \"G:\\DB\\image.jpg\"")
+    print("    remove \"G:\\DB\\image.jpg\"")
+    print("    remove -f 1 \"G:\\DB\\image.jpg\"")
     print("")
 
     if not HAS_SEND2TRASH:
@@ -1559,6 +1826,12 @@ def run():
                             success_count += 1
                         else:
                             success = False
+            elif action == "remove":
+                for fp in file_path:
+                    if _handle_remove(fp, args):
+                        success_count += 1
+                    else:
+                        success = False
             else:
                 print(f"[error] Unknown action: {action}")
                 _beep("error")
@@ -1571,6 +1844,7 @@ def run():
             # Done beep
             if success:
                 _beep("success")
+                _refresh_everything()  # Auto-refresh Everything Search window
             else:
                 _beep("error")
 
