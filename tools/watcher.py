@@ -320,7 +320,7 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
         # we've already extracted all quoted content separately below
         tokens = text.split()
 
-    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') or t in ('-a','--action') or t.startswith('--action=') or t in ('--asset-type',) or t.startswith('--asset-type=') or t in ('-d','--description') or t.startswith('--description=') for t in tokens):
+    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') or t in ('-a','--action') or t.startswith('--action=') or t in ('--asset-type','--type','-t') or t.startswith('--asset-type=') or t.startswith('--type=') or t in ('-d','--description') or t.startswith('--description=') for t in tokens):
         # Parse flag-style commands only. Supported flags:
         # --field/-f, --value/-v (repeatable pairs)
         # --action/-a (enrich/create/audit/set/add)
@@ -369,15 +369,16 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
                 action = t.split('=', 1)[1].lower()
                 i += 1
                 continue
-            if t in ('--asset-type',):
+            if t in ('--asset-type','--type','-t'):
                 if i + 1 < len(tokens):
-                    asset_type = tokens[i+1].lower()
+                    # Allow values like -fur (strip leading hyphen) for convenience
+                    asset_type = tokens[i+1].lstrip('-').lower()
                     i += 2
                     continue
                 else:
                     return None, None, None
-            if t.startswith('--asset-type='):
-                asset_type = t.split('=', 1)[1].lower()
+            if t.startswith('--asset-type=') or t.startswith('--type=') or t.startswith('-t='):
+                asset_type = t.split('=', 1)[1].lstrip('-').lower()
                 i += 1
                 continue
             if t in ('-d','--description'):
