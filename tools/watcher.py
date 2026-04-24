@@ -983,8 +983,6 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
         _row_basename,
     )
 
-    print(f"  Type: Image")
-
     efu_path = file_path.parent / ".metadata.efu"
     fieldnames: list[str]
     rows: list[dict]
