@@ -1028,11 +1028,21 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
         except Exception:
             pass
     
+    # If still no asset type, use AI vision-based detection
+    if not asset_type:
+        try:
+            from ingest_asset import detect_asset_category_vision
+            detected_type, confidence = detect_asset_category_vision(file_path)
+            asset_type = detected_type.lower()
+            print(f"  Asset type auto-detected from image (AI): {asset_type} ({confidence:.0%} confidence)")
+        except Exception as exc:
+            print(f"[warn] AI asset type detection failed: {exc}")
+    
     # If still no asset type, error
     if not asset_type:
         print(f"[error] Could not determine asset type")
         print(f"  Usage: \"G:\\DB\\asset.jpg\" enrich furniture")
-        print(f"  Or provide filename with asset indicators (e.g., furniture_name_xyz.jpg)")
+        print(f"  Or use filename with asset indicators (e.g., furniture_name_xyz.jpg)")
         return False
     
     print(f"  Asset type: {asset_type}")
