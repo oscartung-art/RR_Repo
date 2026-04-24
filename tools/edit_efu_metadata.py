@@ -191,11 +191,11 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("--field", required=True,
-                        help="EFU column or friendly alias (e.g. rating, subject, title, color).")
-    parser.add_argument("--value", required=True,
-                        help="New value to set.")
-    parser.add_argument("--dry-run", action="store_true",
+    parser.add_argument("-f", "--field", required=True,
+                        help="EFU column or friendly alias (e.g. rating, subject, title, color). Short: -f 4 -> custom_property_4")
+    parser.add_argument("-v", "--value", required=True,
+                        help="New value to set. Short: -v \"Yellow\"")
+    parser.add_argument("--dry-run", "-n", action="store_true",
                         help="Preview changes without writing.")
     parser.add_argument("files", nargs="+",
                         help="Full paths to asset files to update.")
