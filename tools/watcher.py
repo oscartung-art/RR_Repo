@@ -676,17 +676,22 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
             return paths, "add", [("description", description)]
         return paths, "add", []
     elif action_raw == "remove":
-        # Remove format: "remove 'path'" or "remove -f 1 'path'" (remove field 1)
-        # Parse optional field specification (-f <field_num>)
+        # Remove format: "remove 'path'" removes all metadata
+        #               "remove 5 'path'" removes custom_property_5
+        #               "remove tag 'path'" removes Tag column
+        # Parse optional field specification (number or column name)
         field_to_remove = None
-        if args_str and args_str.strip().startswith('-f'):
-            # Pattern: -f 1 or -f=1
-            args_parts = args_str.strip().split()
-            if len(args_parts) >= 2:
-                try:
-                    field_to_remove = args_parts[1].strip('=')
-                except:
-                    pass
+        if args_str and args_str.strip():
+            # First token could be a number (1-9) or column name
+            args_parts = args_str.strip().split(None, 1)
+            if args_parts:
+                first_arg = args_parts[0].strip()
+                # Check if it's a digit 1-9 (custom property)
+                if first_arg.isdigit() and 1 <= int(first_arg) <= 9:
+                    field_to_remove = first_arg
+                elif not first_arg.startswith('"'):
+                    # It's a column name (not a quoted path)
+                    field_to_remove = first_arg
         return paths, "remove", [("field", field_to_remove)] if field_to_remove else []
     elif action_raw in ["audit", "create"]:
         return paths, action_raw, []
@@ -1443,7 +1448,8 @@ def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -
     
     Args:
         args: List of tuples. If [("field", None)], remove all metadata.
-              If [("field", "1")], remove only custom_property_1.
+              If [("field", "5")], remove custom_property_5.
+              If [("field", "tag")], remove Tag column.
     """
     print(f"\n[clipboard-watcher] REMOVE {file_path}")
 
@@ -1494,19 +1500,26 @@ def _handle_remove(file_path: Path, args: List[Tuple[str, str]] | None = None) -
         print(f"  ✓ All metadata cleared")
     else:
         # Remove specific field
-        # Map field number to custom_property name
-        # Field 1 → custom_property_1, etc.
+        # Check if it's a number (custom_property_N) or column name
+        field_name = None
         try:
+            # Try parsing as number
             field_num = int(field_to_remove)
-            field_name = f"custom_property_{field_num}"
-            if field_name in fieldnames:
-                target_row[field_name] = "-"
-                print(f"  ✓ Cleared {field_name}")
+            if 1 <= field_num <= 9:
+                field_name = f"custom_property_{field_num}"
             else:
-                print(f"[error] Field {field_name} not found in EFU")
+                print(f"[error] Field number must be 1-9, got: {field_num}")
                 return False
         except ValueError:
-            print(f"[error] Invalid field number: {field_to_remove}")
+            # It's a column name, use as-is
+            field_name = field_to_remove
+        
+        # Check if field exists in EFU
+        if field_name in fieldnames:
+            target_row[field_name] = "-"
+            print(f"  ✓ Cleared {field_name}")
+        else:
+            print(f"[error] Field '{field_name}' not found in EFU")
             return False
     
     # Write back to EFU
@@ -1584,8 +1597,10 @@ def run():
     print("    Set field on multiple files using pipe-separated format")
     print("  remove \"<path>\"")
     print("    Remove all metadata from an asset")
-    print("  remove -f 1 \"<path>\"")
-    print("    Remove specific field (e.g., -f 1 removes custom_property_1)")
+    print("  remove 5 \"<path>\"")
+    print("    Remove specific field (e.g., remove 5 removes custom_property_5, remove tag removes Tag column)")
+    print("  remove tag \"<path>\"")
+    print("    Remove by column name (e.g., remove tag, remove Rating, remove Subject)")
     print("")
     print("[clipboard-watcher] Commands (flag-style):")
     print("  --field <field> --value <value> \"<path>\"")
