@@ -217,8 +217,9 @@ def resolve_asset_type_abbreviation(abbr: str) -> str:
     - Exact matches in ASSET_TYPE_ABBREVIATIONS (e.g., "fix" → "fixture")
     - First three letters of any asset type (e.g., "fur" → "furniture")
     - Case-insensitive matching
+    - Handles hyphen prefix: "-fur" → "fur" → "furniture"
     """
-    abbr_lower = abbr.strip().lower()
+    abbr_lower = abbr.strip().lower().lstrip('-')
 
     # Check exact mapping first
     if abbr_lower in ASSET_TYPE_ABBREVIATIONS:
@@ -230,8 +231,8 @@ def resolve_asset_type_abbreviation(abbr: str) -> str:
     if abbr_lower in prefix_map:
         return prefix_map[abbr_lower]
 
-    # If no match, return as-is (allow full asset types to be specified)
-    return abbr
+    # If no match, return as-is without the leading hyphen (allow full asset types to be specified)
+    return abbr_lower
 
 # ---------------------------------------------------------------------------
 # Command Parsing
@@ -243,20 +244,27 @@ def _looks_like_command(text: str) -> bool:
     if '--field' in low or '--value' in low or low.startswith('-f') or low.startswith('-v'):
         return True
 
-    # Must have a drive letter (Windows) or path separator for the original style
-    if ":" not in low and "\\" not in low and "/" not in low:
-        return False
-
-    # Check if any token (which could be the last one) is an action
+    # Check if any token (could be first or last) is an action keyword
     tokens = low.split()
     if not tokens:
         return False
 
+    has_action = False
     for token in tokens:
         cleaned = token.rstrip(':')
-        if cleaned in ["enrich", "audit", "create", "set"]:
-            return True
-    return False
+        if cleaned in ["enrich", "audit", "create", "set", "add"]:
+            has_action = True
+            break
+
+    if not has_action:
+        return False
+
+    # Must have a drive letter (Windows) or path separator somewhere in the command
+    # (action-first format has it at the end, which is fine)
+    if ":" not in low and "\\" not in low and "/" not in low:
+        return False
+
+    return True
 
 def _extract_all_after_keyword(text: str, keyword: str) -> Optional[str]:
     """Extract everything after a keyword (including after colon if present)."""
@@ -302,60 +310,81 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     except Exception:
         tokens = text.split()
 
-    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') for t in tokens):
-        # Parse simple flag-style: --field/-f and --value/-v. Remaining tokens are paths.
-        opts: list[tuple[str, str]] = []
+    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') or t in ('-a','--action') or t.startswith('--action=') or t in ('--asset-type',) or t.startswith('--asset-type=') for t in tokens):
+        # Parse flag-style commands only. Supported flags:
+        # --field/-f, --value/-v (repeatable pairs)
+        # --action/-a (enrich/create/audit/set)
+        # --asset-type (for enrich)
+        # --dry-run/-n (ignored, watcher-level DRY_RUN still controls writes)
+        field_vals: list[str] = []
+        value_vals: list[str] = []
         paths_tokens: list[str] = []
+        action: Optional[str] = None
+        asset_type: Optional[str] = None
         i = 0
         while i < len(tokens):
             t = tokens[i]
             if t in ('-f', '--field'):
                 if i + 1 < len(tokens):
-                    opts.append(('field', tokens[i+1]))
+                    field_vals.append(tokens[i+1])
                     i += 2
                     continue
                 else:
                     return None, None, None
             if t.startswith('--field='):
-                opts.append(('field', t.split('=', 1)[1]))
+                field_vals.append(t.split('=', 1)[1])
                 i += 1
                 continue
             if t in ('-v', '--value'):
                 if i + 1 < len(tokens):
-                    opts.append(('value', tokens[i+1]))
+                    value_vals.append(tokens[i+1])
                     i += 2
                     continue
                 else:
                     return None, None, None
             if t.startswith('--value='):
-                opts.append(('value', t.split('=', 1)[1]))
+                value_vals.append(t.split('=', 1)[1])
+                i += 1
+                continue
+            if t in ('-a', '--action'):
+                if i + 1 < len(tokens):
+                    action = tokens[i+1].lower()
+                    i += 2
+                    continue
+                else:
+                    return None, None, None
+            if t.startswith('--action='):
+                action = t.split('=', 1)[1].lower()
+                i += 1
+                continue
+            if t in ('--asset-type',):
+                if i + 1 < len(tokens):
+                    asset_type = tokens[i+1].lower()
+                    i += 2
+                    continue
+                else:
+                    return None, None, None
+            if t.startswith('--asset-type='):
+                asset_type = t.split('=', 1)[1].lower()
                 i += 1
                 continue
             if t in ('--dry-run', '-n'):
-                # ignore for now, watcher DRY_RUN handled via CLI when starting
                 i += 1
                 continue
             # Otherwise treat as path
             paths_tokens.append(t)
             i += 1
 
+        # Validate paths
         if not paths_tokens:
             return None, None, None
 
         # Build field/value pairs
-        field_vals = [v for k, v in opts if k == 'field']
-        value_vals = [v for k, v in opts if k == 'value']
         pairs: list[tuple[str, str]] = []
-        if field_vals and value_vals:
-            if len(field_vals) == len(value_vals):
-                for f, v in zip(field_vals, value_vals):
-                    pairs.append((resolve_field(f), v))
-            else:
-                # Use first field for first value if counts mismatch
-                pairs.append((resolve_field(field_vals[0]), value_vals[0]))
-        else:
-            # Require both --field and --value
-            return None, None, None
+        if field_vals or value_vals:
+            minlen = min(len(field_vals), len(value_vals))
+            for idx in range(minlen):
+                pairs.append((resolve_field(field_vals[idx]), value_vals[idx]))
 
         # Convert paths to Path objects
         try:
@@ -363,30 +392,80 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
         except Exception:
             return None, None, None
 
-        return path_objs, 'set', pairs
+        # Determine action
+        if not action:
+            if pairs:
+                action = 'set'
+            else:
+                action = 'enrich'
+
+        # Build args for handlers
+        args: list[tuple[str, str]] = []
+        if action == 'set':
+            args = pairs
+        elif action == 'enrich':
+            if asset_type:
+                args = [("asset_type", resolve_asset_type_abbreviation(asset_type))]
+            else:
+                args = []
+        elif action in ('audit', 'create'):
+            args = []
+        else:
+            # Unsupported action in flag-only mode
+            return None, None, None
+
+        return path_objs, action, args
 
     all_words = text.split()
 
     if len(all_words) < 2:
         return None, None, None
 
-    # Find the last word that is an action keyword
-    # This allows multiple paths before the action (supports spaces in paths when quoted)
+    # Find action: check if it's at the beginning (Everything search format: "enrich: -fur [Image] path")
+    # If not, find the last word that is an action keyword (traditional format: "path action")
+    # This allows both formats:
+    #   1. Traditional: "path..." action [args]
+    #   2. Everything: action [args] "path..."
     action_index = -1
-    for i, word in enumerate(reversed(all_words)):
-        candidate = word.lower().rstrip(':')
-        if candidate in ["enrich", "audit", "create", "set"]:
-            action_index = len(all_words) - 1 - i
-            break
+    # Check first word first - handles Everything copied format (action at start)
+    first_candidate = all_words[0].lower().rstrip(':')
+    if first_candidate in ["enrich", "audit", "create", "set"]:
+        action_index = 0
+    else:
+        # Traditional format: search from end for last action (paths before action)
+        for i, word in enumerate(reversed(all_words)):
+            candidate = word.lower().rstrip(':')
+            if candidate in ["enrich", "audit", "create", "set"]:
+                action_index = len(all_words) - 1 - i
+                break
 
     if action_index == -1:
         return None, None, None
 
-    # All words before action_index are paths (may be quoted)
-    # All words after action_index are arguments
-    path_words = all_words[:action_index]
     action_raw = all_words[action_index].lower().rstrip(':')
-    args_words = all_words[action_index+1:]
+
+    if action_index == 0:
+        # Action-first format (Everything search): action [args] [tags] path
+        # After bracket stripping, this is: action abbr "path"
+        # All words between action and the last word are args, last word is path
+        all_remaining = all_words[action_index+1:]
+        if len(all_remaining) == 0:
+            return None, None, None
+        if len(all_remaining) == 1:
+            # Just a path, no args: action "path"
+            args_words = []
+            path_words = all_remaining
+        else:
+            # Multiple words: action [abbr] "path" → abbr is arg, last is path
+            args_words = all_remaining[:-1]
+            path_words = all_remaining[-1:]
+    else:
+        # Traditional format: paths... action [args]
+        # All words before action_index are paths (may be quoted)
+        # All words after action_index are arguments
+        path_words = all_words[:action_index]
+        args_words = all_words[action_index+1:]
+
     args_str = " ".join(args_words)
 
     # Collect paths: extract all quoted paths (handles spaces in filenames)
@@ -449,6 +528,50 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
                 print(f"[clipboard-watcher] Resolved asset type: {asset_type} -> {resolved_asset_type}")
             return paths, "enrich", [("asset_type", resolved_asset_type)]
         return paths, "enrich", []
+    elif action_raw == "add":
+        # Add/describe format: "add: "description text here" "path/to/image.jpg"
+        # OR with asset type: "add: -fur "description text here" "path/to/image.jpg"
+        # First quoted string is the description, last quoted string is the image path
+        # Extract description from the first quoted token that's not a path
+        quoted_all = re.findall(r'"([^"]+)"', text)
+        if len(quoted_all) >= 2:
+            description = quoted_all[0]
+            # Strip << >> wrapping if present (common when copied from formatted output)
+            description = description.strip()
+            if description.startswith('<<') and description.endswith('>>'):
+                description = description[2:-2].strip()
+            # Replace | separators with spaces (common in copied formatted data)
+            description = description.replace('|', ' ')
+            # Collapse multiple spaces
+            description = re.sub(r'\s+', ' ', description).strip()
+            # Check if we have an asset type abbreviation before the first quote
+            # Pattern: add: -fur "description" "path"
+            if args_str:
+                # Split args - if starts with an abbreviation (hyphen optional), extract it
+                args_parts = args_str.strip().split()
+                if args_parts and len(quoted_all) == 2:
+                    first_part = args_parts[0].strip().lower()
+                    # if first part is short (4 chars or less), treat as asset type abbreviation
+                    if len(first_part) <= 4:
+                        resolved_abbr = resolve_asset_type_abbreviation(first_part)
+                        if resolved_abbr != first_part:
+                            print(f"[clipboard-watcher] Resolved asset type: {first_part} -> {resolved_abbr}")
+                            # We have both asset type and description - add both to args
+                            return paths, "add", [("asset_type", resolved_abbr), ("description", description)]
+            # Just description, no asset type (will get from existing row)
+            return paths, "add", [("description", description)]
+        elif len(paths) == 1 and args_str.strip():
+            # If no quotes around description, the entire args_str is description
+            description = args_str.strip()
+            # Strip << >> wrapping if present (common when copied from formatted output)
+            if description.startswith('<<') and description.endswith('>>'):
+                description = description[2:-2].strip()
+            # Replace | separators with spaces (common in copied formatted data)
+            description = description.replace('|', ' ')
+            # Collapse multiple spaces
+            description = re.sub(r'\s+', ' ', description).strip()
+            return paths, "add", [("description", description)]
+        return paths, "add", []
     elif action_raw in ["audit", "create"]:
         return paths, action_raw, []
     else:
@@ -848,6 +971,141 @@ def _enrich_image(file_path: Path, asset_type: str | None = None) -> bool:
         return False
 
 
+def _handle_add_with_description(file_path: Path, args: list[Tuple[str, str]] | None) -> bool:
+    """Add/enrich image with description text provided directly in command.
+
+    Format: add: "description text goes here" "path/to/image.jpg"
+    Uses AI to extract metadata from description text.
+    """
+    from ingest_asset import (
+        infer_metadata_fields,
+        enrich_row_with_models,
+    )
+    from move_delete_assets import (
+        _load_efu,
+        _write_efu,
+        _row_basename,
+    )
+
+    print(f"\n[clipboard-watcher] ADD (with description) {file_path}")
+
+    if not file_path.exists():
+        print(f"[error] File not found: {file_path}")
+        _beep("error")
+        return False
+
+    # Extract description and optional asset_type from args
+    description: str | None = None
+    asset_type: str | None = None
+    if args and len(args) > 0:
+        for key, value in args:
+            if key == "description":
+                description = value
+            elif key == "asset_type":
+                asset_type = value
+
+    if not description:
+        print("[error] No description provided. Usage: add: \"description\" \"path\"")
+        _beep("error")
+        return False
+
+    print(f"  Description: {description[:100]}{'...' if len(description) > 100 else ''}")
+
+    efu_path = file_path.parent / ".metadata.efu"
+    fieldnames: list[str]
+    rows: list[dict]
+    existing_row = None
+    row_index = -1
+
+    if efu_path.exists():
+        fieldnames, rows = _load_efu(efu_path)
+        target_basename = file_path.name.lower()
+        for i, row in enumerate(rows):
+            if _row_basename(row) == target_basename:
+                existing_row = row
+                row_index = i
+                break
+    else:
+        # Create new EFU with canonical headers
+        fieldnames = [
+            "Filename", "Rating", "Tags", "URL", "Comment", "ArchiveFile",
+            "SourceMetadata", "Content Status", "CRC-32",
+            "custom_property_0", "custom_property_1", "custom_property_2",
+            "custom_property_3", "custom_property_4", "custom_property_5",
+            "custom_property_6", "custom_property_7", "custom_property_8",
+            "custom_property_9",
+        ]
+        rows = []
+
+    # Need asset_type - check args first, then try to get from existing row
+    if not asset_type and existing_row:
+        # Extract asset type from existing Subject field
+        subject = existing_row.get("custom_property_0", "")
+        if subject and "/" in subject:
+            asset_type = subject.split("/")[0].strip().lower()
+            print(f"  Asset type auto-detected from existing row: {asset_type}")
+
+    if not asset_type:
+        print(f"[error] Asset type required (no existing entry). Add asset type abbreviation after add:")
+        print(f"  Example: add: -fur \"this is a chair\" \"path.jpg\"")
+        _beep("error")
+        return False
+
+    print(f"  Asset type: {asset_type}")
+
+    # Enrich using AI with description as sidecar text
+    try:
+        _beep("start")
+        print(f"  Running AI enrichment from description...")
+
+        # Get source stem from filename
+        source_stem = file_path.stem
+
+        # Run full enrichment pipeline WITH sidecar text from description
+        metadata = infer_metadata_fields(
+            asset_type,
+            source_stem,
+            image_path=file_path,
+            sidecar_text=description
+        )
+        enriched_row = enrich_row_with_models(
+            file_path,
+            source_stem,
+            asset_type,
+            metadata,
+            existing_row.copy() if existing_row else {},
+            raw_sidecar_text=description
+        )
+
+        # Set Filename field (critical - otherwise empty in EFU)
+        enriched_row["Filename"] = file_path.name
+
+        # Update or append
+        if existing_row:
+            rows[row_index] = enriched_row
+            action = "updated"
+        else:
+            rows.append(enriched_row)
+            action = "created"
+
+        print(f"  ✓ Row {action}: {file_path.name}")
+    except Exception as exc:
+        print(f"[error] AI enrichment failed: {exc}")
+        _beep("error")
+        return False
+
+    # Write back to EFU
+    try:
+        _write_efu(efu_path, fieldnames, rows)
+        print(f"  ✓ EFU saved: {efu_path}")
+        _beep("success")
+        return True
+    except Exception as exc:
+        print(f"[error] Failed to write EFU: {exc}")
+        _beep("error")
+        return False
+
+
 def _enrich_pdf(file_path: Path, asset_type: str | None = None) -> bool:
     """Extract PDF schedule and create .metadata.efu entries using ingest_schedule.py."""
     from ingest_schedule import (
@@ -1136,13 +1394,20 @@ def run():
         print("[clipboard-watcher] DRY RUN mode enabled - no changes will be saved")
 
     print(f"[clipboard-watcher] Started, polling every {CHECK_INTERVAL}s (Ctrl+C to stop)")
-    print("[clipboard-watcher] Copy commands like:")
-    print("  Single existing:  g:/db/image.jpg enrich:   -> AI-enrich metadata (uses existing asset_type)")
-    print("  Single new:       g:/db/image.jpg enrich furniture -> Create entry with specified type")
-    print("  Multiple new:     \"g:/db/1.jpg\" \"g:/db/2.jpg\" enrich furniture -> Create multiple entries")
-    print("  g:/db/.metadata.efu audit:   -> Audit EFU and remove entries for missing files")
-    print("  g:/db/schedule.pdf create: -> Extract images + create metadata")
-    print("  g:/db/image.jpg set Rating=99 Tags=lighting -> Update fields\n")
+    print("[clipboard-watcher] Commands (flag-style):")
+    print("  --field <field> --value <value> \"<path>\"")
+    print("    Set a metadata field to a value for the given file. Repeat -f/-v pairs for multiple updates.")
+    print("  --action enrich --asset-type <type> \"<path|folder|metadata.json>\"")
+    print("    Enrich image(s). If a JSON file is provided, it will be used for batch enrichment.")
+    print("  --action create \"<pdf_path>\"")
+    print("    Extract images from a PDF into the same folder (creates code-named JPGs).")
+    print("  --action audit \"<folder_or_efu_path>\"")
+    print("    Audit .metadata.efu and remove entries for missing files.")
+    print("  Examples:")
+    print("    --field 4 --value \"Green\" \"G:\\DB\\image.jpg\"")
+    print("    --action enrich --asset-type vegetation \"G:\\DB\\image.jpg\"")
+    print("    --action enrich \"G:\\DB\\images\\\" \"G:\\DB\\metadata.json\"")
+    print("")
 
     if not HAS_SEND2TRASH:
         print("[warn] send2trash not installed - audit function available but not used for file deletion")
