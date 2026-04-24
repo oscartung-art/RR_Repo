@@ -1242,7 +1242,7 @@ def _handle_set(file_path: Path, updates: List[Tuple[str, str]]) -> bool:
 # Main Loop
 # ---------------------------------------------------------------------------
 def run():
-    global _last_seen, DRY_RUN
+    global _last_seen, DRY_RUN, _waiting_for_description, _pending_image_path, _last_paste_time
 
     parser = argparse.ArgumentParser(
         description="Background clipboard watcher for RR asset management.",
