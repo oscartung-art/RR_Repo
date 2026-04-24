@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# NOTE: This file will be renamed to watcher.py by automated update
+
 """
 clipboard_asset_watcher.py — Background daemon to handle asset management commands from clipboard.
 
@@ -84,7 +86,10 @@ from edit_efu_metadata import (
     resolve_field,
     update_efu,
     VALID_RATINGS,
+    _load_efu,
+    _write_efu,
 )
+from move_delete_assets import _row_basename
 from move_delete_assets import (
     _remove_from_efu,
     _remove_from_central_efu,
@@ -330,7 +335,78 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     # Replace angle brackets with spaces instead of removing them entirely
     # This handles paths wrapped in <> without losing content
     text = text.replace('<', ' ').replace('>', ' ').strip()
-    
+
+    # Support flag-style set commands pasted from terminal, e.g.:
+    # --field 4 --value "Yellow" "G:\\DB\\img.jpg"
+    import shlex
+    try:
+        tokens = shlex.split(text)
+    except Exception:
+        tokens = text.split()
+
+    if tokens and any(t in ('-f', '--field', '-v', '--value') or t.startswith('--field=') or t.startswith('--value=') for t in tokens):
+        # Parse simple flag-style: --field/-f and --value/-v. Remaining tokens are paths.
+        opts: list[tuple[str, str]] = []
+        paths_tokens: list[str] = []
+        i = 0
+        while i < len(tokens):
+            t = tokens[i]
+            if t in ('-f', '--field'):
+                if i + 1 < len(tokens):
+                    opts.append(('field', tokens[i+1]))
+                    i += 2
+                    continue
+                else:
+                    return None, None, None
+            if t.startswith('--field='):
+                opts.append(('field', t.split('=', 1)[1]))
+                i += 1
+                continue
+            if t in ('-v', '--value'):
+                if i + 1 < len(tokens):
+                    opts.append(('value', tokens[i+1]))
+                    i += 2
+                    continue
+                else:
+                    return None, None, None
+            if t.startswith('--value='):
+                opts.append(('value', t.split('=', 1)[1]))
+                i += 1
+                continue
+            if t in ('--dry-run', '-n'):
+                # ignore for now, watcher DRY_RUN handled via CLI when starting
+                i += 1
+                continue
+            # Otherwise treat as path
+            paths_tokens.append(t)
+            i += 1
+
+        if not paths_tokens:
+            return None, None, None
+
+        # Build field/value pairs
+        field_vals = [v for k, v in opts if k == 'field']
+        value_vals = [v for k, v in opts if k == 'value']
+        pairs: list[tuple[str, str]] = []
+        if field_vals and value_vals:
+            if len(field_vals) == len(value_vals):
+                for f, v in zip(field_vals, value_vals):
+                    pairs.append((resolve_field(f), v))
+            else:
+                # Use first field for first value if counts mismatch
+                pairs.append((resolve_field(field_vals[0]), value_vals[0]))
+        else:
+            # Require both --field and --value
+            return None, None, None
+
+        # Convert paths to Path objects
+        try:
+            path_objs = [Path(p).absolute() for p in paths_tokens]
+        except Exception:
+            return None, None, None
+
+        return path_objs, 'set', pairs
+
     all_words = text.split()
 
     if len(all_words) < 2:
@@ -1224,6 +1300,27 @@ def run():
     while True:
         try:
             time.sleep(CHECK_INTERVAL)
+
+            # Reload .env on every iteration to pick up any changes user made to configuration
+            repo_root = Path(__file__).resolve().parents[1]
+            for env_name in (".env", ".env.local"):
+                env_path = repo_root / env_name
+                if not env_path.exists() or not env_path.is_file:
+                    continue
+                try:
+                    for raw in env_path.read_text(encoding="utf-8", errors="replace").splitlines():
+                        line = raw.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        key, value = line.split("=", 1)
+                        key = key.strip()
+                        value = value.strip().strip('"').strip("'")
+                        if key:
+                            # Always update from .env - allows picking up config changes
+                            # while watcher is running (model names, API keys, etc.)
+                            os.environ[key] = value
+                except Exception:
+                    continue
 
             # Read clipboard
             try:

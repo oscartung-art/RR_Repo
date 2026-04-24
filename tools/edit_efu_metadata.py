@@ -77,13 +77,32 @@ VALID_RATINGS = {1, 25, 50, 75, 99}
 
 
 def resolve_field(field: str) -> str:
-    """Resolve a friendly name or raw column name to the canonical EFU column name."""
-    lower = field.lower().replace(" ", "").replace("_", "")
+    """Resolve a friendly name or raw column name to the canonical EFU column name.
+
+    Supports numeric shorthand: e.g. "4" or "field4" or "cp4" -> "custom_property_4".
+    """
+    s = str(field).strip()
+    if not s:
+        return field
+
+    lower = s.lower().replace(" ", "").replace("_", "")
+
+    # Numeric shorthand: single digit -> custom_property_N
+    if lower.isdigit() and len(lower) == 1:
+        return f"custom_property_{lower}"
+
+    # Common short forms ending with a single digit: field4, f4, cp4, customproperty4
+    if len(lower) >= 2 and lower[-1].isdigit() and lower[-1] in "0123456789":
+        prefix = lower[:-1]
+        if prefix in ("", "field", "f", "cp", "customproperty"):
+            return f"custom_property_{lower[-1]}"
+
     # Try alias map (strip underscores/spaces for fuzzy match)
     for alias, col in FIELD_ALIASES.items():
         if lower == alias.replace("_", ""):
             return col
-    # Try exact match as-is (handles custom_property_0 etc. directly)
+
+    # Fallback: return as provided (allows passing canonical names like custom_property_4)
     return field
 
 

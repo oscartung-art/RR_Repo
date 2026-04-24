@@ -42,7 +42,8 @@
       "Bash(del *)",
       "Read(//d D:/**)",
       "Bash(\"D:\\\\rr_repo\\\\.venv\\\\Scripts\\\\python.exe\" \"test_extraction.py\")",
-      "Bash(.\\\\.venv\\\\Scripts\\\\python *)"
+      "Bash(.\\\\.venv\\\\Scripts\\\\python *)",
+      "Bash(D:\\\\rr_repo\\\\.venv\\\\Scripts\\\\python.exe *)"
     ]
   },
   "model": "auto"

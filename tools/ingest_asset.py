@@ -171,7 +171,8 @@ def _load_local_env_vars() -> None:
                 key, value = line.split("=", 1)
                 key = key.strip()
                 value = value.strip().strip('"').strip("'")
-                if key and key not in os.environ:
+                if key:
+                    # Always update from .env - users expect .env changes to take effect
                     os.environ[key] = value
         except Exception:
             continue
@@ -285,7 +286,8 @@ _load_local_env_vars()
 # extraction via OpenRouter.
 # Override with OPENROUTER_MODEL env var or --model=<id> flag.
 OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen2.5-vl-72b-instruct")
-OPENROUTER_VISION_MODEL = os.environ.get("OPENROUTER_VISION_MODEL", "qwen/qwen2.5-vl-72b-instruct")
+# If OPENROUTER_VISION_MODEL is not set, use the same as OPENROUTER_MODEL
+OPENROUTER_VISION_MODEL = os.environ.get("OPENROUTER_VISION_MODEL", OPENROUTER_MODEL)
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_REFERER = os.environ.get("OPENROUTER_HTTP_REFERER", "")
@@ -1786,7 +1788,6 @@ def ollama_generate(
     if not model_candidates:
         raise RuntimeError("No OpenRouter model configured. Set OPENROUTER_MODEL or OPENROUTER_FALLBACK_MODELS")
 
-    spinner_msg = spinner_label or "Waiting for AI response..."
     body: dict = {}
     last_error = ""
     unavailable_models: list[str] = []
@@ -1813,10 +1814,11 @@ def ollama_generate(
             headers=headers,
         )
 
+        current_spinner_msg = spinner_label if spinner_label is not None else f"Text: extracting from {model_name.split('/')[-1]}..."
         model_succeeded = False
         max_retries = 4
         for attempt in range(max_retries):
-            spinner = _Spinner(spinner_msg)
+            spinner = _Spinner(current_spinner_msg)
             spinner.start()
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -2797,10 +2799,16 @@ def classify_image(image_path: Path) -> tuple[str, float, str]:
             return to_camel_case(user_label), user_confidence, "custom"
     # Use vision model
     _label_prompt = "Return one short CamelCase product label describing the main object. No explanation."
-    resp_text = ollama_generate(_label_prompt, image_path=image_path, timeout=120, spinner_label="")
+    # Get current vision model from environment (supports hot-reload in long-running processes)
+    current_vision_model = os.environ.get("OPENROUTER_VISION_MODEL", OPENROUTER_VISION_MODEL)
+    resp_text = ollama_generate(_label_prompt, image_path=image_path, timeout=120, spinner_label="", model=current_vision_model)
     if not resp_text:
         raise RuntimeError("Vision model returned no label")
-    return to_camel_case(resp_text.splitlines()[0]), 1.0, "qwen-vision"
+    # Extract friendly model name from configured vision model
+    model_name = current_vision_model.split('/')[-1]
+    # Convert kebab-case to title case with spaces
+    friendly_name = model_name.replace('-', ' ').replace('.', ' ').title()
+    return to_camel_case(resp_text.splitlines()[0]), 1.0, friendly_name
 
 
 def _move_with_timeout(src: str, dst: str, timeout: float = 30.0) -> Path:
@@ -3190,6 +3198,9 @@ def _prepare_collection_archive(
 
 
 def main() -> None:
+    import time
+    start_time = time.time()
+    processed_count = 0
     try:
         # Validate all base paths before any file operations.
         _validate_base_paths()
@@ -4572,6 +4583,7 @@ def main() -> None:
                             "pair(s)",
                             "No valid image/archive pairs to apply.",
                         )
+                        processed_count = len([item for item in prepared_items if not item.error])
                     else:
                         if sys.stdout.isatty():
                             print(f"Processing {total} item(s)...")
@@ -4595,6 +4607,7 @@ def main() -> None:
                                 print(f"Skipping stem '{stem}': could not identify image/asset pair ({a}, {b})")
                             processed += 1
                             _print_progress(processed, total)
+                        processed_count = processed
         else:
             # Interactive multiline paste mode.
             # User can paste any number of file paths (one per line, mixed order),
@@ -4665,6 +4678,7 @@ def main() -> None:
 
             print(f"Processing {len(paste_images)} item(s)...")
 
+            processed_count = len(paste_images)
             _process_images_with_folder_autodetect(
                 paste_images,
                 dry_run,
@@ -4673,11 +4687,26 @@ def main() -> None:
                 skip_batch_preview=False,
                 preview_title="Paste Preview",
             )
+
+        # Print final timing/speed summary
+        elapsed = time.time() - start_time
+        if processed_count > 0 and elapsed > 0:
+            items_per_minute = processed_count * 60 / elapsed
+            items_per_second = processed_count / elapsed
+            print()
+            print("=" * 80)
+            if processed_count == 1:
+                print(f"Completed 1 item in {elapsed:.1f} seconds ({items_per_minute:.1f} items/min)")
+            else:
+                print(f"Completed {processed_count} items in {elapsed:.1f} seconds ({items_per_minute:.1f} items/min, {items_per_second:.2f} items/sec)")
+            print("=" * 80)
     except KeyboardInterrupt:
-        print("Cancelled by user.")
+        elapsed = time.time() - start_time
+        print(f"\nCancelled by user after {elapsed:.1f} seconds.")
         sys.exit(1)
     except Exception as exc:
-        print(f"Error: {exc}")
+        elapsed = time.time() - start_time
+        print(f"\nError after {elapsed:.1f} seconds: {exc}")
         sys.exit(1)
 
 
