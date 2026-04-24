@@ -15,6 +15,10 @@ Purpose: concise, actionable guidance for future Copilot sessions working in thi
 - Ingest dry-run (preview only):
   python tools/ingest_asset.py --asset-type=furniture --dry-run IMAGE ARCHIVE
   Use --yes only after preview is correct.
+- Schedule metadata extraction (two-step workflow):
+  python tools/extract_schedule_json.py --dry-run SCHEDULE.pdf
+  python tools/extract_schedule_json.py --yes SCHEDULE.pdf
+  Then: "SCHEDULE.pdf" create: (extract images) → "folder/" "metadata.json" enrich:
 - Keyword table/audit: python tools/audit_keywords.py
 - Optional linters (not required by repo): flake8 . or ruff . if added to requirements.
 

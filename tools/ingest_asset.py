@@ -14,12 +14,19 @@ from pathlib import Path
 from PIL import Image
 import base64
 import json
+import requests
 import urllib.error
 import urllib.request
 import threading
 import time
 import textwrap
 import unicodedata
+
+try:
+    from hanziconv import HanziConv
+    HAS_HANZICONV = True
+except ImportError:
+    HAS_HANZICONV = False
 
 THUMBNAIL_BASE = Path(r"G:\DB")
 ARCHIVE_BASE = Path(r"G:\DB")
@@ -334,36 +341,38 @@ def _openrouter_model_candidates(preferred: str | None = None) -> list[str]:
 
 EFU_HEADERS = [
     "Filename",
-    "Subject",
     "Rating",
     "Tags",
     "URL",
-    "Company",
-    "Author",
-    "Album",
-    "custom_property_0",
-    "custom_property_1",
-    "custom_property_2",
-    "Period",
-    "Title",
     "Comment",
     "ArchiveFile",
     "SourceMetadata",
     "Content Status",
+    "CRC-32",
+    "custom_property_0",
+    "custom_property_1",
+    "custom_property_2",
     "custom_property_3",
     "custom_property_4",
     "custom_property_5",
-    "CRC-32",
+    "custom_property_6",
+    "custom_property_7",
+    "custom_property_8",
+    "custom_property_9",
 ]
 
-# Human-friendly aliases for terminal preview output.
+# Human-friendly aliases for terminal preview output (new mapping)
 _PREVIEW_HEADER_ALIASES = {
-    "custom_property_0": "Color",
-    "custom_property_1": "Location",
-    "custom_property_2": "Form",
-    "custom_property_3": "ChineseName",
-    "custom_property_4": "LatinName",
-    "custom_property_5": "Size",
+    "custom_property_0": "CP0",            # Primary asset classification
+    "custom_property_1": "CP1",            # Model name/designer name
+    "custom_property_2": "CP2",            # Brand/Designer/Collection identifier
+    "custom_property_3": "CP3",            # Style/era classification
+    "custom_property_4": "CP4",            # Primary color/material/surface finish
+    "custom_property_5": "CP5",            # Usage context/location
+    "custom_property_6": "CP6",            # Shape/physical configuration
+    "custom_property_7": "CP7",            # Dimensions/scale classification
+    "custom_property_8": "CP8",            # Reference code (from OCR/filename)
+    "custom_property_9": "CP9",            # Reserved/unused
 }
 
 
@@ -827,6 +836,152 @@ def compute_crc32(file_path: Path) -> str:
         while chunk := file_handle.read(1024 * 1024):
             checksum = zlib.crc32(chunk, checksum)
     return f"{checksum & 0xFFFFFFFF:08X}"
+
+
+def extract_botanical_name_from_stem(stem: str) -> str:
+    """
+    Extract botanical name from vegetation filename stem.
+    
+    Patterns handled:
+    - "14-24 MT_PM_V40_Zelkova_serrata_01_06" -> "Zelkova_serrata"
+    - "Zelkova_serrata" -> "Zelkova_serrata"
+    - "V40_Zelkova_serrata_01" -> "Zelkova_serrata"
+    
+    Strategy: Look for a pattern of Genus_species (capitalized word followed by lowercase word).
+    """
+    # Split by spaces and underscores to get parts
+    parts = re.split(r'[_\s]+', stem)
+    
+    # Look for Genus_species pattern: Capitalized followed by lowercase
+    for i in range(len(parts) - 1):
+        current = parts[i]
+        next_part = parts[i + 1]
+        
+        # Check if this looks like Genus (starts with capital) followed by species (lowercase)
+        if (current and current[0].isupper() and current[1:].islower() and
+            next_part and next_part[0].islower()):
+            return f"{current}_{next_part}"
+    
+    # Fallback: return the original stem
+    return stem
+
+
+def fetch_vegetation_wiki_data(stem: str) -> tuple[str, str, str]:
+    """
+    Searches Wikidata for botanical information using structured properties.
+    Returns (latin_name, common_name, chinese_name).
+    
+    Uses Wikidata properties:
+    - P225: Taxon name (Latin scientific name)
+    - P1843: Common name (multilingual)
+    - Labels: zh-hant/zh for Chinese names
+    """
+    # Clean the stem: "Zelkova_serrata" -> "Zelkova serrata"
+    # Preserve scientific naming: Genus capitalized, species lowercase
+    parts = stem.replace("_", " ").split()
+    if len(parts) >= 2:
+        # Genus capitalized, species lowercase
+        search_query = f"{parts[0].capitalize()} {parts[1].lower()}"
+    else:
+        search_query = stem.replace("_", " ").capitalize()
+    
+    headers = {"User-Agent": "VegetationIngestScript/1.0"}
+    
+    try:
+        # Step 1: Search for entity by name
+        search_url = "https://www.wikidata.org/w/api.php"
+        search_params = {
+            "action": "wbsearchentities",
+            "search": search_query,
+            "language": "en",
+            "limit": 3,
+            "format": "json"
+        }
+        
+        response = requests.get(search_url, params=search_params, headers=headers, timeout=10)
+        search_data = response.json()
+        
+        if not search_data.get("search"):
+            print(f"  [Wikidata] No entities found for: {search_query}")
+            return search_query, "-", "-"
+        
+        # Step 2: Try each result until we find one with taxon data
+        for result in search_data["search"]:
+            entity_id = result["id"]
+            print(f"  [Wikidata] Checking entity: {entity_id} ({result.get('label', 'N/A')})")
+            
+            # Get entity data with properties
+            entity_url = "https://www.wikidata.org/w/api.php"
+            entity_params = {
+                "action": "wbgetentities",
+                "ids": entity_id,
+                "props": "claims|labels",
+                "languages": "en|zh-hant|zh",
+                "format": "json"
+            }
+            
+            entity_response = requests.get(entity_url, params=entity_params, headers=headers, timeout=10)
+            entity_data = entity_response.json()
+            
+            if "entities" not in entity_data or entity_id not in entity_data["entities"]:
+                continue
+            
+            entity = entity_data["entities"][entity_id]
+            claims = entity.get("claims", {})
+            labels = entity.get("labels", {})
+            
+            # Check if this is a taxon (has P225 - taxon name property)
+            if "P225" not in claims:
+                print(f"  [Wikidata] Not a taxon, skipping...")
+                continue
+            
+            # Extract data
+            # P225: Taxon name (Latin scientific name)
+            latin_name = claims["P225"][0]["mainsnak"]["datavalue"]["value"]
+            print(f"  [Wikidata] Latin name (P225): {latin_name}")
+            
+            # P1843: Common name (look for English)
+            common_name = "-"
+            if "P1843" in claims:
+                for claim in claims["P1843"]:
+                    if claim["mainsnak"].get("datavalue"):
+                        value = claim["mainsnak"]["datavalue"]["value"]
+                        # Check if it's English
+                        if isinstance(value, dict) and value.get("language") == "en":
+                            common_name = value.get("text", "-")
+                            print(f"  [Wikidata] Common name (P1843): {common_name}")
+                            break
+            
+            # If no P1843, use the English label as fallback
+            if common_name == "-" and "en" in labels:
+                common_name = labels["en"]["value"]
+                print(f"  [Wikidata] Common name (label): {common_name}")
+            
+            # Chinese name from labels (prefer zh-hant > zh)
+            chinese_name = "-"
+            if "zh-hant" in labels:
+                chinese_name = labels["zh-hant"]["value"]
+                print(f"  [Wikidata] Chinese name (zh-hant): {chinese_name}")
+            elif "zh" in labels:
+                chinese_name = labels["zh"]["value"]
+                print(f"  [Wikidata] Chinese name (zh): {chinese_name}")
+                # Convert to Traditional if available
+                if HAS_HANZICONV:
+                    chinese_name_trad = HanziConv.toTraditional(chinese_name)
+                    if chinese_name_trad != chinese_name:
+                        print(f"  [Wikidata] Converted to Traditional: {chinese_name_trad}")
+                        chinese_name = chinese_name_trad
+            
+            # Success - return the data
+            return latin_name, common_name, chinese_name
+        
+        # No valid taxon found in results
+        print(f"  [Wikidata] No taxon data found for: {search_query}")
+        return search_query, "-", "-"
+        
+    except Exception as e:
+        print(f"  [Wikidata Error] Could not fetch data for {search_query}: {e}")
+        return search_query, "-", "-"
 
 
 def normalize_asset_type(raw: str) -> str:
@@ -1753,6 +1908,45 @@ def extract_json_payload(text: str) -> dict[str, str]:
     return {}
 
 
+def _estimate_primary_color(image_path: Path) -> str:
+    """Estimate a basic color name from the image. Returns a simple color label like 'Green', 'Brown', etc., or '-' if unknown."""
+    try:
+        from PIL import Image
+        img = Image.open(image_path).convert('RGB')
+        # Resize to small thumbnail to speed up
+        img = img.resize((64, 64))
+        pixels = list(img.getdata())
+        # Count colors
+        from collections import Counter
+        cnt = Counter(pixels)
+        # Get top colors
+        top = cnt.most_common(10)
+        # Average top colors
+        r = sum([c[0][0] * c[1] for c in top]) / sum([c[1] for c in top])
+        g = sum([c[0][1] * c[1] for c in top]) / sum([c[1] for c in top])
+        b = sum([c[0][2] * c[1] for c in top]) / sum([c[1] for c in top])
+        # Map RGB to basic color names by simple heuristics
+        if g > r and g > b and g > 90:
+            return "Green"
+        if r > g and r > b and r > 90:
+            return "Red"
+        if b > r and b > g and b > 90:
+            return "Blue"
+        if r > 140 and g > 120 and b < 100:
+            return "Brown"
+        if r > 200 and g > 200 and b > 200:
+            return "White"
+        if r < 60 and g < 60 and b < 60:
+            return "Black"
+        if abs(r - g) < 20 and b < 120 and r > 120:
+            return "Yellow"
+        # Fallback: return dominant channel as name
+        channels = {'Red': r, 'Green': g, 'Blue': b}
+        return max(channels, key=channels.get)
+    except Exception:
+        return "-"
+
+
 def infer_metadata_fields(
     asset_type: str,
     source_stem: str,
@@ -1810,7 +2004,7 @@ def infer_metadata_fields(
             "  recognize it and extract the Latin name, Traditional Chinese name, and common name.\n"
             "- latin_name: The scientific/botanical Latin name in proper format (e.g., 'Quercus robur', 'Rosa damascena').\n"
             "- chinese_name: The Traditional Chinese name for the plant (e.g., '英國橡樹' for Quercus robur, '大馬士革玫瑰' for Rosa damascena).\n"
-            "- common_name: The common English name of the plant (e.g., 'English Oak' for Quercus robur, 'Damask Rose' for Rosa damascena).\n"
+            "- common_name: The actual common English name of the plant, NOT phonetic pronunciation (e.g., 'English Oak' for Quercus robur, 'Damask Rose' for Rosa damascena, 'Common Blue Violet' for Viola sororia).\n"
             "- subject: One short leaf subject phrase describing the plant type (e.g., 'Conifer Tree', 'Flowering Shrub', 'Groundcover').\n"
             "- primary_material_or_color: The dominant color(s) of the plant as shown in the image (e.g., 'Green', 'Pink Flowers', 'Purple Blooms', 'Green with Red Berries').\n"
             "- usage_location: Primary visual/growth context from the image (e.g., 'Garden', 'Indoor', 'Landscape', 'Container', 'Wildflower', 'Aquatic'). Use '-' if unclear.\n"
@@ -1930,11 +2124,32 @@ def enrich_row_with_models(
     period        = _clean_field(fields, "period")
     size          = _clean_field(fields, "size")
     vendor_name   = _clean_field(fields, "vendor_name")
+
+    # Fallback: estimate dominant color from the image when AI didn't return it
+    if primary_material == "-" and image_path and image_path.exists():
+        try:
+            est_color = _estimate_primary_color(image_path)
+            if est_color:
+                primary_material = est_color
+                print(f"  [Fallback] Estimated primary color: {primary_material}")
+        except Exception:
+            pass
     
-    # For vegetation: extract Latin, Chinese, and common names from AI output
-    latin_name = _clean_field(fields, "latin_name") if asset_type == "vegetation" else "-"
-    chinese_name = _clean_field(fields, "chinese_name") if asset_type == "vegetation" else "-"
-    common_name = _clean_field(fields, "common_name") if asset_type == "vegetation" else "-"
+    # For vegetation: fetch factual data from Wikipedia based on the filename stem
+    if asset_type == "vegetation":
+        # Extract botanical name from filename (e.g., "14-24 MT_PM_V40_Zelkova_serrata_01_06" -> "Zelkova_serrata")
+        botanical_stem = extract_botanical_name_from_stem(source_stem)
+        print(f"  Fetching botanical data for: {botanical_stem}...")
+        wiki_latin, wiki_common, wiki_chinese = fetch_vegetation_wiki_data(botanical_stem)
+        
+        # Prefer Wikidata's structured botanical data. If Wikidata fails, fall back to AI analysis.
+        latin_name = wiki_latin if wiki_latin != "-" else _clean_field(fields, "latin_name")
+        common_name = wiki_common if wiki_common != "-" else _clean_field(fields, "common_name")
+        chinese_name = wiki_chinese if wiki_chinese != "-" else _clean_field(fields, "chinese_name")
+    else:
+        latin_name = "-"
+        chinese_name = "-"
+        common_name = "-"
 
     # Vendor defaults to brand when AI leaves it blank.
     if vendor_name == "-" and brand != "-":
@@ -1961,23 +2176,114 @@ def enrich_row_with_models(
     if db_row.get("URL", "").strip() and db_row["URL"].strip() not in ("-", ""):
         row["URL"] = db_row["URL"].strip()
 
-    # ── Write to EFU row ─────────────────────────────────────────────────
-    row["Subject"] = build_subject_path(asset_type, subject_path) if subject_path != "-" else "-"
-    # For vegetation, Title is the common name; for other assets, it's model_name
-    row["Title"] = common_name if asset_type == "vegetation" else model_name
-    row["Company"] = brand
-    row["Album"] = collection
-    row["custom_property_0"] = primary_material
-    row["custom_property_1"] = usage_location
-    row["custom_property_2"] = shape_form
-    row["Period"] = period
-    row["custom_property_5"] = size
-    row["Author"] = vendor_name if vendor_name != "-" else (brand if brand != "-" else "-")
+    # ── Write to EFU row per asset-type-specific schema ──────────────────
+    # Schema per manual/everything_columnmapping.xlsx: each asset type has its own column semantics.
+    # cp0 is universal: Primary asset classification (Subject)
+    row["custom_property_0"] = build_subject_path(asset_type, subject_path) if subject_path != "-" else "-"
     
-    # Vegetation-specific fields: Latin name and Traditional Chinese name
     if asset_type == "vegetation":
-        row["custom_property_3"] = chinese_name
-        row["custom_property_4"] = latin_name
+        # Vegetation schema (cp1-cp7):
+        # cp1: Common Name of Vegetation
+        row["custom_property_1"] = common_name
+        # cp2: Plant Secondary Color Besides Green (e.g., flower color, autumn foliage)
+        row["custom_property_2"] = primary_material  # AI vision analysis extracts color from image
+        # cp3: Plant Shape
+        row["custom_property_3"] = shape_form
+        # cp4: Chinese scientific name
+        row["custom_property_4"] = chinese_name
+        # cp5: Latin scientific name
+        row["custom_property_5"] = latin_name
+        # cp6: Plant Height, Spread, Radius
+        row["custom_property_6"] = size
+        # cp7: Reserved
+        row["custom_property_7"] = "-"
+        # cp8: Reference code (typically empty unless from schedule)
+        row["custom_property_8"] = "-"
+        # cp9: Reserved
+        row["custom_property_9"] = "-"
+    elif asset_type == "material":
+        # Material schema (cp1-cp7):
+        # cp1: Secondary Asset Classification
+        row["custom_property_1"] = collection
+        # cp2: Specific Name/Model of Material
+        row["custom_property_2"] = model_name
+        # cp3: Style or era classification
+        row["custom_property_3"] = period
+        # cp4: Primary color
+        row["custom_property_4"] = primary_material
+        # cp5: - (Reserved)
+        row["custom_property_5"] = "-"
+        # cp6: Dimensions or scale classification
+        row["custom_property_6"] = size
+        # cp7: Reserved
+        row["custom_property_7"] = "-"
+        # cp8: Reference code
+        row["custom_property_8"] = "-"
+        # cp9: Reserved
+        row["custom_property_9"] = "-"
+    elif asset_type == "people":
+        # People schema (cp1-cp4):
+        # cp1: Gender
+        row["custom_property_1"] = model_name  # Use model_name field for gender when available
+        # cp2: Ethnicity
+        row["custom_property_2"] = collection
+        # cp3: Usage context or location
+        row["custom_property_3"] = usage_location
+        # cp4-cp9: Reserved
+        row["custom_property_4"] = "-"
+        row["custom_property_5"] = "-"
+        row["custom_property_6"] = "-"
+        row["custom_property_7"] = "-"
+        row["custom_property_8"] = "-"
+        row["custom_property_9"] = "-"
+    elif asset_type == "layouts":
+        # Layouts schema:
+        # cp1: Asset inside the thumbnail
+        row["custom_property_1"] = model_name
+        # cp2: Usage context or location
+        row["custom_property_2"] = usage_location
+        # cp3-cp5: Reserved
+        row["custom_property_3"] = "-"
+        row["custom_property_4"] = "-"
+        row["custom_property_5"] = "-"
+        # cp6-cp7: Reserved
+        row["custom_property_6"] = "-"
+        row["custom_property_7"] = "-"
+        # cp8: Reference code
+        row["custom_property_8"] = "-"
+        # cp9: Reserved
+        row["custom_property_9"] = "-"
+    elif asset_type == "vfx":
+        # VFX schema: all reserved
+        row["custom_property_1"] = "-"
+        row["custom_property_2"] = "-"
+        row["custom_property_3"] = "-"
+        row["custom_property_4"] = "-"
+        row["custom_property_5"] = "-"
+        row["custom_property_6"] = "-"
+        row["custom_property_7"] = "-"
+        row["custom_property_8"] = "-"
+        row["custom_property_9"] = "-"
+    else:
+        # Default schema for Furniture, Fixture, Object, Vehicle, Schedule (all share same mapping):
+        # cp1: Model name or designer name
+        row["custom_property_1"] = model_name
+        # cp2: Brand/Designer/Collection identifier
+        row["custom_property_2"] = brand
+        # cp3: Style or era classification
+        row["custom_property_3"] = period
+        # cp4: Primary color or material or surface finish
+        row["custom_property_4"] = primary_material
+        # cp5: Usage context or location
+        row["custom_property_5"] = usage_location
+        # cp6: Shape or physical configuration
+        row["custom_property_6"] = shape_form
+        # cp7: Dimensions or scale classification
+        row["custom_property_7"] = size
+        # cp8: Reference code (typically empty unless from schedule)
+        row["custom_property_8"] = "-"
+        # cp9: Reserved
+        row["custom_property_9"] = "-"
 
     return row
 
@@ -2075,39 +2381,53 @@ def build_metadata_row(
     row["Tags"] = "-"
     row["CRC-32"] = crc32_value
 
+    # Initialize asset-type-specific columns from filename hints (before AI enrichment).
+    # Per manual/everything_columnmapping.xlsx schema.
     if asset_type == "furniture":
-        row["Title"] = clean_display_case(hints["model"] or hints["lead_desc"])
-        row["Company"] = "-"
-        row["Author"] = clean_display_case(hints["brand"] or hints["brand_raw"])
-        row["Album"] = clean_display_case(hints["collection"])
-        row["custom_property_5"] = hints["size"]
+        # Furniture: cp1=model_name, cp2=brand, cp3=period, cp4=primary_material, cp7=size
+        row["custom_property_1"] = clean_display_case(hints["model"] or hints["lead_desc"])
+        row["custom_property_2"] = clean_display_case(hints["brand"] or hints["brand_raw"])
+        row["custom_property_3"] = clean_display_case(hints["collection"])
+        row["custom_property_7"] = hints["size"]
     elif asset_type == "vegetation":
-        row["Company"] = hints["size"]
-        row["Author"] = clean_display_case(hints["model"])
-        row["Album"] = clean_display_case(hints["collection"] or hints["lead_desc"])
-        row["custom_property_5"] = hints["size"]
-    elif asset_type == "people":
-        row["Company"] = clean_display_case(hints["model"])
-        row["Author"] = clean_display_case(hints["collection"])
-        row["custom_property_5"] = hints["size"]
+        # Vegetation: cp1=common_name (AI), cp2=plant_secondary, cp3=plant_shape (AI),
+        #            cp4=chinese_name (AI), cp5=latin_name (AI), cp6=height_spread (AI)
+        # From filename, only set cp2 as secondary classification if available
+        row["custom_property_2"] = clean_display_case(hints["collection"] or hints["lead_desc"])
     elif asset_type == "material":
-        row["Album"] = clean_display_case(hints["collection"])
-        row["Company"] = clean_display_case(hints["model"])
-        row["Period"] = clean_display_case("Material Category")
-        row["custom_property_5"] = hints["size"]
-    elif asset_type == "buildings":
-        row["Company"] = clean_display_case(hints["model"])
-        row["Period"] = clean_display_case(hints["collection"])
-        row["custom_property_5"] = hints["size"]
+        # Material: cp1=secondary_class, cp2=model_name, cp3=period, cp4=primary_color, cp6=dimensions
+        row["custom_property_1"] = clean_display_case(hints["collection"])
+        row["custom_property_2"] = clean_display_case(hints["model"])
+        row["custom_property_3"] = "-"
+        row["custom_property_6"] = hints["size"]
+    elif asset_type == "people":
+        # People: cp1=gender, cp2=ethnicity (limited from filename hints)
+        row["custom_property_1"] = "-"  # Gender typically comes from AI
+        row["custom_property_2"] = "-"  # Ethnicity typically comes from AI
     elif asset_type == "layouts":
-        row["Title"] = clean_display_case(hints["model"])
-        row["Period"] = clean_display_case(hints["collection"])
-        row["custom_property_5"] = hints["size"]
+        # Layouts: cp1=asset_inside, cp2=usage_context
+        row["custom_property_1"] = clean_display_case(hints["model"])
+        row["custom_property_2"] = "-"  # Usage context from AI
+    elif asset_type == "fixture":
+        # Fixture: cp1=model_name, cp2=brand, cp3=period, cp4=primary_material, cp7=size
+        row["custom_property_1"] = clean_display_case(hints["model"] or hints["lead_desc"])
+        row["custom_property_2"] = clean_display_case(hints["brand"] or hints["brand_raw"])
+        row["custom_property_3"] = clean_display_case(hints["collection"])
+        row["custom_property_7"] = hints["size"]
     elif asset_type == "object":
-        # Subject stays unset until AI enrichment fills it.
-        row["Company"] = "-"
-        row["Author"] = clean_display_case(hints.get("brand", "") or hints.get("brand_raw", ""))
-        row["Album"] = "-"
+        # Object: same as furniture/fixture
+        row["custom_property_1"] = clean_display_case(hints["model"] or hints["lead_desc"])
+        row["custom_property_2"] = clean_display_case(hints["brand"] or hints["brand_raw"])
+        row["custom_property_3"] = clean_display_case(hints["collection"])
+        row["custom_property_7"] = hints["size"]
+    elif asset_type == "vehicle":
+        # Vehicle: same as furniture/fixture
+        row["custom_property_1"] = clean_display_case(hints["model"] or hints["lead_desc"])
+        row["custom_property_2"] = clean_display_case(hints["brand"] or hints["brand_raw"])
+        row["custom_property_3"] = clean_display_case(hints["collection"])
+        row["custom_property_7"] = hints["size"]
+    # else: VFX or unknown — leave all cp fields as "-"
+    
     row["Comment"] = "-"
 
     return row
@@ -2115,9 +2435,10 @@ def build_metadata_row(
 
 # Fields that carry free-text display values and should be casing-normalized.
 _NORMALIZE_EFU_FIELDS = {
-    "Author", "Album", "Company", "Period", "Title",
     "custom_property_0", "custom_property_1", "custom_property_2",
     "custom_property_3", "custom_property_4", "custom_property_5",
+    "custom_property_6", "custom_property_7", "custom_property_8",
+    "custom_property_9",
 }
 
 
@@ -2229,6 +2550,32 @@ def ensure_metadata_file(path: Path) -> None:
                     row["ArchiveFile"] = legacy_archive_value
                     migrated = True
                     break
+
+        # Migration: old schema → new schema (all enrichment to custom_property 0-9)
+        # Map old top-level columns to new custom_property slots
+        migration_map = [
+            ("Subject", "custom_property_0"),
+            ("Title", "custom_property_1"),
+            ("Company", "custom_property_2"),
+            ("Album", "custom_property_3"),
+            ("Author", "custom_property_4"),
+            ("Period", "custom_property_5"),
+            # Old custom properties → new custom properties
+            ("custom_property_0", "custom_property_6"),  # old Color → new Color (cp6)
+            ("custom_property_1", "custom_property_7"),  # old Location → new Location (cp7)
+            ("custom_property_2", "custom_property_8"),  # old Form → new Form (cp8)
+            ("custom_property_5", "custom_property_9"),  # old Size → new Size (cp9)
+        ]
+        for old_col, new_col in migration_map:
+            if old_col in row:
+                val = (row.get(old_col) or "").strip()
+                if val and val != "-":
+                    current = (row.get(new_col) or "").strip()
+                    if not current or current == "-":
+                        row[new_col] = val
+                        migrated = True
+
+        # Old cp3/cp4 (Chinese/Latin) are deprecated - not mapped to new schema
         row = normalize_efu_row(row)
         new_rows.append(row)
 
@@ -2565,6 +2912,7 @@ def _build_enriched_image_row(
     )
     if author_input:
         temp_row["Author"] = author_input
+    temp_row["Filename"] = image_path.name
     temp_row["ArchiveFile"] = archive_file_name
     return temp_row
 

@@ -17,3 +17,13 @@ Pillow
 # PDF Processing (pdf_to_spec.py, pdf_to_excel_docling.py)
 PyMuPDF
 pdfplumber
+
+# Clipboard Asset Watcher
+send2trash
+win10toast  # Windows toast notifications
+
+# Chinese Character Conversion (Simplified to Traditional)
+hanziconv
+
+# HTTP Requests (Wikipedia API, OpenRouter, etc.)
+requests

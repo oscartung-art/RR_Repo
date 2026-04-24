@@ -37,23 +37,30 @@ def build_filename_title_fallback(source_stem: str, hints: dict[str, str]) -> st
 
 def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str, str], fallback: str) -> str:
     """Build short base filename from asset type, metadata row, and hints."""
-    subject_value = subject_path_leaf(row.get("Subject", "")) or row.get("Subject", "")
+    # New schema: Subject is in custom_property_0
+    subject_value = subject_path_leaf(row.get("custom_property_0", "")) or row.get("custom_property_0", "")
     if asset_type == "furniture":
-        model_name_token = sanitize_name_token(row.get("Title", "") or "")
+        # Title is in custom_property_1
+        model_name_token = sanitize_name_token(row.get("custom_property_1", "") or "")
         preferred = [subject_value, model_name_token] if model_name_token and model_name_token != "-" else [subject_value]
     elif asset_type == "fixture":
-        model_name_token = sanitize_name_token(row.get("Title", "") or "")
+        # Title is in custom_property_1
+        model_name_token = sanitize_name_token(row.get("custom_property_1", "") or "")
         preferred = [p for p in [subject_value, model_name_token] if p and p != "-"]
     elif asset_type == "vegetation":
-        preferred = [subject_value, row.get("Author", "")]
+        # Author is in custom_property_4
+        preferred = [subject_value, row.get("custom_property_4", "")]
     elif asset_type == "people":
-        preferred = [subject_value, row.get("Author", "")]
+        # Author is in custom_property_4
+        preferred = [subject_value, row.get("custom_property_4", "")]
     elif asset_type == "material":
-        preferred = [subject_value, row.get("Company", "")]
+        # Company is in custom_property_2
+        preferred = [subject_value, row.get("custom_property_2", "")]
     elif asset_type == "buildings":
-        preferred = [subject_value, row.get("Company", "")]
+        # Company is in custom_property_2
+        preferred = [subject_value, row.get("custom_property_2", "")]
     else:
-        preferred = [subject_value, row.get("custom_property_1", "")]
+        preferred = [subject_value, row.get("custom_property_5", "")]
 
     tokens = [sanitize_name_token(x) for x in preferred if x]
     tokens = [t for t in tokens if t]
@@ -66,8 +73,8 @@ def build_short_base_name(asset_type: str, row: dict[str, str], hints: dict[str,
         qwen_name = clean_name_with_qwen(
             asset_type=asset_type,
             source_stem=fallback,
-            mapped_subject=row.get("Subject", ""),
-            mapped_brand=row.get("Company", ""),
+            mapped_subject=row.get("custom_property_0", ""),
+            mapped_brand=row.get("custom_property_2", ""),
         )
         qwen_clean = sanitize_name_token(qwen_name.replace("_", " "))
         if qwen_clean:

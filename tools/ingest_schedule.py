@@ -14,18 +14,18 @@ If the output .metadata.efu already exists, existing rows are deduplicated by Fi
 Parsing strategy: uses page.extract_text() (reading order) so it handles
 all table layout variants (2-col, 4-col, 7-col) without cell alignment issues.
 
-EFU column mapping:
+EFU column mapping (canonical per everything_columnmapping.md):
   Filename          ← <SubjectLeaf>_<Brand><ModelRef>  (synthetic identifier)
-  custom_property_6 ← Code  (schedule reference code, e.g. C-SF-01, AL-01)
-  Subject           ← AssetType/TitleCaseItem  (e.g. Fixture/SensorBasinMixer)
-  Title             ← Model spec (without brand prefix)
-  custom_property_7 ← Finish  (surface finish/treatment)
-  custom_property_0 ← Colour/Color
-  custom_property_5 ← Dimension  (Size)
-  custom_property_1 ← Location  (room/area)
-  Author            ← Parent folder name (mirrors ingest_asset.py convention)
-  Album             ← Output folder name
-  Company           ← Brand  (extracted from quoted model prefix)
+  custom_property_0 ← Subject  (AssetType/TitleCaseItem, e.g. Fixture/SensorBasinMixer)
+  custom_property_1 ← Model name/designer name (model spec without brand prefix)
+  custom_property_2 ← Brand/Designer/Collection identifier
+  custom_property_3 ← Style/era classification
+  custom_property_4 ← Primary color/material/surface finish
+  custom_property_5 ← Usage context/location (room/area)
+  custom_property_6 ← Shape/physical configuration
+  custom_property_7 ← Dimensions/scale classification (Size specification)
+  custom_property_8 ← Reference code (schedule item code, e.g. C-SF-01, AL-01)
+  custom_property_9 ← Reserved (unused)
 """
 
 import argparse
@@ -59,21 +59,46 @@ try:
 except ImportError:
     requests = None
 
+# Load .env file if it exists (for API keys and configuration)
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    try:
+        with open(_env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"\'')
+                    if key not in os.environ:  # Don't override existing env vars
+                        os.environ[key] = value
+    except Exception:
+        pass  # Silently ignore .env loading errors
+
 EFU_FIELDNAMES = [
     "Filename",
-    "custom_property_6",
-    "Subject",
-    "Title",
-    "custom_property_7",
-    "custom_property_0",
-    "custom_property_5",
-    "custom_property_1",
-    "Author",
-    "Album",
-    "Company",
+    "Rating",
+    "Tags",
+    "URL",
+    "Comment",
+    "ArchiveFile",
+    "SourceMetadata",
+    "Content Status",
+    "CRC-32",
+    "custom_property_0",  # Subject (Primary asset classification)
+    "custom_property_1",  # Model name/designer name
+    "custom_property_2",  # Brand/Designer/Collection identifier
+    "custom_property_3",  # Style/era classification
+    "custom_property_4",  # Primary color/material/surface finish
+    "custom_property_5",  # Usage context/location
+    "custom_property_6",  # Shape/physical configuration
+    "custom_property_7",  # Dimensions/scale classification
+    "custom_property_8",  # Reference code
+    "custom_property_9",  # Reserved
 ]
 
 # Maps keywords found in PDF filename/title to ingest_asset.py asset_type root.
+# No more "Schedule" asset type - each entry is directly classified to its actual category.
 _FILENAME_ROOT_KEYWORDS: list[tuple[list[str], str]] = [
     (["sanitary", "plumbing", "fitting", "wc", "bathroom"],  "Fixture"),
     (["lighting", "light", "lamp", "luminaire"],             "Fixture"),
@@ -86,13 +111,13 @@ OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "qwen/qwen2.5-vl-72b-instr
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 AI_ALLOWED_UPDATE_FIELDS = {
-    "Subject",
-    "Title",
-    "custom_property_7",
-    "custom_property_0",
-    "custom_property_5",
-    "custom_property_1",
-    "Company",
+    "custom_property_0",  # Subject
+    "custom_property_1",  # Title
+    "custom_property_4",  # Color/finish
+    "custom_property_5",  # Location
+    "custom_property_7",  # Dimensions
+    "custom_property_8",  # Code
+    "custom_property_2",  # Company/brand
 }
 
 
@@ -207,29 +232,38 @@ def cleanup_rows_with_ai(rows: list[dict], pdf_path: Path) -> list[dict]:
 Look at this sample PDF page and the extracted schedule data below.
 Your task is to identify and fix ALL extraction errors systematically.
 
+Columns (canonical mapping per everything_columnmapping.md):
+- custom_property_0 = Subject (asset classification, e.g. Fixture/WaterCloset)
+- custom_property_1 = Model name (model spec without brand)
+- custom_property_2 = Brand (manufacturer/designer name)
+- custom_property_4 = Color/finish (color and surface finish)
+- custom_property_5 = Location (room/area)
+- custom_property_7 = Dimension (size specification)
+- custom_property_8 = Code (item reference code)
+
 EXTRACTED DATA (first 5 rows):
 {rows_csv}
 
 CRITICAL RULES (apply ALL of them):
-1. Subject: Remove redundancy (Fixture/WaterClosetCistern → Fixture/WaterCloset)
-2. Color field: MUST be ONLY color name (e.g. "Black", "White", "#726 Warm Bronze")
+1. Subject (custom_property_0): Remove redundancy (Fixture/WaterClosetCistern -> Fixture/WaterCloset)
+2. Color/finish field (custom_property_4): MUST be ONLY color and finish name (e.g. "Black Matt", "White Polished")
    - REMOVE any residual email, phone, "E:", "T:", "Dimension:" text
-   - If Color looks like junk/noise, set to "-"
-3. Location field: MUST be ONLY room/area name (e.g. "Clubhouse female restroom")
+   - If Color/finish looks like junk/noise, set to "-"
+3. Location field (custom_property_5): MUST be ONLY room/area name (e.g. "Clubhouse female restroom")
    - REMOVE any dimensions, drawing references, or residual text
-4. Size/Dimension: MUST be ONLY size spec (e.g. "467x305x155mm", "Refer to drawings")
+4. Size/Dimension (custom_property_7): MUST be ONLY size spec (e.g. "467x305x155mm", "Refer to drawings")
    - REMOVE contact info
 5. Replace "-" with appropriate contextual value only if visually obvious from PDF
-6. Title: Keep model spec without brand prefix
-7. Keep Brand/Company exactly as extracted from quoted prefix
+6. Model name (custom_property_1): Keep model spec without brand prefix
+7. Keep Brand (custom_property_2) exactly as extracted from quoted prefix
 
 IMPORTANT: Be AGGRESSIVE about stripping contact info - look carefully for residual emails, phone patterns, abbreviations like "E: brianli@..."
 
 Return ONLY valid JSON:
 {{
   "corrections": {{
-    "0": {{"custom_property_0": "clean_color_only"}},
-    "1": {{"custom_property_1": "clean_location_only"}},
+    "0": {{"custom_property_0": "clean_subject"}},
+    "1": {{"custom_property_1": "clean_model"}},
     ...
   }},
   "notes": "what was fixed"
@@ -243,7 +277,14 @@ Return ONLY valid JSON:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image", "image": f"data:image/png;base64,{b64_image}"}
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": b64_image
+                        }
+                    }
                 ]
             }
         ],
@@ -282,6 +323,13 @@ Return ONLY valid JSON:
             rows[idx].update(fixes)
         print(f"✓ AI cleanup: {parsed.get('notes', 'validated')}", file=sys.stderr)
              
+    except requests.exceptions.HTTPError as e:
+        # Provide more detailed error info for HTTP errors
+        try:
+            error_detail = resp.json()
+            print(f"⚠ AI cleanup failed: {e} - {error_detail}", file=sys.stderr)
+        except:
+            print(f"⚠ AI cleanup failed: {e} - Response: {resp.text}", file=sys.stderr)
     except Exception as e:
         print(f"⚠ AI cleanup failed: {e}", file=sys.stderr)
     
@@ -319,7 +367,7 @@ def extract_field(text: str, key: str) -> str:
 
 
 def extract_field_line(text: str, key: str) -> str:
-    """Extract a field value — first line only (avoids supplier info interleaving)."""
+    """Extract a field value - first line only (avoids supplier info interleaving)."""
     if not text:
         return "-"
     m = re.search(rf"{re.escape(key)}:\s*(.+?)(?=\n|\Z)", text, re.IGNORECASE)
@@ -377,7 +425,7 @@ def extract_brand_and_model(raw: str) -> tuple[str, str]:
 
 
 def subject_leaf(subject: str) -> str:
-    """Return last path segment: 'Material/Tile' → 'Tile'."""
+    """Return last path segment: 'Material/Tile' -> 'Tile'."""
     return subject.rstrip("/").rsplit("/", 1)[-1] if subject and subject != "-" else subject
 
 
@@ -396,8 +444,8 @@ def build_filename(subject: str, brand: str, model_ref: str) -> str:
 # Image extraction
 # ---------------------------------------------------------------------------
 
-_MIN_IMG_SIDE = 60      # px — skip icons, dividers, thin lines
-_THUMB_HEIGHT = 400     # px — uniform height when combining side-by-side
+_MIN_IMG_SIDE = 60      # px - skip icons, dividers, thin lines
+_THUMB_HEIGHT = 400     # px - uniform height when combining side-by-side
 
 
 def _find_header_xrefs(doc: "fitz.Document") -> set[int]:
@@ -424,10 +472,19 @@ def extract_page_images(doc: "fitz.Document", page_index: int, header_xrefs: set
             continue
         try:
             raw = doc.extract_image(xref)
-            result.append(raw["image"])
+            result.append((raw["image"], w * h))  # Store with area for sorting
         except Exception:
             continue
     return result
+
+
+def get_largest_image(image_list: list[tuple[bytes, int]]) -> bytes:
+    """Return the largest image by area from a list of (image_bytes, area) tuples."""
+    if not image_list:
+        return b""
+    # Sort by area (second element) and return the largest
+    largest = max(image_list, key=lambda x: x[1])
+    return largest[0]
 
 
 def combine_images(image_bytes_list: list[bytes], target_height: int = _THUMB_HEIGHT) -> bytes:
@@ -460,6 +517,38 @@ def combine_images(image_bytes_list: list[bytes], target_height: int = _THUMB_HE
     return buf.getvalue()
 
 
+def extract_codes_from_pdf(pdf_path: Path) -> tuple[list[str], list[int], str, str]:
+    """Extract only codes and page indices from PDF (for image-only extraction).
+    
+    Returns (codes, page_indices, project, client).
+    """
+    codes = []
+    page_indices = []
+    project = "-"
+    client = "-"
+    
+    with pdfplumber.open(str(pdf_path)) as pdf:
+        for pdf_page_index in range(0, len(pdf.pages)):
+            page = pdf.pages[pdf_page_index]
+            text = page.extract_text() or ""
+            if not text.strip():
+                continue
+            
+            # Parse project/client from the header (only needed once)
+            if project == "-":
+                project = extract_field(text, "Project")
+                client = extract_field(text, "Client")
+            
+            code, item_type = extract_code_and_item_type(text)
+            if code == "-":
+                continue
+            
+            codes.append(code)
+            page_indices.append(pdf_page_index)
+    
+    return codes, page_indices, project, client
+
+
 def extract_from_pdf(pdf_path: Path, root: str) -> tuple[list[dict], list[int], str, str]:
     """Return (rows, page_indices, project, client).
 
@@ -472,7 +561,7 @@ def extract_from_pdf(pdf_path: Path, root: str) -> tuple[list[dict], list[int], 
     author = pdf_path.parent.name  # mirror ingest_asset.py: use parent folder name
 
     with pdfplumber.open(str(pdf_path)) as pdf:
-        for pdf_page_index in range(1, len(pdf.pages)):  # skip title/cover page
+        for pdf_page_index in range(0, len(pdf.pages)):  # Process all pages (user may have extracted specific pages)
             page = pdf.pages[pdf_page_index]
             text = page.extract_text() or ""
             if not text.strip():
@@ -500,18 +589,35 @@ def extract_from_pdf(pdf_path: Path, root: str) -> tuple[list[dict], list[int], 
                 colour = extract_field(text, "Color")
             colour = strip_contact_info(colour)
 
+            # Map to new schema: all enrichment in custom_property 0-9
+            finish = strip_contact_info(extract_field(text, "Finish"))
+            # Combine color + finish into custom_property_4 (semantic: Primary color/material/surface finish)
+            color_finish = colour
+            if finish != "-" and colour != "-":
+                color_finish = f"{colour} {finish}"
+            elif finish != "-":
+                color_finish = finish
+
             rows.append({
                 "Filename":          build_filename(subject, brand, model_ref),
-                "custom_property_6": code,
-                "Subject":           subject,
-                "Title":             model_ref,
-                "custom_property_7": extract_field(text, "Finish"),
-                "custom_property_0": colour,
-                "custom_property_5": strip_contact_info(extract_field(text, "Dimension")),
-                "custom_property_1": strip_contact_info(extract_field(text, "Location")),
-                "Author":            author,
-                "Album":             "-",
-                "Company":           brand,
+                "Rating":            "-",
+                "Tags":              "-",
+                "URL":               "-",
+                "Comment":           "-",
+                "ArchiveFile":       "-",
+                "SourceMetadata":    f"extracted from {pdf_path.name}",
+                "Content Status":    "Draft",
+                "CRC-32":            "-",
+                "custom_property_0": subject,               # Primary asset classification
+                "custom_property_1": model_ref,             # Model name/designer name
+                "custom_property_2": brand,                 # Brand/Designer identifier
+                "custom_property_3": "-",                   # Style/era classification
+                "custom_property_4": color_finish,          # Primary color/material/surface finish
+                "custom_property_5": strip_contact_info(extract_field(text, "Location")),  # Usage context/location
+                "custom_property_6": "-",                   # Shape/physical configuration
+                "custom_property_7": strip_contact_info(extract_field(text, "Dimension")),  # Dimensions/scale classification
+                "custom_property_8": code,                  # Reference code
+                "custom_property_9": "-",                   # Reserved/unused
             })
             page_indices.append(pdf_page_index)  # 0-based index in the fitz doc
 
@@ -620,8 +726,8 @@ def main():
     else:
         rows = cleanup_rows_with_ai(rows, pdf_path)
 
-    for row in rows:
-        row["Album"] = album_name
+    # Note: Album/Author context is informational only, not written to EFU
+    # as they are not part of canonical EFU column mapping
 
     print(f"Project : {project}", file=log)
     print(f"Client  : {client}", file=log)
@@ -630,7 +736,7 @@ def main():
     print(file=log)
 
     for r in rows:
-        print(f"  {r['custom_property_6']:<12} {r['Filename']:<40} loc={r['custom_property_1']}", file=log)
+        print(f"  {r['custom_property_8']:<12} {r['Filename']:<40} loc={r['custom_property_5']}", file=log)
 
     if args.dry_run:
         if args.csv:
@@ -646,23 +752,24 @@ def main():
         return
 
     # --- Image extraction (before EFU write so Filename points to real .jpg) ---
-    if not args.no_images and fitz is not None and PILImage is not None:
+    if not args.no_images and fitz is not None:
         doc = fitz.open(str(pdf_path))
         header_xrefs = _find_header_xrefs(doc)
         img_count = 0
         for row, page_idx in zip(rows, page_indices):
-            img_bytes_list = extract_page_images(doc, page_idx, header_xrefs)
-            if not img_bytes_list:
+            img_list = extract_page_images(doc, page_idx, header_xrefs)
+            if not img_list:
                 continue
-            combined = combine_images(img_bytes_list)
-            if combined:
+            # Just take the largest image - no resizing, no combining
+            largest_img = get_largest_image(img_list)
+            if largest_img:
                 img_path = out_dir / row["Filename"]  # Filename already ends in .jpg
-                img_path.write_bytes(combined)
+                img_path.write_bytes(largest_img)
                 img_count += 1
         doc.close()
         print(f"Images  : {img_count} saved to {out_dir}", file=log)
     elif not args.no_images:
-        print("Images  : skipped (pymupdf or Pillow not available)", file=log)
+        print("Images  : skipped (pymupdf not available)", file=log)
 
     written, replaced = write_metadata_efu(rows, out_path)
     action = f"Written ({written} rows, {replaced} updated)" if replaced else f"Written ({written} rows)"

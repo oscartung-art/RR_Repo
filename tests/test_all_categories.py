@@ -21,7 +21,7 @@ def test_ai_subject_is_prefixed_for_supported_asset_types():
 
     for asset_type, stem, ai_subject, expected_subject in cases:
         _, row = build_enriched_row(asset_type, stem, {"subject": ai_subject})
-        assert row["Subject"] == expected_subject
+        assert row["custom_property_0"] == expected_subject
         assert row["CRC-32"] == DUMMY_CRC
         assert "Mood" not in row
 
@@ -43,15 +43,23 @@ def test_material_fields_map_to_canonical_columns():
         },
     )
 
-    assert row["Subject"] == "Material/Wood Veneer"
-    assert row["Title"] == "SK3"
-    assert row["Company"] == "Loro Piana"
-    assert row["Album"] == "Gym Flooring"
-    assert row["Period"] == "Contemporary"
-    assert row["custom_property_0"] == "Beige"
-    assert row["custom_property_2"] == "Linear Grain"
-    assert row["custom_property_5"] == "1200x2400mm"
-    assert row["Author"] == "Loro Piana"
+    # New mapping semantic meanings:
+    # custom_property_0 = Subject (Primary asset classification)
+    # custom_property_1 = Title (Model name/designer name)
+    # custom_property_2 = Company (Brand/Designer/Collection identifier)
+    # custom_property_3 = Album (Style or era classification)
+    # custom_property_4 = Author (Primary color/material/surface finish)
+    # custom_property_5 = Period (Usage context/location)
+    # custom_property_6 = Color (Shape/physical configuration)
+    # custom_property_7 = Location (Dimensions/scale classification)
+    assert row["custom_property_0"] == "Material/Wood Veneer"
+    assert row["custom_property_1"] == "SK3"
+    assert row["custom_property_2"] == "Loro Piana"
+    assert row["custom_property_3"] == "Contemporary"  # period = style/era → now in cp3 (Album slot)
+    assert row["custom_property_5"] == "-"  # usage_location not provided in this test
+    assert row["custom_property_4"] == "Beige"  # primary color → cp4 (Author slot)
+    assert row["custom_property_6"] == "Linear Grain"  # shape/form → cp6 (Color slot)
+    assert row["custom_property_7"] == "1200x2400mm"  # dimensions → cp7 (Location slot)
 
 
 if __name__ == "__main__":

@@ -15,19 +15,19 @@ in a table. Works for material, sanitary, furniture, lighting, and other schedul
 
 Maps extracted fields to EFU columns:
 
-| Schedule Field | EFU Column | Display Name in Everything |
+| Schedule Field | EFU Column | Semantic Meaning |
 |---|---|---|
-| `<SubjectLeaf>_<Brand><ModelRef>` | `Filename` | Filename |
-| Code | `custom_property_6` | Code |
-| Item / Subcategory | `Subject` | Subject (`AssetType/TitleCaseItem`) |
-| Model spec (after brand) | `Title` | Title |
-| Finish | `custom_property_7` | Finish |
-| Color | `custom_property_0` | Color |
-| Dimension | `custom_property_5` | Size |
-| Location | `custom_property_1` | Location |
-| PDF parent folder name | `Author` | Author |
-| Output folder name | `Album` | Album |
-| Brand (from quoted model prefix) | `Company` | Company |
+| `<SubjectLeaf>_<Brand><ModelRef>` | `Filename` | Filename (synthetic identifier) |
+| Item / Subcategory | `custom_property_0` | Subject (`AssetType/TitleCaseItem` e.g. Fixture/WaterCloset) |
+| Model spec (after brand) | `custom_property_1` | Model name |
+| Brand (from quoted model prefix) | `custom_property_2` | Brand/Designer |
+| — | `custom_property_3` | Style/era (empty in schedule extraction) |
+| Color + Finish | `custom_property_4` | Color/Material/Surface finish |
+| Location | `custom_property_5` | Usage context/Location (room/area) |
+| — | `custom_property_6` | Shape/Form (empty in schedule extraction) |
+| Dimension | `custom_property_7` | Dimensions/Size |
+| Code | `custom_property_8` | Reference code |
+| — | `custom_property_9` | Reserved (unused)
 
 ### How to invoke — ALWAYS show final enriched table first
 

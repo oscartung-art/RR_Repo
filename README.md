@@ -55,6 +55,13 @@ Key scripts:
 - `tools/ingest_asset.py` — AI-powered metadata enrichment (Ollama local, OpenRouter optional)
 - `Subject` is canonicalized as `AssetType/<AI subject>` for all asset types; the model determines the leaf subject phrase.
 
+**Schedule PDF Workflow (Two-Step):**
+1. Extract metadata to JSON: `python tools/extract_schedule_json.py --yes "schedule.pdf"`
+2. Extract images by code: `"schedule.pdf" create:` (clipboard watcher)
+3. Enrich with JSON: `"folder/" "metadata.json" enrich:` (clipboard watcher)
+
+See [`.github/skills/extract-schedule-json/`](.github/skills/extract-schedule-json/) for details.
+
 ### Data / Sync Utilities
 
 - `tools/audit_assets.py` — asset library audits

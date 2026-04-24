@@ -1,0 +1,622 @@
+{
+    "Furniture": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Furniture/Armchair)",
+            "Examples": "Furniture/Armchair"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Model name or designer name",
+            "Enrichment Method": "Extracted from filename or context (e.g., Barcelona, Eames Lounge)",
+            "Examples": "Barcelona"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Brand/Designer/Collection identifier",
+            "Enrichment Method": "Extracted from filename context or domain knowledge (e.g., BBItalia, Herman Miller)",
+            "Examples": "BBItalia"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Style or era classification",
+            "Enrichment Method": "AI vision analysis identifies design style (e.g., Modern, Contemporary, Mid-Century, Industrial)",
+            "Examples": "Modern"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Primary color or material or surface finish",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image or OCR from schedule (e.g., Chrome, Matte Black, Wood)",
+            "Examples": "Chrome"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI reasoning determines appropriate usage context (e.g., Living Room, Bedroom, Office)",
+            "Examples": "Living Room"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Shape or physical configuration",
+            "Enrichment Method": "AI vision analysis identifies geometric form (e.g., Round, Rectangular)",
+            "Examples": "Round"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Dimensions or scale classification",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation (e.g., 300x300mm, 1200x450x350mm)",
+            "Examples": "300x300mm"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename (e.g., AL-01, GL-02, ST-03)",
+            "Examples": "AL-01"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Vegetation": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Vegetation/Tree, Vegetation/Shrub)",
+            "Examples": "Vegetation/Tree"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Common Name of Vegetation",
+            "Enrichment Method": "AI plant classification provides common name, learns from chinese and latin (e.g., Birds of Paradise, Fig Leaf)",
+            "Examples": "Birds of Paradise"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Plant Secondary Besides Green",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image (e.g., Pink, Yellow, Red)",
+            "Examples": "Pink"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Plant Shape",
+            "Enrichment Method": "AI vision analysis identifies geometric form/growth pattern (e.g., Columnar, Spreading)",
+            "Examples": "Columnar"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Chinese scientific name",
+            "Enrichment Method": "AI plant classification provides scientific name (e.g., 栎树, 月季, 仙人掌)",
+            "Examples": "栎树"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Latin scientific name",
+            "Enrichment Method": "AI plant classification provides scientific name (e.g., Quercus robur, Rosa damascena)",
+            "Examples": "Quercus robur"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Plant Height, Spread, Radius..etc",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation (e.g., 3m, 5m)",
+            "Examples": "3m"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename (e.g., AL-01, GL-02)",
+            "Examples": "AL-01"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Material": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Material/Wood, Material/Metal)",
+            "Examples": "Material/Wood"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Secondary Asset Classification",
+            "Enrichment Method": "AI vision analysis identifies secondary category (e.g., Walnut, Oak, Gold, Chrome)",
+            "Examples": "Walnut"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Specific Name/Model of Material",
+            "Enrichment Method": "Extracted from filename context or domain knowledge (e.g., Carrera, Verde marina)",
+            "Examples": "Carrera"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Style or era classification",
+            "Enrichment Method": "AI vision analysis identifies design style (e.g., Modern, Contemporary)",
+            "Examples": "Modern"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Primary color",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image (e.g., Beige, Yellow, Teal)",
+            "Examples": "Beige"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "-",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Dimensions or scale classification",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation (e.g., 300x300mm)",
+            "Examples": "300x300mm"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename (e.g., AL-01, GL-02)",
+            "Examples": "AL-01"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Layouts": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Layout_Ushape Config, Layout_Lshape Sofa Set)",
+            "Examples": "Layout_Ushape Config"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Asset inside the thumbnail",
+            "Enrichment Method": "AI looks at image and sees what object is inside, then lists it (e.g., Armchair, Coffee table, Lamp)",
+            "Examples": "Armchair"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI reasoning determines appropriate usage context (e.g., Living Room, Bedroom)",
+            "Examples": "Living Room"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "-",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "-",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename (e.g., AL-01, GL-02)",
+            "Examples": "AL-01"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "People": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with person's pose (e.g., People/Standing, People/Sitting)",
+            "Examples": "People/Standing"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Gender",
+            "Enrichment Method": "AI vision analysis image, filename, sidecar (e.g., Male, Female)",
+            "Examples": "Male"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Ethnicity",
+            "Enrichment Method": "AI vision analysis image, filename, sidecar (e.g., Asian, Caucasian)",
+            "Examples": "Asian"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI vision analysis image, filename, sidecar (e.g., Living Room, Bedroom)",
+            "Examples": "Living Room"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename (e.g., AL-01, GL-02)",
+            "Examples": "AL-01"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "VFX": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., VFX/Water, VFX/Smoke, VFX/FallingLeaf)",
+            "Examples": "VFX/Water"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Fixture": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Fixture/Lighting/SpotLight)",
+            "Examples": "Fixture/Lighting/SpotLight"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Model name or designer name",
+            "Enrichment Method": "Extracted from filename or context (e.g., A16601 Shower Set With Mixer)",
+            "Examples": "A16601 Shower Set With Mixer"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Brand/Designer/Collection identifier",
+            "Enrichment Method": "Extracted from filename context or domain knowledge (e.g., OM)",
+            "Examples": "OM"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Style or era classification",
+            "Enrichment Method": "AI vision analysis identifies design style (e.g., Modern, Contemporary)",
+            "Examples": "Modern"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Primary color or material or surface finish",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image or OCR from schedule (e.g., Chrome, Matte Black)",
+            "Examples": "Chrome"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI reasoning determines appropriate usage context (e.g., Bathroom, Kitchen)",
+            "Examples": "Bathroom"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Shape or physical configuration",
+            "Enrichment Method": "AI vision analysis identifies geometric form (e.g., Vertical, Square)",
+            "Examples": "Vertical"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Dimensions or scale classification",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation",
+            "Examples": "300x300mm"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename",
+            "Examples": "AL-01"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Object": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Object/Vase)",
+            "Examples": "Object/Vase"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Model name or designer name",
+            "Enrichment Method": "Extracted from filename or context",
+            "Examples": "Vase"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Brand/Designer/Collection identifier",
+            "Enrichment Method": "Extracted from filename context or domain knowledge",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Style or era classification",
+            "Enrichment Method": "AI vision analysis identifies design style",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Primary color or material or surface finish",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image or OCR from schedule",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI reasoning determines appropriate usage context",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Shape or physical configuration",
+            "Enrichment Method": "AI vision analysis identifies geometric form",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Dimensions or scale classification",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Vehicle": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root (e.g., Vehicle/Car)",
+            "Examples": "Vehicle/Car"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Model name or designer name",
+            "Enrichment Method": "Extracted from filename or context",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Brand/Designer/Collection identifier",
+            "Enrichment Method": "Extracted from filename context or domain knowledge",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Style or era classification",
+            "Enrichment Method": "AI vision analysis identifies design style",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Primary color or material or surface finish",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image or OCR from schedule",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI reasoning determines appropriate usage context",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Shape or physical configuration",
+            "Enrichment Method": "AI vision analysis identifies geometric form",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Dimensions or scale classification",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ],
+    "Schedule": [
+        {
+            "Custom Property": "custom_property_0",
+            "Description": "Primary asset classification",
+            "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_1",
+            "Description": "Model name or designer name",
+            "Enrichment Method": "Extracted from filename or context",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_2",
+            "Description": "Brand/Designer/Collection identifier",
+            "Enrichment Method": "Extracted from filename context or domain knowledge",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_3",
+            "Description": "Style or era classification",
+            "Enrichment Method": "AI vision analysis identifies design style",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_4",
+            "Description": "Primary color or material or surface finish",
+            "Enrichment Method": "AI vision analysis extracts dominant color from image or OCR from schedule",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_5",
+            "Description": "Usage context or location",
+            "Enrichment Method": "AI reasoning determines appropriate usage context",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_6",
+            "Description": "Shape or physical configuration",
+            "Enrichment Method": "AI vision analysis identifies geometric form",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_7",
+            "Description": "Dimensions or scale classification",
+            "Enrichment Method": "Extracted from metadata or AI scale estimation",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_8",
+            "Description": "Reference code",
+            "Enrichment Method": "OCR extracted from schedule specifications, filename",
+            "Examples": "-"
+        },
+        {
+            "Custom Property": "custom_property_9",
+            "Description": "Reserved",
+            "Enrichment Method": "Unused",
+            "Examples": "-"
+        }
+    ]
+}

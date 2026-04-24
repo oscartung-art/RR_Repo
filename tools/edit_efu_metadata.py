@@ -12,20 +12,18 @@ Usage:
 
 Friendly field aliases (case-insensitive):
     rating                    -> Rating
-    subject                   -> Subject
-    title, model              -> Title
-    company, brand            -> Company
-    author, vendor            -> Author
-    album, collection         -> Album
+    subject                   -> custom_property_0
+    title, model              -> custom_property_1
+    company, brand            -> custom_property_2
+    author, vendor            -> custom_property_4
+    album, collection         -> custom_property_3
     tags                      -> Tags
     comment, notes            -> Comment
-    period, style             -> Period
-    color                     -> custom_property_0
-    location                  -> custom_property_1
-    form, shape               -> custom_property_2
-    chinesename, chinese       -> custom_property_3
-    latinname, latin           -> custom_property_4
-    size, dimensions           -> custom_property_5
+    period, style             -> custom_property_5
+    color                     -> custom_property_6
+    location                  -> custom_property_7
+    form, shape               -> custom_property_8
+    size, dimensions           -> custom_property_9
 """
 from __future__ import annotations
 
@@ -35,34 +33,44 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# Friendly name -> canonical EFU column name
+# Friendly name -> canonical EFU column name (new mapping: all enrichment in custom_property 0-9)
 FIELD_ALIASES: dict[str, str] = {
+    # Core fields (unchanged)
     "rating":       "Rating",
-    "subject":      "Subject",
-    "title":        "Title",
-    "model":        "Title",
-    "company":      "Company",
-    "brand":        "Company",
-    "author":       "Author",
-    "vendor":       "Author",
-    "album":        "Album",
-    "collection":   "Album",
     "tags":         "Tags",
     "comment":      "Comment",
     "notes":        "Comment",
-    "period":       "Period",
-    "style":        "Period",
-    "color":        "custom_property_0",
-    "colour":       "custom_property_0",
-    "location":     "custom_property_1",
-    "form":         "custom_property_2",
-    "shape":        "custom_property_2",
+    # Enrichment fields mapped to custom_property slots
+    "subject":      "custom_property_0",
+    "title":        "custom_property_1",
+    "model":        "custom_property_1",
+    "company":      "custom_property_2",
+    "brand":        "custom_property_2",
+    "author":       "custom_property_4",
+    "vendor":       "custom_property_4",
+    "album":        "custom_property_3",
+    "collection":   "custom_property_3",
+    "period":       "custom_property_5",
+    "style":        "custom_property_5",
+    "color":        "custom_property_6",
+    "colour":       "custom_property_6",
+    "location":     "custom_property_7",
+    "form":         "custom_property_8",
+    "shape":        "custom_property_8",
+    "size":         "custom_property_9",
+    "dimensions":   "custom_property_9",
+    # Chinese/Latin are deprecated in new schema
     "chinesename":  "custom_property_3",
     "chinese":      "custom_property_3",
     "latinname":    "custom_property_4",
     "latin":        "custom_property_4",
-    "size":         "custom_property_5",
-    "dimensions":   "custom_property_5",
+    # Deprecated top-level names for backward compatibility
+    "Subject":      "custom_property_0",
+    "Title":        "custom_property_1",
+    "Company":      "custom_property_2",
+    "Album":        "custom_property_3",
+    "Author":       "custom_property_4",
+    "Period":       "custom_property_5",
 }
 
 VALID_RATINGS = {1, 25, 50, 75, 99}

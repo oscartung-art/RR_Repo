@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "32768"
+  },
   "permissions": {
     "allow": [
       "Bash(.\\\\.venv\\\\Scripts\\\\python.exe -m pylint \".github/skills/ingest-schedule/ingest_schedule.py\" \".github/skills/ingest-schedule/display_preview.py\" \".github/skills/edit-efu-metadata/edit_metadata.py\" \".github/skills/move-delete-assets/move_delete_assets.py\")",
@@ -28,7 +31,17 @@
       "Bash(cp \"G:\\\\3D\\\\Dedon\\\\files_folders_20250825\\\\BABYLON\\\\Stills\\\\ADP230V000C.jpg\" \"G:\\\\DB\\\\dedon\\\\ADP230V000C.jpg\")",
       "Skill(update-config)",
       "Bash(tee /tmp/bellmonde_files.txt)",
-      "Bash(awk -F',' 'NR>1 && $2 ~ /Furniture/ && $8 == \"BELLMONDE Collection\" {print \"G:/DB/dedon/\" $1}' G:/DB/dedon/.metadata.efu)"
+      "Bash(awk -F',' 'NR>1 && $2 ~ /Furniture/ && $8 == \"BELLMONDE Collection\" {print \"G:/DB/dedon/\" $1}' G:/DB/dedon/.metadata.efu)",
+      "Bash(git push *)",
+      "Bash(xargs grep *)",
+      "Bash(.venv/Scripts/pip.exe install *)",
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile tools/clipboard_asset_watcher.py)",
+      "Bash(\".venv/Scripts/python.exe\" -m py_compile \"tools/clipboard_asset_watcher.py\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe *)",
+      "Bash(powershell *)",
+      "Bash(del *)",
+      "Read(//d D:/**)",
+      "Bash(\"D:\\\\rr_repo\\\\.venv\\\\Scripts\\\\python.exe\" \"test_extraction.py\")"
     ]
   },
   "model": "auto"

@@ -24,7 +24,7 @@ def test_filename_prefix_codes_do_not_override_ai_subject():
         },
     )
 
-    assert row["Subject"] == "Object/Sculpture"
+    assert row["custom_property_0"] == "Object/Sculpture"
 
 
 if __name__ == "__main__":

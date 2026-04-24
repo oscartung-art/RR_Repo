@@ -47,92 +47,103 @@ THUMBNAIL_BASE = Path(os.environ.get("INGEST_THUMBNAIL_BASE", r"G:\DB"))
 # The EFU uses Everything Search custom property names.
 # This mapping lets the user think in friendly names while the EFU file
 # uses the canonical column headers.
+# New schema: all enrichment categories stored in custom_property 0-9
 # ---------------------------------------------------------------------------
 FIELD_TO_EFU = {
     "filepath":        "Filename",
-    "subject":         "Subject",
-    "brand":           "Company",
-    "author":          "Author",
-    "album":           "Album",
-    "color":           "custom_property_0",
-    "usage_location":  "custom_property_1",
-    "shape_form":      "custom_property_2",
-    "period":          "Period",
-    "model_name":      "Title",
+    "subject":         "custom_property_0",
+    "brand":           "custom_property_2",
+    "author":          "custom_property_4",
+    "album":           "custom_property_3",
+    "color":           "custom_property_4",
+    "usage_location":  "custom_property_5",
+    "shape_form":      "custom_property_6",
+    "period":          "custom_property_3",
+    "model_name":      "custom_property_1",
     "archive_file":    "ArchiveFile",
     "crc32":           "CRC-32",
-    "size":            "custom_property_5",
+    "size":            "custom_property_7",
     "sidecar_text":    "SourceMetadata",
-    "vendor_name":     "Author",  # fallback — author_from_path wins
-    "collection":      "Album",   # fallback — album_from_path wins
+    "vendor_name":     "custom_property_4",  # fallback
+    "collection":      "custom_property_3",  # fallback
     "description":     "Comment",
 }
 
-# Friendly name aliases so users can type --columns Color instead of custom_property_0
+# Friendly name aliases so users can type --columns Color instead of custom_property_4
 FRIENDLY_NAMES = {
-    "color":    "custom_property_0",
-    "location": "custom_property_1",
-    "form":     "custom_property_2",
-    "size":     "custom_property_5",
-    "title":    "Title",
-    "subject":  "Subject",
-    "company":  "Company",
-    "brand":    "Company",
-    "author":   "Author",
-    "album":    "Album",
-    "period":   "Period",
-    "archive":  "ArchiveFile",
-    "crc":      "CRC-32",
-    "crc32":    "CRC-32",
-    "crc-32":   "CRC-32",
-    "comment":  "Comment",
-    "description": "Comment",
-    "source":   "SourceMetadata",
-    "sidecar":  "SourceMetadata",
+    # New schema: friendly name → canonical custom_property slot
+    "subject":      "custom_property_0",
+    "title":        "custom_property_1",
+    "model":        "custom_property_1",
+    "company":      "custom_property_2",
+    "brand":        "custom_property_2",
+    "album":        "custom_property_3",
+    "collection":  "custom_property_3",
+    "author":       "custom_property_4",
+    "color":        "custom_property_4",
+    "finish":       "custom_property_4",
+    "period":       "custom_property_5",
+    "location":     "custom_property_5",
+    "form":         "custom_property_6",
+    "shape":        "custom_property_6",
+    "size":         "custom_property_7",
+    "dimensions":   "custom_property_7",
+    "code":         "custom_property_8",
+    "refcode":      "custom_property_8",
+    "archive":      "ArchiveFile",
+    "crc":          "CRC-32",
+    "crc32":        "CRC-32",
+    "crc-32":       "CRC-32",
+    "comment":      "Comment",
+    "description":  "Comment",
+    "source":       "SourceMetadata",
+    "sidecar":      "SourceMetadata",
 }
 
-# Default EFU columns — matches the canonical schema from everything_columnmapping.md
+# Default EFU columns — matches the canonical schema
 DEFAULT_EFU_COLUMNS = [
     "Filename",
-    "Subject",
     "Rating",
     "Tags",
     "URL",
-    "Company",
-    "Author",
-    "Album",
-    "custom_property_0",   # Color
-    "custom_property_1",   # Location
-    "custom_property_2",   # Form
-    "Period",
-    "Title",
     "Comment",
     "ArchiveFile",
     "SourceMetadata",
     "Content Status",
-    "custom_property_3",   # ChineseName
-    "custom_property_4",   # LatinName
-    "custom_property_5",   # Size
     "CRC-32",
+    "custom_property_0",   # Subject (Primary asset classification)
+    "custom_property_1",   # Title (Model name/designer name)
+    "custom_property_2",   # Company (Brand/Designer/Collection identifier)
+    "custom_property_3",   # Album (Style or era classification)
+    "custom_property_4",   # Author (Primary color/material/surface finish)
+    "custom_property_5",   # Period (Usage context/location)
+    "custom_property_6",   # Color (Shape/physical configuration)
+    "custom_property_7",   # Location (Dimensions/scale classification)
+    "custom_property_8",   # Form (Reference code)
+    "custom_property_9",   # Size (reserved/unused)
 ]
 
 # Which vector DB field populates which EFU column
 DB_FIELD_FOR_EFU_COL = {
     "Filename":         "filepath",
-    "Subject":          "subject",
-    "Company":          "brand",
-    "Author":           "author",
-    "Album":            "album",
-    "custom_property_0": "color",
-    "custom_property_1": "usage_location",
-    "custom_property_2": "shape_form",
-    "Period":           "period",
-    "Title":            "model_name",
+    "Rating":           "rating",
+    "Tags":             "tags",
+    "URL":              "url",
     "Comment":          "description",
     "ArchiveFile":      "archive_file",
     "SourceMetadata":   "sidecar_text",
-    "custom_property_5": "size",
+    "Content Status":   "content_status",
     "CRC-32":           "crc32",
+    "custom_property_0": "subject",
+    "custom_property_1": "model_name",
+    "custom_property_2": "brand",
+    "custom_property_3": "period",
+    "custom_property_4": "color",
+    "custom_property_5": "usage_location",
+    "custom_property_6": "shape_form",
+    "custom_property_7": "size",
+    "custom_property_8": "code",
+    "custom_property_9": "-",
 }
 
 

@@ -1,0 +1,537 @@
+{
+  "Furniture": {
+    "headers": [
+      "Old-Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Old-Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "Furniture/Armchair"
+      },
+      {
+        "Old-Column Name": "Title",
+        "New-Column Name": "custom_property__1",
+        "Description": "Model name or designer name",
+        "Enrichment Method": "Extracted from filename or context",
+        "Examples": "Barcelona, Eames Lounge, Arco"
+      },
+      {
+        "Old-Column Name": "Company",
+        "New-Column Name": "custom_property__2",
+        "Description": "Brand/Designer/Collection identifier",
+        "Enrichment Method": "Extracted from filename context or domain knowledge",
+        "Examples": "BBItalia, Herman Miller, Flos, Kartell, Vernis Collection, Arco Collection, Sahal Collection"
+      },
+      {
+        "Old-Column Name": "Album",
+        "New-Column Name": "custom_property__3",
+        "Description": "Style or era classification",
+        "Enrichment Method": "AI vision analysis identifies design style",
+        "Examples": "Modern, Contemporary, Mid-Century, Industrial"
+      },
+      {
+        "Old-Column Name": "Author",
+        "New-Column Name": "custom_property__4",
+        "Description": "Primary color or material or surface finish",
+        "Enrichment Method": "AI vision analysis extracts dominant color from imageor OCR from schedule documents + AI vision verification",
+        "Examples": "Chrome, Matte Black, Wood, Leather, Green, Matt, Polished, Brushed, Sandblasted, Powder Coated"
+      },
+      {
+        "Old-Column Name": "Period",
+        "New-Column Name": "custom_property__5",
+        "Description": "Usage context or location",
+        "Enrichment Method": "AI reasoning determines appropriate usage context/habitat",
+        "Examples": "Living Room, Bedroom, Office, Outdoor, Aquatic"
+      },
+      {
+        "Old-Column Name": "Color",
+        "New-Column Name": "custom_property__6",
+        "Description": "Shape or physical configuration",
+        "Enrichment Method": "AI vision analysis identifies geometric form",
+        "Examples": "Round, Rectangular"
+      },
+      {
+        "Old-Column Name": "Location",
+        "New-Column Name": "custom_property__7",
+        "Description": "Dimensions or scale classification",
+        "Enrichment Method": "Extracted from metadata or AI scale estimation",
+        "Examples": "300x300mm, 1200x450x350mm, Small, Medium, 3m"
+      },
+      {
+        "Old-Column Name": "Form",
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "Old-Column Name": "Size",
+        "New-Column Name": "custom_property__9",
+        "Description": "-",
+        "Enrichment Method": "-",
+        "Examples": "-"
+      }
+    ]
+  },
+  "Fixture": {
+    "headers": [
+      "Old-Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Old-Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "Fixture/Walllamp, Fixture/RangeHood"
+      },
+      {
+        "Old-Column Name": "Title",
+        "New-Column Name": "custom_property__1",
+        "Description": "Model name or designer name",
+        "Enrichment Method": "Extracted from filename or context",
+        "Examples": "Barcelona, Eames Lounge, Arco"
+      },
+      {
+        "Old-Column Name": "Company",
+        "New-Column Name": "custom_property__2",
+        "Description": "Brand/Designer/Collection identifier",
+        "Enrichment Method": "Extracted from filename context or domain knowledge",
+        "Examples": "Mille, "
+      },
+      {
+        "Old-Column Name": "Album",
+        "New-Column Name": "custom_property__3",
+        "Description": "Style or era classification",
+        "Enrichment Method": "AI vision analysis identifies design style",
+        "Examples": "Modern, Contemporary, Mid-Century, Industrial"
+      },
+      {
+        "Old-Column Name": "Author",
+        "New-Column Name": "custom_property__4",
+        "Description": "Primary color or material or surface finish",
+        "Enrichment Method": "AI vision analysis extracts dominant color from imageor OCR from schedule documents + AI vision verification",
+        "Examples": "Chrome, Matte Black, Wood, Leather, Green, Matt, Polished, Brushed, Sandblasted, Powder Coated"
+      },
+      {
+        "Old-Column Name": "Period",
+        "New-Column Name": "custom_property__5",
+        "Description": "Usage context or location",
+        "Enrichment Method": "AI reasoning determines appropriate usage context/habitat",
+        "Examples": "Living Room, Bedroom, Office, Outdoor, Aquatic"
+      },
+      {
+        "Old-Column Name": "Color",
+        "New-Column Name": "custom_property__6",
+        "Description": "Shape or physical configuration",
+        "Enrichment Method": "AI vision analysis identifies geometric form",
+        "Examples": "Round, Rectangular"
+      },
+      {
+        "Old-Column Name": "Location",
+        "New-Column Name": "custom_property__7",
+        "Description": "Dimensions or scale classification",
+        "Enrichment Method": "Extracted from metadata or AI scale estimation",
+        "Examples": "300x300mm, 1200x450x350mm, Small, Medium, 3m"
+      },
+      {
+        "Old-Column Name": "Form",
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "Old-Column Name": "Size",
+        "New-Column Name": "custom_property__9",
+        "Description": "-",
+        "Enrichment Method": "-",
+        "Examples": "-"
+      }
+    ]
+  },
+  "Object": {
+    "headers": [
+      "Old-Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Old-Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "Object/Vase, Object/Artwork, Object/Sculpture"
+      },
+      {
+        "Old-Column Name": "Title",
+        "New-Column Name": "custom_property__1",
+        "Description": "Model name or designer name",
+        "Enrichment Method": "Extracted from filename or context",
+        "Examples": "Barcelona, Eames Lounge, Arco"
+      },
+      {
+        "Old-Column Name": "Company",
+        "New-Column Name": "custom_property__2",
+        "Description": "Brand/Designer/Collection identifier",
+        "Enrichment Method": "Extracted from filename context or domain knowledge",
+        "Examples": "BBItalia, Herman Miller, Flos, Kartell, Vernis Collection, Arco Collection, Sahal Collection"
+      },
+      {
+        "Old-Column Name": "Album",
+        "New-Column Name": "custom_property__3",
+        "Description": "Style or era classification",
+        "Enrichment Method": "AI vision analysis identifies design style",
+        "Examples": "Modern, Contemporary, Mid-Century, Industrial"
+      },
+      {
+        "Old-Column Name": "Author",
+        "New-Column Name": "custom_property__4",
+        "Description": "Primary color or material or surface finish",
+        "Enrichment Method": "AI vision analysis extracts dominant color from imageor OCR from schedule documents + AI vision verification",
+        "Examples": "Chrome, Matte Black, Wood, Leather, Green, Matt, Polished, Brushed, Sandblasted, Powder Coated"
+      },
+      {
+        "Old-Column Name": "Period",
+        "New-Column Name": "custom_property__5",
+        "Description": "Usage context or location",
+        "Enrichment Method": "AI reasoning determines appropriate usage context/habitat",
+        "Examples": "Living Room, Bedroom, Office, Outdoor, Aquatic"
+      },
+      {
+        "Old-Column Name": "Color",
+        "New-Column Name": "custom_property__6",
+        "Description": "Shape or physical configuration",
+        "Enrichment Method": "AI vision analysis identifies geometric form",
+        "Examples": "Round, Rectangular"
+      },
+      {
+        "Old-Column Name": "Location",
+        "New-Column Name": "custom_property__7",
+        "Description": "Dimensions or scale classification",
+        "Enrichment Method": "Extracted from metadata or AI scale estimation",
+        "Examples": "300x300mm, 1200x450x350mm, Small, Medium, 3m"
+      },
+      {
+        "Old-Column Name": "Form",
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "Old-Column Name": "Size",
+        "New-Column Name": "custom_property__9",
+        "Description": "-",
+        "Enrichment Method": "-",
+        "Examples": "-"
+      }
+    ]
+  },
+  "Vegetation": {
+    "headers": [
+      "Old-Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples",
+      ""
+    ],
+    "rows": [
+      {
+        "Old-Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "Vegetation/Tree, Vegetation/Shrub, Vegetation/Bamboo"
+      },
+      {
+        "Old-Column Name": "Title",
+        "New-Column Name": "custom_property__1",
+        "Description": "Common Name of Vegetation",
+        "Enrichment Method": "AI plant classification provides common name, learn from chinese and latin name",
+        "Examples": "Birds of Paradise, Fig Leaf,"
+      },
+      {
+        "Old-Column Name": "Color",
+        "New-Column Name": "custom_property__2",
+        "Description": "Plant  Seconary Besides Green",
+        "Enrichment Method": "AI vision analysis extracts dominant color from image",
+        "Examples": "Pink, Yellow, Red"
+      },
+      {
+        "Old-Column Name": "Form",
+        "New-Column Name": "custom_property__3",
+        "Description": "Plant Shape",
+        "Enrichment Method": "AI vision analysis identifies geometric form/growth pattern",
+        "Examples": " Columnar, peared shape, Spreading"
+      },
+      {
+        "Old-Column Name": "ChineseName",
+        "New-Column Name": "custom_property__4",
+        "Description": "Chinese scientific name",
+        "Enrichment Method": "AI plant classification provides scientific name",
+        "Examples": "栎树, 月季, 仙人掌, 地被植物"
+      },
+      {
+        "Old-Column Name": "LatinName",
+        "New-Column Name": "custom_property__5",
+        "Description": "Latin scientific name",
+        "Enrichment Method": "AI plant classification provides scientific name",
+        "Examples": "Quercus robur, Rosa damascena, Opuntia ficus-indica"
+      },
+      {
+        "Old-Column Name": "Size",
+        "New-Column Name": "custom_property__6",
+        "Description": "Plant Height, Spread, Radius..etc",
+        "Enrichment Method": "Extracted from metadata or AI scale estimation",
+        "Examples": "3m, 5m "
+      },
+      {
+        "Old-Column Name": "-",
+        "New-Column Name": "custom_property__7",
+        "Description": "-",
+        "Enrichment Method": "-",
+        "Examples": "-"
+      },
+      {
+        "Old-Column Name": "-",
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "Old-Column Name": "-",
+        "New-Column Name": "custom_property__9",
+        "Description": "-",
+        "Enrichment Method": "-",
+        "Examples": "-"
+      }
+    ]
+  },
+  "Material": {
+    "headers": [
+      "Old-Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Old-Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "Material/Wood, Material/Metal, Material/Painting"
+      },
+      {
+        "Old-Column Name": "Title",
+        "New-Column Name": "custom_property__1",
+        "Description": "Seconadry Asset Classification",
+        "Enrichment Method": "AI vision analysis identifies secondary category",
+        "Examples": "Walnut, Oak, Gold, Chrome, Aluminium"
+      },
+      {
+        "Old-Column Name": "Company",
+        "New-Column Name": "custom_property__2",
+        "Description": "Specific Name/Model of Material",
+        "Enrichment Method": "Extracted from filename context or domain knowledge",
+        "Examples": "Carrera , Verde marina"
+      },
+      {
+        "Old-Column Name": "Period",
+        "New-Column Name": "custom_property__3",
+        "Description": "Style or era classification",
+        "Enrichment Method": "AI vision analysis identifies design style",
+        "Examples": "Modern, Contemporary, Mid-Century, Industrial"
+      },
+      {
+        "Old-Column Name": "Color",
+        "New-Column Name": "custom_property__4",
+        "Description": "Primary color ",
+        "Enrichment Method": "AI vision analysis extracts dominant color from image",
+        "Examples": "Beige, Yellow, Teal"
+      },
+      {
+        "Old-Column Name": "Form",
+        "New-Column Name": "custom_property__5",
+        "Description": "-"
+      },
+      {
+        "Old-Column Name": "Size",
+        "New-Column Name": "custom_property__6",
+        "Description": "Dimensions or scale classification",
+        "Enrichment Method": "Extracted from metadata or AI scale estimation",
+        "Examples": "300x300mm, 1200x450x350mm, Small, Medium, 3m"
+      },
+      {
+        "New-Column Name": "custom_property__7"
+      },
+      {
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "New-Column Name": "custom_property__9"
+      }
+    ]
+  },
+  "Layouts": {
+    "headers": [
+      "Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "Layout_Ushape Config, Layout_armchair pair, Layuout_Lshape Sofa Set"
+      },
+      {
+        "Column Name": "Album",
+        "New-Column Name": "custom_property__1",
+        "Description": "Asset inside the thumbnail",
+        "Enrichment Method": "AI look at image and sees what object inside the thumbnail, then list it",
+        "Examples": "Armchair, Coffee table, Lamp.."
+      },
+      {
+        "Column Name": "Location",
+        "New-Column Name": "custom_property__2",
+        "Description": "Usage context or location",
+        "Enrichment Method": "AI reasoning determines appropriate usage context/habitat",
+        "Examples": "Living Room, Bedroom, Office, Outdoor, Aquatic"
+      },
+      {
+        "Column Name": "Form",
+        "New-Column Name": "custom_property__3"
+      },
+      {
+        "Column Name": "Size",
+        "New-Column Name": "custom_property__4"
+      },
+      {
+        "New-Column Name": "custom_property__5"
+      },
+      {
+        "New-Column Name": "custom_property__6"
+      },
+      {
+        "New-Column Name": "custom_property__7"
+      },
+      {
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "New-Column Name": "custom_property__9"
+      }
+    ]
+  },
+  "People": {
+    "headers": [
+      "Column Name",
+      "New-Column Name",
+      "Description",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Column Name": "Subject",
+        "New-Column Name": "custom_property__0",
+        "Description": "Primary asset classification",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed the person's pose",
+        "Examples": "People/Standing, People/Sitting, People/Walking"
+      },
+      {
+        "Column Name": "Period",
+        "New-Column Name": "custom_property__1",
+        "Description": "Gender",
+        "Enrichment Method": "AI vision analysis image, filename, sidecar ",
+        "Examples": "Male, Female"
+      },
+      {
+        "Column Name": "Color",
+        "New-Column Name": "custom_property__2",
+        "Description": "Ethinicity",
+        "Enrichment Method": "AI vision analysis image, filename, sidecar ",
+        "Examples": "Asian, Caucasian"
+      },
+      {
+        "Column Name": "Location",
+        "New-Column Name": "custom_property__3",
+        "Description": "Usage context or location",
+        "Enrichment Method": "AI vision analysis image, filename, sidecar ",
+        "Examples": "Living Room, Bedroom, Office, Outdoor, Aquatic"
+      },
+      {
+        "New-Column Name": "custom_property__4"
+      },
+      {
+        "New-Column Name": "custom_property__5"
+      },
+      {
+        "New-Column Name": "custom_property__6"
+      },
+      {
+        "New-Column Name": "custom_property__7"
+      },
+      {
+        "New-Column Name": "custom_property__8",
+        "Description": "Reference code",
+        "Enrichment Method": "OCR extracted from schedule specifications, filename",
+        "Examples": "AL-01, GL-02, ST-03, TL-01"
+      },
+      {
+        "New-Column Name": "custom_property__9"
+      }
+    ]
+  },
+  "VFX": {
+    "headers": [
+      "Column Name",
+      "Custom Property",
+      "Description",
+      "Data Type",
+      "Semantic Mapping",
+      "Enrichment Method",
+      "Examples"
+    ],
+    "rows": [
+      {
+        "Column Name": "Subject",
+        "Custom Property": "—",
+        "Description": "Primary asset classification",
+        "Data Type": "Text",
+        "Semantic Mapping": "AssetType/<AI subject>",
+        "Enrichment Method": "AI determines leaf subject phrase, prefixed with asset category root",
+        "Examples": "VFX/Water, VFX/Smoke, VFX/FallingLeaf"
+      }
+    ]
+  }
+}
