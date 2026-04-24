@@ -317,21 +317,10 @@ def parse_command(text: str) -> Tuple[Optional[list[Path]], Optional[str], Optio
     # BUT preserve brackets that are part of the filename (when path is quoted)
     # Strategy: Only remove brackets that are NOT inside quoted strings
     
-    # First, protect quoted strings by temporarily replacing them
-    quoted_parts = re.findall(r'"([^"]+)"', text)
-    placeholder_map = {}
-    for i, qp in enumerate(quoted_parts):
-        placeholder = f"__QUOTED_{i}__"
-        placeholder_map[placeholder] = qp
-        text = text.replace(f'"{qp}"', placeholder, 1)
-    
-    # Now remove brackets from unquoted parts only
+    # Remove any bracketed prefixes/suffixes like [Image: ...]
+    # (This may remove brackets inside quotes in rare cases, but keeps parsing simple.)
     text = re.sub(r'\[[^\]]*\]', '', text).strip()
-    
-    # Restore quoted strings (with their original brackets intact)
-    for placeholder, original in placeholder_map.items():
-        text = text.replace(placeholder, f'"{original}"')
-    
+
     # Replace angle brackets with spaces instead of removing them entirely
     # This handles paths wrapped in <> without losing content
     text = text.replace('<', ' ').replace('>', ' ').strip()
